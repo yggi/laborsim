@@ -18,6 +18,44 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — stack settled, architecture rules anchored
+
+Cards: none closed · [L-013] fully specified
+
+Stack confirmed and closed to further debate: **TypeScript · Vite · Svelte 5 ·
+Vitest · Biome · Three.js · Rapier**, on `@dimforge/rapier3d-deterministic` so
+replay determinism is a test rather than an aspiration. Godot, Babylon and Jolt
+are recorded in `MEMORY.md` § 9 as rejected *with reasons*, so they are not
+relitigated later — Godot's web export cannot run C# at all and is
+Compatibility-renderer only; Babylon's switching cost lands exactly on the
+already-proven cel pipeline; Jolt's tracked-vehicle controller is an
+anti-feature here, because differential drive with friction *is* the teaching
+layer and we write that one.
+
+**Mobile-first is now fixed with a stated mechanical reason**, not a preference:
+viewport budgeting turns out to be a core mechanism, which couples it deeply to
+touch — direct manipulation, thumb reach, occlusion by your own hand, no hover,
+no pixel precision. A desktop-first cockpit would be a different mechanic
+wearing the same name. Recorded as upstream of stack, layout and control design.
+
+**Chase camera resolved**, and it resolved in the same shape as everything else
+in this design: available, but it costs you something real. While it is up you
+see no cockpit and have no vehicle control — an observation mode, so it can
+never be strictly better than the cab. Specific contexts may disable it as a
+challenge condition. The last chase-camera thread closed; only panel field-
+stowing survives from that cluster.
+
+**The three architecture rules are anchored** in `docs/design/architecture-rules.md`
+and cited from `MEMORY.md` § 12: the sim runs headless, fixed timestep with a
+seeded PRNG and no `Math.random` sim-visible, and a one-directional snapshot
+boundary (instruments read snapshots, Svelte never owns the canvas, no Threlte).
+Each is written with the pillar it serves and a mechanical check, so none can
+quietly rot. Breaking one now requires editing that file first, out loud.
+
+MEMORY hit 292/300 taking this on. Spilled two sections rather than waiting for
+the gate to force it: the cockpit material to `docs/design/cockpit.md` and the
+downstream mechanics to `docs/design/mechanics.md`. Six spill files now.
+
 ## 2026-08-23 — diegetic frame, cockpit resolved, damage counter
 
 Cards: closed [L-020] · added [L-029]

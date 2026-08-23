@@ -26,11 +26,12 @@ Card format:
 ## ready
 
 ### [L-013] Scaffold the toolchain
-- **what:** Vite + Svelte 5 + Vitest + Three.js, mobile-first. No Rapier yet —
-  see the "Is Rapier in?" thread. No game code; just a project that builds,
-  tests and serves.
-- **done-when:** `npm run dev`, `npm run build` and `npm test` all work from a
-  clean clone, and the commands are documented in `README.md`.
+- **what:** TypeScript + Vite + Svelte 5 + Vitest + Biome + Three.js +
+  `@dimforge/rapier3d-deterministic`. No game code. The three architecture rules
+  are enforced by the layout from the first commit, not adopted later.
+- **done-when:** `npm run dev`, `build`, `test` and `lint` all work from a clean
+  clone; a Vitest suite steps a Rapier world headless in plain Node; the
+  commands are in `README.md`.
 
 ### [L-014] Rung 1 — tracked platform, drivable
 - **what:** the ladder's first machine on real terrain: body-frame velocity, two
@@ -115,9 +116,9 @@ Card format:
 
 ### [L-025] Panel budget and occlusion
 - **what:** fixed glass area, instruments declare their size, installed rather
-  than toggled.
-- **done-when:** installing an instrument measurably costs you view.
-- **needs:** chase-camera thread
+  than toggled. Chase camera as an observation mode with no vehicle control.
+- **done-when:** installing an instrument measurably costs you view, and the
+  chase view cannot be used to drive.
 
 ### [L-007] `autonav` as the reference dumb module
 - **what:** the canonical predictable-failure component — steers to the pin,

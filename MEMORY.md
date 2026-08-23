@@ -10,9 +10,12 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 
 | File | Holds |
 |---|---|
+| `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
 | `docs/design/arbitration.md` | the rack, subsumption, components-as-loops, the attribution rule |
+| `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
+| `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
 | `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
@@ -130,59 +133,34 @@ The ladder is non-monotonic by design: the Phantom Labor attacks the sensor
 surface that capability created, so the unscrambleable two-lever cage at rung
 one must stay a genuinely good machine, never a tutorial.
 
-## 6. Panel budget and occlusion
+## 6. The cockpit — panel budget and occlusion
 
-Every instrument you install **obscures your direct view**. In the basic tracked
-cage you sit behind two levers with a clear windscreen; in a high-tech Labor you
-can barely see out — map, thermal, radar — powerful, and blind when they fail.
+Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 
-This is the rare case where the **UX constraint *is* the game constraint**.
-Fixed glass area; instruments declare their size. Adding autonav means giving up
-a gauge you wanted. Real cabs are cramped for the same reason.
-
-**Panels must be installed, not toggled.** If they can be tapped away, players
-run naked-cage and peek at the map on demand, and the mechanic is gone.
-
-### 6.1 The cockpit is authored, from a mandatory manifest
-
-Settled, between the authored cockpit of the brief and the derived cockpit of
-`HANDOVER.md` § 9.4: **components ship instruments, and those instruments are
-mandatory and must be placed by the player within the viewport.**
-
-The consequences are why this is the right call, not just the compromise:
-
-- **The rack and the cockpit become one decision.** Fitting a component means
-  fitting its instrument. Capability literally costs you sight.
-- **An empty or incoherent cockpit is unreachable** — which was the whole case
-  for deriving it. Every chassis ships stock wiring that works.
-- **The panel budget gets teeth.** Adding a component can make a machine
-  unflyable because its instrument will not fit. That is a real design failure
-  the player can see coming and argue with.
-- **Placement stays authored**, so the DIN rail keeps something to do and the
-  cockpit is still where a parts list becomes a thing you can drive.
-
-OS-mode is tuning, never a gate.
-
-Occlusion only bites **if the pilot camera is the only camera** — still open in
-`NOTES.md`, and now more urgent, since mandatory instruments mean occlusion is
-no longer something a player can opt out of.
+- Every instrument installed **obscures your direct view**. Fixed glass area;
+  instruments declare their size. **Installed, not toggled.** This is the rare
+  case where the **UX constraint *is* the game constraint.**
+- **Components ship instruments; those instruments are mandatory; the player
+  places them.** So the rack and the cockpit are one decision, and a component
+  can be **refused for want of glass**. OS-mode is tuning, never a gate.
+- **The chase camera exists, but you cannot drive from it** — no cockpit, no
+  vehicle control while it is up. It is an observation mode, so it can never be
+  strictly better than the cab. Some contexts disable it as a challenge.
+- **Viewport budgeting is a core mechanism, not a UI style**, which couples it
+  deeply to touch. This is *why* mobile-first is fixed — see § 9.
 
 ## 7. Mechanics that fall out of the above
 
-- **Phantom Labor.** The antagonist attacks the sensor surface that capability
-  created — scrambling instruments, not armour. Difficulty curve and antagonist
-  become the same object: no separate balance pass, no bolted-on villain.
-- **Hot-patching, anchored on LOTO.** Lockout–tagout is a real procedure with a
-  real cost. Locking outputs parks the actuator and holds state: safe, inert,
-  behind schedule. Rewiring live gambles on transient authority handoff — get
-  the order wrong on a stabiliser and the Labor goes limp and falls. Prices
-  field repair without arbitrary fragility dice. More dangerous the more
-  advanced the Labor.
-- **Component curriculum.** Every rung-one component needs a named rung-two
-  successor visible on the shelf from day one and unaffordable. Waypoint-drives-
-  into-a-ditch is funny once; it is a *game* when the ditch sends you back to
-  build for a slope-aware variant **and the load chart moves by a number you can
-  read.** Curriculum and economy in the same object.
+Detail: `docs/design/mechanics.md`. They are listed there rather than here
+because each one *follows* from the core commitments — that is the argument for
+keeping them.
+
+- **Phantom Labor** — attacks the sensor surface capability created. Antagonist
+  and difficulty curve become the same object.
+- **Hot-patching, anchored on LOTO** — lock outputs (safe, inert, late) versus
+  rewire live (gambling on transient authority handoff).
+- **Component curriculum** — every rung-one component has a named, visible,
+  unaffordable rung-two successor. Curriculum and economy in one object.
 
 ## 8. Simulation — multi-layer
 
@@ -201,15 +179,41 @@ switching it off does not fake a fall, it removes the thing that was holding you
 up. Mechanic and physics from the same object. See
 `docs/design/physics-migration.md` for the tier costs and what inverts.
 
-## 9. Stack
+## 9. Stack — settled
 
-**Vite · Svelte 5 · Vitest · Three.js · Rapier (wasm).**
+**TypeScript · Vite · Svelte 5 · Vitest · Biome · Three.js · Rapier (wasm).**
 
-**Mobile-first. Touch is the primary input, not a fallback.** This is not a
-polish note — it is why the rack is a DIN rail and not a node graph.
+**Mobile-first is fixed. Touch is the primary input, not a fallback.** The
+reason is mechanical, not aesthetic: viewport budgeting (§ 6) is a core game
+mechanism, and it is coupled deeply to touch — direct manipulation, thumb reach,
+occlusion by your own hand, no hover, no pixel precision. A desktop-first
+cockpit would be a different mechanic wearing the same name. This is upstream of
+stack, layout and control design alike.
 
-Single-file HTML output is a proven pattern in this codebase family, but **not
-for the Rapier build** — Rapier wants a real bundler.
+Use `@dimforge/rapier3d-deterministic`: it is bit-level cross-platform
+deterministic and `world.createSnapshot()` hashes identically across machines,
+which makes replay a test rather than an aspiration. It costs SIMD and parallel
+features. Rapier also rules out single-file HTML output — it wants a bundler.
+
+Rejected, with reasons, so they are not relitigated:
+
+- **Godot** — its web export cannot run C# at all (no .NET in the browser
+  sandbox) and is Compatibility-renderer only, so GDScript would be the only
+  option for a control-loop-heavy sim on the one platform that must ship. Add an
+  order-of-magnitude larger first load, and the fact that half this game is 2D
+  UI where the DOM wins. *Would be reconsidered only if mobile-first browser
+  stopped being a requirement — and it will not.*
+- **Babylon.js** — genuinely competitive (TS-native, built-in inspector, Havok),
+  but the switching cost lands exactly on the cel pipeline, which is Three-
+  specific, already proven, and the artful part. Do not rewrite the proof.
+- **Jolt** — better articulated-body support and it ships a tracked-vehicle
+  controller, which rung 1 could use. Declined deliberately: **a black-box
+  vehicle controller is an anti-feature here.** Differential drive with friction
+  *is* the teaching layer; we write that one.
+
+No further dependencies without a reason. The art direction is procedural boxes
+and cylinders, so **no asset pipeline is needed for a long time** — do not build
+one preemptively.
 
 ## 10. The prototype
 
@@ -253,6 +257,28 @@ The tree is a claim about seams, not a promise about files. Move a seam if it
 turns out to be wrong, and record the move here.
 
 ## 12. Conventions
+
+### The three architecture rules
+
+Adopted before any production code. Each is load-bearing for a pillar and each
+is mechanically checkable. Rationale and checks: `docs/design/architecture-rules.md`.
+
+1. **The sim runs headless.** No renderer dependency in `src/sim/`,
+   `src/control/` or `src/modules/` — no `three`, no DOM, no canvas. This is
+   what makes Vitest useful for a game and what keeps a worker possible.
+2. **Fixed timestep, seeded PRNG.** The sim advances in fixed steps; rendering
+   interpolates and never drives. **No `Math.random()` sim-visible, ever** — the
+   seed is part of the recorded scenario. Attribution is the design, and a
+   failure you cannot reproduce cannot be blamed on a decision.
+3. **One-directional snapshot boundary.** Sim is imperative at ~60 Hz; UI reads
+   a snapshot at ~10 Hz. Instruments never subscribe to live sim state — an
+   instrument is a view of a recording, which is why the same code drives a
+   replay. **Svelte never owns the canvas. Do not use Threlte.**
+
+Breaking one of these is not a style disagreement. Say so out loud, and change
+that file first.
+
+### Coding
 
 - **One fact, one place.** Three of the four probe defects came from keeping one
   fact in two places (heading in `body.yaw` *and* `root.rotation.y`; hull height

@@ -11,20 +11,12 @@ or delete. Do not grow the file.
 
 ---
 
-## Does an external chase camera exist in the shipped game?
+## Field stowing of panels
 
-Occlusion is a core mechanic and a chase view defeats it — the probe's external
-view is strictly better than the cab whenever panels are installed. Cab-only is
-coherent but harsh on mobile, which is the primary target.
-
-**Sharpened by § 6.1**: instruments are now mandatory, so occlusion is not
-opt-out. A chase camera is therefore not a comfort setting, it is an escape
-hatch from a core mechanic. The training frame offers a possible out — a rig
-plausibly has an external observation view, and using it could simply be
-recorded rather than forbidden.
-
-Sub-question: **field stowing of panels** — allowed at a cost in hands or
-seconds, or not at all?
+Left over from the chase-camera decision. Instruments are installed, not
+toggled — but may they be *stowed* in the field at a cost in hands or seconds,
+or not at all? The chase camera's shape suggests an answer (available, but it
+costs you something real while it is up), which has not been confirmed.
 
 ## Determinism discipline: transcendentals are not portable
 
