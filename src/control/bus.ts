@@ -52,6 +52,15 @@ export interface Module {
   enabled: boolean;
   /** What this module wants, on its own terms. Null means nothing to say. */
   intent(): TrackCommand | null;
+  /**
+   * Numbers this module publishes for its own instrument.
+   *
+   * Components ship mandatory instruments (docs/design/cockpit.md), and an
+   * instrument reads a snapshot rather than the live module — so whatever it
+   * needs has to travel through here. Plain numbers only: this crosses the
+   * one-directional boundary and has to stay a value.
+   */
+  readout?(): Readonly<Record<string, number>> | undefined;
 }
 
 /** One module's contribution, kept so the chain can be read stage by stage. */
@@ -63,6 +72,8 @@ export interface Stage {
   /** True when the module had nothing to say and simply passed the signal on. */
   readonly idle: boolean;
   readonly output: TrackCommand;
+  /** Whatever the module publishes for its instrument. */
+  readonly readout?: Readonly<Record<string, number>>;
 }
 
 export interface BusResult {
@@ -120,6 +131,7 @@ export function runRack(modules: readonly Module[]): BusResult {
       enabled: module.enabled,
       idle: intent === null,
       output: signal,
+      readout: module.readout?.(),
     });
   }
 

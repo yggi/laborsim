@@ -173,6 +173,24 @@ export function createViewport(
   }
   const wheels: { left: Wheel[]; right: Wheel[] } = { left: [], right: [] };
 
+  /**
+   * Track grousers — the plates that actually bite the ground.
+   *
+   * They travel at **commanded** track speed, not at the speed the machine is
+   * making over the ground. That difference is slip, and this is the only place
+   * you can *see* it: belt racing under a machine that is not moving. The
+   * telemetry number said the same thing, but a number is something you read
+   * and this is something you notice.
+   */
+  const GROUSERS = 9;
+  const GROUSER_PITCH = TRACK.length / GROUSERS;
+  const grouserGeom = new THREE.BoxGeometry(TRACK.width * 1.08, 0.07, 0.13);
+  const grousers: { left: THREE.Mesh[]; right: THREE.Mesh[] } = {
+    left: [],
+    right: [],
+  };
+  const beltPhase = { left: 0, right: 0 };
+
   for (const [name, x] of [
     ["left", LEFT_X],
     ["right", RIGHT_X],
@@ -200,6 +218,17 @@ export function createViewport(
       pivot.add(mesh);
       machine.add(pivot);
       wheels[name].push({ pivot, radius });
+    }
+
+    // Two runs: the plates come back over the top, so the belt reads as a loop
+    // rather than a row of blocks sliding along the ground.
+    for (let i = 0; i < GROUSERS * 2; i++) {
+      const plate = new THREE.Mesh(grouserGeom, rubber);
+      plate.castShadow = true;
+      ink(plate, 0.018);
+      plate.position.x = x;
+      machine.add(plate);
+      grousers[name].push(plate);
     }
   }
 
@@ -241,6 +270,31 @@ export function createViewport(
         ] as const) {
           for (const wheel of wheels[name]) {
             wheel.pivot.rotation.x += (track.commanded / wheel.radius) * dt;
+          }
+
+          // Advance the belt by commanded speed and wrap it into one pitch.
+          const loop = TRACK.length * 2;
+          beltPhase[name] =
+            (((beltPhase[name] + track.commanded * dt) % loop) + loop) % loop;
+          const plates = grousers[name];
+          for (let i = 0; i < plates.length; i++) {
+            const plate = plates[i];
+            if (!plate) continue;
+            const along = (i * GROUSER_PITCH + beltPhase[name]) % loop;
+            if (along < TRACK.length) {
+              // Bottom run, travelling forward under the machine.
+              plate.position.set(plate.position.x, 0.035, along - TRACK.length / 2);
+              plate.rotation.set(0, 0, 0);
+            } else {
+              // Top run, coming back the other way.
+              const back = along - TRACK.length;
+              plate.position.set(
+                plate.position.x,
+                TRACK.height - 0.035,
+                TRACK.length / 2 - back,
+              );
+              plate.rotation.set(Math.PI, 0, 0);
+            }
           }
         }
       }

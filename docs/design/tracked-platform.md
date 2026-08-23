@@ -53,6 +53,14 @@ Measured: 42° climbs at 95% grip; 50° grinds partway up, rears to −72°, los
 contact and ends upside down at the bottom. Pinned by tests in
 `tests/machine.test.ts` so a model change has to be deliberate.
 
+## Slip, made visible
+
+Track grousers travel at **commanded** speed, not at the speed the machine is
+making over the ground. That difference *is* slip, and the belt is the only
+place you can see it rather than read it: plates racing under a machine that is
+not moving. The sprockets spin from the same number, and left and right run
+independently.
+
 ## Slip is the teaching quantity
 
 **Commanded track speed minus actual ground speed under the track.** Every

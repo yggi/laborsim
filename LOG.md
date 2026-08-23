@@ -18,6 +18,58 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — the dark area was the contour code
+
+Cards: none closed · [L-025] narrowed
+
+**Found it, on the fourth attempt.** The dark slab across the site was the
+contour shader, and the tell was one I should have used first: it appeared
+exactly when `terrainMaterial` landed, and survived every lighting change.
+
+The mechanism is worth writing down. Contours are drawn where the distance to
+the nearest contour multiple, divided by that value's screen-space derivative,
+is under about a pixel. On **perfectly flat ground both terms vanish**: the
+derivative goes to zero *and* the distance goes to zero, if the ground happens
+to sit exactly on a multiple. The graded starting pad is at exactly 0 m, which
+is a multiple of both the 1 m and 5 m spacings — so the entire pad passed the
+line test at once and rendered as one enormous contour line, darkened twice.
+
+Fixed by gating contours on relief, which is also cartographically right: flat
+ground has no contours. Three earlier diagnoses — shadow frustum, hill shading,
+ramp darkness — were all wrong, and each was disproved by an experiment I
+should have run before proposing the next hypothesis. The isolating test
+(`receiveShadow = false`) took one build and settled the shadow question
+permanently; I ran it third instead of first.
+
+**Track grousers** now travel at commanded speed on both runs of the belt, so
+slip is something you *see* — plates racing under a machine that is not moving —
+rather than a number you read. Left and right run independently.
+
+**The rack became a posture rather than a panel.** Looking down slides the
+viewport up until only a strip of windscreen remains, and the rack fills the
+rest. You have dropped your eyes from the glass to the cabinet between your
+knees, the machine keeps running, and reconfiguring on the move costs exactly
+what it should. That makes hot-patching (L-026) a posture rather than a menu.
+
+**Strength meters** on every module slot and both actuator terminals, filled by
+fraction of drivetrain capacity and coloured for direction. The numbers are
+demoted to debug telemetry: a number is something you read, a bar is something
+you notice, and that difference matters when your attention is on the ground.
+
+**NAV-1 ships a route scope**, the machine's first mandatory instrument, and it
+already occludes the windscreen — the panel budget biting for the first time.
+Deliberately not a map: no terrain, no obstacles, just the route and where you
+are on it, nose-up. It shows exactly what the module knows, because an
+instrument that drew the ground would be lying about the component behind it,
+and the player would blame the autopilot for something the *panel* implied it
+could see. Pins are selectable, which is the pilot's one lever on the autopilot
+short of switching it off.
+
+To wire that without breaking rule 3, modules gained a `readout()` of plain
+numbers that travels inside their stage. Instruments read it from the snapshot
+rather than holding a live module, so the boundary holds and the same
+instrument code will drive a replay.
+
 ## 2026-08-23 — determinism audit, survey ground, greebles
 
 Cards: none closed · rule 2 now enforced by test

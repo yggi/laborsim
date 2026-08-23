@@ -14,10 +14,11 @@ import type { Module } from "./control/bus.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
-import { createAutonav } from "./modules/autonav.ts";
+import { type Autonav, createAutonav } from "./modules/autonav.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
 import Lever from "./ui/Lever.svelte";
+import NavRadar from "./ui/NavRadar.svelte";
 import Rack from "./ui/Rack.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
 
@@ -47,7 +48,11 @@ const pilot: Module = {
  */
 const rack: Module[] = $state([pilot]);
 let rackOpen = $state(false);
+let nav = $state<Autonav | undefined>(undefined);
+let route = $state<readonly { x: number; z: number }[]>([]);
 let rackVersion = $state(0);
+/** Numeric telemetry is debug now that the meters carry the live reading. */
+let showDebug = $state(true);
 
 let setViewMode: (m: CameraMode) => void = () => {};
 
@@ -67,16 +72,17 @@ $effect(() => {
     const world = createWorld({ modules: rack });
     // NAV needs the pose of the machine it is driving, so it is built once the
     // world exists and pushed onto the rail below the pilot.
-    rack.push(
-      createAutonav(
-        world.waypoints,
-        () => {
-          const t = world.machine.body.translation();
-          return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
-        },
-        { verb: "CAP", enabled: false },
-      ),
+    route = world.waypoints;
+    const autonav = createAutonav(
+      world.waypoints,
+      () => {
+        const t = world.machine.body.translation();
+        return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
+      },
+      { verb: "CAP", enabled: false },
     );
+    nav = autonav;
+    rack.push(autonav);
     const viewport = createViewport(
       canvas,
       world.terrain,
@@ -147,11 +153,16 @@ $effect(() => {
 });
 </script>
 
-<canvas bind:this={canvas}></canvas>
+<!-- Looking down at the rack slides the whole viewport up: a strip of glass
+     stays visible at the top, and the machine keeps running while you read. -->
+<div class="viewport" class:down={rackOpen}>
+  <canvas bind:this={canvas}></canvas>
+  <div class="cabframe" class:cab={mode === "cab"}></div>
+</div>
 
-<div class="cabframe" class:cab={mode === "cab"}></div>
-
-<Telemetry snapshot={latest} showChain={!rackOpen} />
+{#if showDebug}
+  <Telemetry snapshot={latest} showChain={!rackOpen} />
+{/if}
 
 {#if mode === "cab"}
   <div class="levers left"><Lever label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} /></div>
@@ -165,8 +176,17 @@ $effect(() => {
 
 {#if rackOpen}
   {#key rackVersion}
-    <Rack modules={rack} stages={latest?.stages ?? []} onchange={() => rackVersion++} />
+    <Rack modules={rack} snapshot={latest} onchange={() => rackVersion++} debug={showDebug} />
   {/key}
+{/if}
+
+<!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
+{#if nav && mode === "cab" && !rackOpen}
+  <NavRadar
+    snapshot={latest}
+    waypoints={route}
+    onselect={(i) => nav?.setTarget(i)}
+  />
 {/if}
 
 <style>
@@ -174,8 +194,16 @@ $effect(() => {
      lays out at its INTRINSIC (drawing-buffer) size, not the inset box. This
      cost the concept-3 probe a debugging round — see
      docs/design/prototype-findings.md. */
-  canvas {
+  .viewport {
     position: fixed;
+    inset: 0;
+    transition: transform 0.28s ease;
+  }
+  .viewport.down {
+    transform: translateY(-74vh);
+  }
+  canvas {
+    position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
@@ -184,7 +212,7 @@ $effect(() => {
 
   /* The viewport is a window, not a screen. */
   .cabframe {
-    position: fixed;
+    position: absolute;
     inset: 0;
     pointer-events: none;
     box-shadow: inset 0 0 0 6px #0d1012, inset 0 0 120px rgba(0, 0, 0, 0.5);

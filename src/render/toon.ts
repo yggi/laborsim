@@ -182,9 +182,14 @@ export function terrainMaterial(color: number): THREE.MeshToonMaterial {
       float majorLine = 1.0 - smoothstep(0.0, 1.6,
         abs(fract(majorU - 0.5) - 0.5) / max(fwidth(majorU), 1e-5));
 
-      // Fade them where the ground is near vertical and the spacing collapses,
-      // so they read as survey rather than as noise.
-      float legible = 1.0 - smoothstep(0.55, 0.85, steep);
+      // Gate on relief. Flat ground has no contours — and without this it is
+      // worse than pointless: a perfectly level area sitting *on* a contour
+      // multiple has both a vanishing derivative and a vanishing distance to
+      // the line, so the whole area passes the line test at once and renders
+      // as one enormous dark slab. The graded starting pad is at exactly 0 m,
+      // which is a multiple of both spacings, so it did precisely that.
+      float relief = smoothstep(0.015, 0.10, steep);
+      float legible = relief * (1.0 - smoothstep(0.55, 0.85, steep));
       gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * 0.74,
         minorLine * 0.5 * legible);
       gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * 0.46,

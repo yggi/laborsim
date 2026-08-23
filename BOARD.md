@@ -80,10 +80,11 @@ Card format:
 - **done-when:** a site has at least one feature that defeats a careless driver.
 
 ### [L-025] Panel budget and occlusion
-- **what:** fixed glass area, instruments declare their size, installed rather
-  than toggled. Chase camera as an observation mode with no vehicle control.
-- **done-when:** installing an instrument measurably costs you view, and the
-  chase view cannot be used to drive.
+- **what:** NAV-1's route scope is the first mandatory instrument and already
+  costs view. Still missing is the *budget*: a fixed glass area, instruments
+  declaring their size, and a component refusable for want of it.
+- **done-when:** fitting a component can fail because its instrument will not
+  fit.
 
 ### [L-009] Phantom Labor — the hazard equalizer
 - **what:** attacks the sensor surface that capability created. Makes the

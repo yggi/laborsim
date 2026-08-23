@@ -49,6 +49,46 @@ So mobile-first is **fixed**, and it is upstream of stack, layout and control
 design alike. A desktop-first cockpit would be a different mechanic wearing the
 same name.
 
+## Looking down at the rack
+
+The rail is not a panel that opens over the view — **you look down at it.** The
+viewport slides up so only a strip of windscreen remains at the top, and the
+rack fills what is left.
+
+That is the posture it describes: you have dropped your eyes from the glass to
+the cabinet between your knees, and while you are reading it you are not
+watching where you are going. The machine keeps running throughout. It is the
+same bargain as the chase camera, made with a different part of the body, and
+it means *reconfiguring on the move costs you exactly what it should*.
+
+Consequence worth noting: this makes hot-patching (L-026) a posture rather than
+a menu. Rewiring live already costs you the view; LOTO will price the rest.
+
+## Instruments carry LEDs, not just numbers
+
+Every module slot and every actuator terminal shows **output strength as a
+meter**, filled by fraction of drivetrain capacity and coloured for direction.
+That is the reading you take at a glance while driving.
+
+The numeric values stay, but demoted to **debug telemetry**. A number is
+something you read; a bar is something you notice, and the difference matters
+when your attention is on the ground rather than the panel.
+
+## NAV-1's instrument: the route scope
+
+The first mandatory instrument on the machine, and it is deliberately **not a
+map**. No terrain, no contours, no obstacles — a radar-style plot of the route,
+the pins, and where you are on it, nose-up.
+
+That restraint is the point. It shows exactly what NAV-1 knows and nothing
+more, so the instrument cannot imply a competence the module does not have. An
+instrument that drew the ground would be lying about the component behind it,
+and the player would rightly blame the autopilot for driving into something the
+*panel* appeared to see.
+
+Pins are selectable: tapping one retargets the module. That is the pilot's one
+lever on the autopilot short of switching it off.
+
 ## The chase camera — "hands off the wheel"
 
 **Available — but you cannot drive from it, and the world does not wait.**

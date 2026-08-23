@@ -122,6 +122,16 @@ and it reads the same live or in replay. Minimum surface:
 - every module's one-sentence statement of what it considers, on the slot,
 - a module that has nothing to say marked **idle**, never silently absent.
 
+## Modules publish their instrument data
+
+A module may expose a `readout()` of plain numbers, which travels down the chain
+inside its stage. Instruments read that from the snapshot rather than holding a
+live module reference, which is what keeps the one-directional boundary intact
+and what lets the same instrument code drive a replay.
+
+It is also how "components ship mandatory instruments" is actually wired: the
+component publishes, the cockpit displays, and neither one reaches into the sim.
+
 ## Acceptance test
 
 Two components fighting over one actuator must be reachable **within ten minutes

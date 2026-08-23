@@ -40,6 +40,8 @@ export interface NavPose {
 export interface Autonav extends Module {
   /** Index of the pin it is currently heading for. */
   readonly target: number;
+  /** Send it to a different pin. The pilot's one lever on the autopilot. */
+  setTarget(index: number): void;
   readonly waypoints: readonly Waypoint[];
 }
 
@@ -59,7 +61,11 @@ export function createAutonav(
     get target() {
       return target;
     },
+    setTarget(index: number) {
+      if (index >= 0 && index < waypoints.length) target = index;
+    },
     waypoints,
+    readout: () => ({ target, pins: waypoints.length }),
     intent(): TrackCommand | null {
       if (waypoints.length === 0) return null;
 
