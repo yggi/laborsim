@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output (anchored — src/build/ is source, not output)
+/dist/
+/build/
+.cache/
+
+# editor / os
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# logs
+*.log
+npm-debug.log*
+
+# env
+.env
+.env.local
