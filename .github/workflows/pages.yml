@@ -1,0 +1,68 @@
+name: deploy
+
+# The training rig should be one tap away on a phone, which is the only place
+# the cockpit can honestly be judged. Every push to the default branch
+# republishes it — but only if the checks pass, so a broken machine cannot
+# reach the site.
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it; skip superseded ones.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - uses: actions/configure-pages@v5
+        id: pages
+        with:
+          # Provision the Pages site on first run rather than needing someone
+          # to click through Settings first.
+          enablement: true
+
+      - name: Build
+        # Project pages are served from /<repo>/, so the bundle needs to know
+        # its own base. Taken from the Pages config rather than hardcoded, so
+        # renaming the repo cannot silently break asset paths.
+        run: npm run build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

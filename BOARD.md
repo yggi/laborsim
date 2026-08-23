@@ -143,6 +143,11 @@ Card format:
 
 ## history
 
+### [L-030] Playable from GitHub Pages — **closed**
+Public URL, deployed on every green push to the default branch. CI gates the
+deploy on lint, typecheck and tests, so a broken machine cannot reach the site.
+Base path comes from the Pages config, not hardcoded.
+
 ### [L-016] Telemetry line from frame one — **closed**
 Speed, attitude, per-track command/slip/grip/contacts, and the bus owner with
 its suppressed layers. Colour-coded on grip. Shipped with rung 1, not after it.

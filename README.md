@@ -9,9 +9,18 @@ find out which of your assumptions was wrong.
 What is being simulated is not combat and not locomotion. It is **the gap
 between what a machine is rated to do and what it does on the day.**
 
-**Status: v0.** The toolchain is up and the architecture rules are enforced by
-tests. No game yet — the first machine is `BOARD.md` L-014. Feasibility was
-proven separately in `prototype/concept-3/`, which needs no build step.
+### ▶ [Drive it](https://yggi.github.io/laborsim/)
+
+Best on a phone. Two levers, one per thumb — tank steering, and you fight it to
+go straight. They do not self-centre, so what you leave them at is what the
+machine keeps doing. Watch **SLIP**: that is the whole of rung 1.
+
+Deployed from the default branch on every green push.
+
+**Status: v0.** Rung 1 of the machinery ladder drives — a tracked platform on
+procedural terrain, with a cab view and a telemetry line. No rack yet; that is
+`BOARD.md` L-015. Feasibility was proven separately in `prototype/concept-3/`,
+which needs no build step.
 
 **Stack:** TypeScript · Vite · Svelte 5 · Vitest · Biome · Three.js · Rapier
 (deterministic wasm). **Mobile-first** — touch is the primary input, because
