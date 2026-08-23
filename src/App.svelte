@@ -52,7 +52,7 @@ $effect(() => {
     if (disposed) return;
 
     const world = createWorld({ sources: [pilot] });
-    const viewport = createViewport(canvas, world.terrain);
+    const viewport = createViewport(canvas, world.terrain, world.props);
     const clock = makeClock();
     setViewMode = viewport.setMode;
 

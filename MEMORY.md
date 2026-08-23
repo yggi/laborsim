@@ -16,6 +16,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
+| `docs/design/missions.md` | **exploratory** — Zachtronics budgeting, and why it inverts the chase camera |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
 | `docs/design/stack.md` | the stack, and the rejected options with their reasons |

@@ -14,6 +14,7 @@ import { hashBytes } from "../core/hash.ts";
 import { attitudeOf, type Snapshot } from "../core/snapshot.ts";
 import { CLEARANCE, TRACK } from "../core/spec.ts";
 import { vec } from "../core/vec.ts";
+import { generateProps, PROP_BOX, type Prop } from "../world/props.ts";
 import {
   CELL,
   GRID,
@@ -43,6 +44,7 @@ export interface SimWorld {
   /** Fingerprint of full physics state — the determinism check. */
   fingerprint(): string;
   readonly terrain: Terrain;
+  readonly props: readonly Prop[];
   readonly machine: TrackedMachine;
   free(): void;
   readonly tick: number;
@@ -74,6 +76,30 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       // machine comes from the track model, so that it stays inspectable.
       .setFriction(0),
   );
+
+  // Site furniture gets real static colliders, so it is something you can hit
+  // rather than something painted on. The damage ledger will attach here.
+  const props = generateProps(terrain);
+  for (const prop of props) {
+    const [hx, hy, hz] = PROP_BOX[prop.kind];
+    const bodyDesc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(prop.x, prop.y + hy * prop.scale, prop.z)
+      .setRotation({
+        x: 0,
+        y: Math.sin(prop.yaw / 2),
+        z: 0,
+        w: Math.cos(prop.yaw / 2),
+      });
+    const propBody = world.createRigidBody(bodyDesc);
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(
+        hx * prop.scale,
+        hy * prop.scale,
+        hz * prop.scale,
+      ).setFriction(0.4),
+      propBody,
+    );
+  }
 
   const startY =
     (options.terrain ? 0 : heightAt(0, 0, seed)) + TRACK.height + CLEARANCE + 0.1;
@@ -117,6 +143,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       return hashBytes(world.takeSnapshot());
     },
     terrain,
+    props,
     machine,
     free() {
       world.free();

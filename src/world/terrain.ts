@@ -134,3 +134,25 @@ export function generateTerrain(seed: number): Terrain {
   }
   return { heights, materials: new Uint8Array(GRID * GRID), seed, extent };
 }
+
+/**
+ * Bilinear height lookup into a generated Terrain. Works for any terrain,
+ * including the test ramps, which `heightAt` cannot do since it only knows the
+ * noise generator. Used to sit props on the ground.
+ */
+export function sampleTerrain(terrain: Terrain, x: number, z: number): number {
+  const n = GRID + 1;
+  const half = terrain.extent / 2;
+  const fx = ((x + half) / terrain.extent) * GRID;
+  const fz = ((z + half) / terrain.extent) * GRID;
+  const ix = Math.max(0, Math.min(GRID - 1, Math.floor(fx)));
+  const iz = Math.max(0, Math.min(GRID - 1, Math.floor(fz)));
+  const tx = Math.max(0, Math.min(1, fx - ix));
+  const tz = Math.max(0, Math.min(1, fz - iz));
+  const h = terrain.heights;
+  const a = h[ix * n + iz] as number;
+  const b = h[(ix + 1) * n + iz] as number;
+  const c = h[ix * n + iz + 1] as number;
+  const d = h[(ix + 1) * n + iz + 1] as number;
+  return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz;
+}

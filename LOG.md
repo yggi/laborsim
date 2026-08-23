@@ -18,6 +18,56 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — cel pipeline, a site worth driving through
+
+Cards: closed [L-024] · [L-023] narrowed · history trimmed to its gate
+
+Ported the probe's cel pipeline as mechanism rather than structure: a stepped
+gradient ramp on MeshToonMaterial, a fresnel rim injected via `onBeforeCompile`
+— **kept guarded**, so a future three.js dropping the varying renders without a
+rim instead of a black screen — and inverted-hull ink shells scaled **per axis**
+from each geometry's own bounds, so a thin plate and a chunky block get the same
+apparent line weight. Added a banded gradient sky dome; anime skies are flat
+washes with visible steps, and the same quantize-and-blend trick as the cel ramp
+does it.
+
+The ink immediately broke the cab view to solid black, which was instructive.
+Ink shells are BackSide, and the operator's eye sits *inside* the cab box — so
+where backface culling used to hide the cab for free, the shell's interior
+became an opaque wall. Fixed with a dedicated layer the cab camera disables,
+which reproduces exactly what culling did and keeps ink lines everywhere else.
+Worth remembering as a general hazard: inverted-hull outlining and interior
+cameras do not mix without a plan.
+
+**Site furniture went in as world data, not decoration** — cones, marker poles,
+pipe stacks, barriers and rock outcrops in `src/world/props.ts`, deterministic
+from the seed, with real static colliders in the sim. That placement was
+deliberate: a cone painted on by the renderer could never become
+`site fixture (cone) damaged −¥400`, and the ledger is the point. They cluster
+into work areas rather than scattering evenly, because a site reads as *worked*
+when things gather and as litter when they do not. Rocks are the exception —
+they are landscape, so they stay scattered.
+
+**Recorded a play-session direction as `docs/design/missions.md`, marked
+exploratory and explicitly not v0**: Zachtronics-style budgeting, scored on
+budget, time and complexity, where complexity trades parts and weight against
+operator interaction.
+
+Two things in it are worth more than the missions themselves. It **inverts the
+chase camera** — settled as a cost, it becomes a reward, because a solution good
+enough to run itself is one you can watch, and the same button then means both
+"I gave up control" and "I no longer need it" depending on what you built. And
+it makes **determinism the scoring substrate** rather than only an attribution
+tool: an autopilot mission can demand the same configuration verified across
+different seeded sites.
+
+The striking part is that none of it asks v0 to change. The rack is the
+complexity axis, the damage ledger is a budget line, determinism is the
+verifier, seeded sites are one integer apart. That convergence is the best
+evidence so far that the v0 scope was drawn in the right place. The open core
+is the metric: **what counts as operator interaction** is undefined, and it is
+load-bearing.
+
 ## 2026-08-23 — mirrored steering, and giving the machine a face
 
 Reported from the live build: steering went the wrong way, and — the more

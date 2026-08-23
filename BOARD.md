@@ -81,15 +81,10 @@ Card format:
 ## backlog
 
 ### [L-023] Terrain — the probe's designed site features
-- **what:** generic value-noise terrain exists. Still missing are the *designed*
-  features from the probe: quarry benches, the graded haul road, the trench,
-  spoil mounds. Landscape is scenery; these are the parts you get stuck on.
+- **what:** noise terrain and clustered site furniture exist. Still missing are
+  the *designed* features from the probe: quarry benches, the graded haul road,
+  the trench, spoil mounds. Those are the parts you get stuck on.
 - **done-when:** a site has at least one feature that defeats a careless driver.
-
-### [L-024] Cel pipeline port
-- **what:** gradient-ramp toon, guarded fresnel rim, inverted-hull ink shells.
-  Mechanisms from the probe, not its structure.
-- **done-when:** rung 1 renders in the concept-art look on a phone.
 
 ### [L-025] Panel budget and occlusion
 - **what:** fixed glass area, instruments declare their size, installed rather
@@ -143,6 +138,11 @@ Card format:
 
 ## history
 
+### [L-024] Cel pipeline port — **closed**
+Stepped toon ramp, guarded fresnel rim, per-axis inverted-hull ink. Banded sky
+dome. Site furniture as real colliders in `src/world/props.ts`, clustered into
+work areas — world data, not decoration, because the ledger must price it.
+
 ### [L-030] Playable from GitHub Pages — **closed**
 Public URL, deployed on every green push to the default branch. CI gates the
 deploy on lint, typecheck and tests, so a broken machine cannot reach the site.
@@ -175,13 +175,3 @@ Answered by `HANDOVER.md` § 10: the acceptance test on rung 1. Became L-018.
 Answered: a linear priority stack with subsumption semantics, not a tree or a
 graph. Position is priority. → `docs/design/arbitration.md`.
 
-### [L-003] Pin the layer axis — **partially closed**
-The physics tiers turned out to be a *development* ladder, not a player-facing
-one. The player-facing question survives as a NOTES thread.
-
-### [L-002] Hello-viewport — **closed as superseded**
-The probe already proved the browser can carry this. Replaced by L-013 + L-014.
-
-### [L-001] Choose the stack — **closed**
-Vite · Svelte 5 · Vitest · Three.js · Rapier (wasm), mobile-first.
-Rapier since confirmed, and in use on rung 1.

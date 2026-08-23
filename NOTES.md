@@ -27,6 +27,23 @@ build mode away from the sim, and lazily load instruments.
 Worth setting an explicit first-load budget *before* the bundle grows enough to
 make the choice for us.
 
+## Missions, and what "operator interaction" means
+
+A play session produced a coherent direction — Zachtronics-style budgeting,
+scored on budget / time / **complexity**, with complexity as parts-and-weight
+traded against operator interaction. Written up in `docs/design/missions.md`
+and explicitly **not v0**.
+
+Two things there are worth carrying even if missions never land. First: it
+inverts the chase camera from a cost into a reward, because a solution good
+enough to run itself is one you can watch. Second: determinism stops being only
+an attribution tool and becomes the substrate for *verifying* a solution across
+several sites.
+
+The unresolved core is the metric. **What counts as operator interaction** —
+lever changes, seconds hands-on, distinct inputs? It is the load-bearing number
+in the only scoring axis that puts two goods in tension, and it is undefined.
+
 ## Field stowing of panels
 
 Left over from the chase-camera decision. Instruments are installed, not
