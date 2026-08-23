@@ -60,13 +60,17 @@ function valueNoise(x: number, z: number, seed: number): number {
  * which is what makes getting stuck real rather than scheduled.
  */
 export function heightAt(x: number, z: number, seed: number): number {
+  // Steeper than it was, and steeper on the short wavelengths especially: the
+  // machine's whole character is what happens on a grade, and gentle ground
+  // gives it nothing to be bad at. The climb limit is 43.5°, so the site should
+  // have plenty of ground either side of that.
   let h = 0;
-  let amplitude = 5.5;
-  let frequency = 1 / 62;
+  let amplitude = 7.6;
+  let frequency = 1 / 54;
   for (let octave = 0; octave < 4; octave++) {
     h +=
       (valueNoise(x * frequency, z * frequency, seed + octave) - 0.5) * 2 * amplitude;
-    amplitude *= 0.48;
+    amplitude *= 0.55;
     frequency *= 2.13;
   }
   // A graded working pad, so the machine does not start on a slope.

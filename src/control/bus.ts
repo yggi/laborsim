@@ -38,10 +38,37 @@ export type Verb = "SET" | "CAP" | "ADD" | "AMP";
 
 export const VERBS: readonly Verb[] = ["SET", "CAP", "ADD", "AMP"];
 
+/**
+ * A number the pilot can turn on a fitted module.
+ *
+ * Deliberately thin: a bounded number with a name and a unit, nothing else. A
+ * parameter is a setting on a component you bought, not a tuning knob on the
+ * simulation — the gain-tuning trap (NOTES) is exactly what this must not
+ * become, so there is no way to express a gain here and no plan to add one.
+ */
+export interface Param {
+  readonly id: string;
+  readonly label: string;
+  /** Shown after the value. Display only; the module owns the real units. */
+  readonly unit: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  get(): number;
+  set(value: number): void;
+}
+
 export interface Module {
   readonly id: string;
   /** Shown to the pilot. Never a bare id. */
   readonly label: string;
+  /**
+   * Who built it. Components come from different manufacturers, and the rail
+   * shows that — different plates, different colours, different layouts. It is
+   * cosmetic on purpose: a rack of mixed kit reads as equipment someone
+   * assembled rather than as a menu the game drew.
+   */
+  readonly maker: string;
   /** One honest sentence about what this module considers. */
   readonly considers: string;
   verb: Verb;
@@ -61,6 +88,8 @@ export interface Module {
    * one-directional boundary and has to stay a value.
    */
   readout?(): Readonly<Record<string, number>> | undefined;
+  /** Settings on the faceplate. Omitted by modules that have none. */
+  readonly params?: readonly Param[];
 }
 
 /** One module's contribution, kept so the chain can be read stage by stage. */

@@ -25,7 +25,7 @@ Card format:
 
 ## ready
 
-Order and reasoning: `docs/design/roadmap.md`. The first four cards close the
+Order and reasoning: `docs/design/roadmap.md`. The first five cards close the
 core loop once, at rung 1, over the rack as the build surface.
 
 ### [L-031] Damage model — the world can be broken
@@ -34,6 +34,13 @@ core loop once, at rung 1, over the rack as the build surface.
   side. No presentation — that is L-029.
 - **done-when:** driving into the scooter destroys it and the sim records what,
   where, how hard and what it cost.
+
+### [L-039] Breakables worth breaking
+- **what:** the site as an inventory of expensive things. More props, more
+  kinds, materials and prices — a damage model is worthless against six crates.
+  Quarry tier first: plenty to wreck, nobody to hurt.
+- **done-when:** a careless run through a work area produces a list, not a line.
+- **needs:** L-031
 
 ### [L-032] Record and playback — one engine
 - **what:** an input trace plus the seed reproduces a run exactly in this
@@ -73,22 +80,39 @@ core loop once, at rung 1, over the rack as the build surface.
 - **done-when:** a number exists, and a written first-load and frame budget with
   it.
 
-### [L-015] The rail — drag to reorder, and the DIN-rail treatment
-- **what:** the pipeline model, verbs and reordering all work; what is missing
-  is the *rail*. Drag rather than arrows, slot styling, ~8 slots, and deciding
-  whether it is editable during sim (which is L-026, not a UX choice).
+### [L-015] The rail — drag to reorder
+- **what:** the pipeline model, verbs, settings and reordering all work, and the
+  plates now look like equipment. What is missing is **drag**: reordering is
+  still arrows. Also ~8 slots, and whether it is editable during sim (which is
+  L-026, not a UX choice).
 - **done-when:** you can drag a slot with a thumb and the machine changes.
-
-### [L-035] Throttle-and-steer — the third module
-- **what:** the named rung-2 successor to the two levers, and the first
-  component curriculum entry. Turns the rack from a two-slot demo into an
-  ordering problem.
-- **done-when:** three modules contend for one actuator and order changes which
-  one you feel.
 
 ---
 
 ## backlog
+
+### [L-038] The machine breaks too, and the reset
+- **what:** damage to the vehicle, destruction, and a diegetic reset — the rig
+  re-racks the exercise, it does not respawn you. Degradation before
+  destruction is the strong version and explicitly not v0.
+- **done-when:** you can wreck the machine badly enough to end the exercise, and
+  starting again costs you nothing but the run.
+- **needs:** L-031
+
+### [L-040] The machine symphony — synthesised sound
+- **what:** engine-generated audio from the quantities the sim already
+  publishes — track speed, slip, contacts, impact energy. Never sampled: a clip
+  is a black box triggered by an event, a synth voice is another rendering of a
+  simulated quantity.
+- **done-when:** a machine labouring at 90% grip sounds like it, and an impact's
+  voice follows how hard it was.
+- **needs:** L-031
+
+### [L-035] Throttle-and-steer — the rung-2 control upgrade
+- **what:** the named successor to the two levers, and a component curriculum
+  entry. Behind the damage work now that TILT-GUARD is the third module.
+- **done-when:** driving with one thumb is available, better in some ways and
+  worse in others, and the rack shows why.
 
 ### [L-019] Cross-browser determinism — the other half
 - **what:** bit-identical `world.takeSnapshot()` hashes across engines. The
@@ -146,11 +170,12 @@ core loop once, at rung 1, over the rack as the build surface.
 - **done-when:** two generated sites demand different machines.
 - **needs:** NOTES thread "What does the procedural generator generate?"
 
-### [L-008] Cockpit editor — place the mandatory instruments
-- **what:** every component ships instruments the player *must* fit into the
-  viewport. Placement is authored; the manifest is not.
-- **done-when:** fitting a component means fitting its instrument, and a
-  component can be refused for want of glass.
+### [L-008] Inline edit — move the instruments on the glass
+- **what:** v0's edit mode is **inline, in the cab, while it runs**: drag a
+  fitted instrument to where you want it. No separate screen. The rack half of
+  edit mode already works; this is the other half.
+- **done-when:** an instrument can be dragged to a new place with a thumb and
+  stays there.
 - **needs:** L-025
 
 ### [L-012] Persistence
@@ -166,6 +191,24 @@ core loop once, at rung 1, over the rack as the build surface.
 ---
 
 ## history
+
+### [L-036] TILT-GUARD — the first safety component — **closed**
+Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
+Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
+signal's range and turn the machine around — a safety module causing the crash
+it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
+sines come straight out of the quaternion and stay bit-portable. Ships enabled
+and deliberately timid (25°/18° against a 43.5° climb limit), so the first
+lesson is that your own machine is what stopped you.
+
+### [L-037] The rack as equipment — **closed**
+Server rack rather than DIN rail: faceplates, ears, screws, and a house style
+per manufacturer (KIBA WORKS, TOWA DENKI, HANSA REGELTECHNIK). Module settings
+as bounded numbers with units — never gains. ATT-0 compass/attitude head as the
+chassis instrument, TILT-GUARD's two banded gauges as its own. Rack toggle
+became a control-panel cover at the seam; the camera became an item in the
+instrument column. Tracks are belts wrapped round their wheels rather than
+boxes, and the site is steeper.
 
 ### [L-007] `autonav` as the reference dumb module — **closed**
 NAV-1 steers on bearing and distance to the pin and considers nothing else,
@@ -198,8 +241,4 @@ the machine rears and flips, emergently. Cab view primary, two non-centring
 levers, actuator bus in from the first commit. Absorbs L-022 (Rapier on rung 1):
 it tips when pushed past the limit, and nothing was hand-tuned to make it.
 
-### [L-013] Scaffold the toolchain — **closed**
-TS · Vite 8 · Svelte 5 · Vitest 4 · Biome · Three · Rapier deterministic-compat.
-`dev`, `build`, `test`, `typecheck`, `lint` all green. The three architecture
-rules are enforced by `tests/architecture.test.ts`, not just documented.
 

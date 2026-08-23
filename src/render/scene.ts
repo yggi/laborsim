@@ -157,14 +157,25 @@ export function createViewport(
    */
   const SPROCKET_R = TRACK.height / 2;
   const IDLER_R = TRACK.height * 0.38;
+  /**
+   * Drawn a little inside the belt that wraps them, so they read as wheels
+   * behind a track rather than drums stuck on the side of one. They still spin
+   * at the belt's rate — the spin is a cue about slip, not a measurement.
+   */
+  const WHEEL_INSET = 0.88;
   const wheelGeom = {
     sprocket: new THREE.CylinderGeometry(
-      SPROCKET_R,
-      SPROCKET_R,
+      SPROCKET_R * WHEEL_INSET,
+      SPROCKET_R * WHEEL_INSET,
       TRACK.width * 1.05,
       10,
     ),
-    idler: new THREE.CylinderGeometry(IDLER_R, IDLER_R, TRACK.width * 1.05, 8),
+    idler: new THREE.CylinderGeometry(
+      IDLER_R * WHEEL_INSET,
+      IDLER_R * WHEEL_INSET,
+      TRACK.width * 1.05,
+      8,
+    ),
   };
 
   interface Wheel {
@@ -182,9 +193,13 @@ export function createViewport(
    * telemetry number said the same thing, but a number is something you read
    * and this is something you notice.
    */
-  const GROUSERS = 9;
+  const GROUSERS = 15;
   const GROUSER_PITCH = TRACK.length / GROUSERS;
-  const grouserGeom = new THREE.BoxGeometry(TRACK.width * 1.08, 0.07, 0.13);
+  /** The straight runs, wheel centre to wheel centre, and the nose-up rise. */
+  const RUN_REAR = -(TRACK.length / 2 - SPROCKET_R);
+  const RUN_FRONT = TRACK.length / 2 - IDLER_R;
+  const BELT_RISE = SPROCKET_R - IDLER_R;
+  const grouserGeom = new THREE.BoxGeometry(TRACK.width * 1.06, 0.05, 0.09);
   const grousers: { left: THREE.Mesh[]; right: THREE.Mesh[] } = {
     left: [],
     right: [],
@@ -195,10 +210,8 @@ export function createViewport(
     ["left", LEFT_X],
     ["right", RIGHT_X],
   ] as const) {
-    const track = inked(
-      new THREE.BoxGeometry(TRACK.width, TRACK.height, TRACK.length),
-      rubber,
-    );
+    const track = inked(beltGeometry(SPROCKET_R, IDLER_R), rubber);
+    track.rotation.y = -Math.PI / 2;
     track.position.set(x, TRACK.height / 2, 0);
     machine.add(track);
 
@@ -281,17 +294,22 @@ export function createViewport(
             const plate = plates[i];
             if (!plate) continue;
             const along = (i * GROUSER_PITCH + beltPhase[name]) % loop;
+            // Plates ride the tangent runs between the two wheels, not the
+            // full box: the idler is smaller than the sprocket, so the belt
+            // lifts towards the nose. That rise is the shape of the machine.
+            const t =
+              along < TRACK.length ? along / TRACK.length : 2 - along / TRACK.length;
+            const z = RUN_REAR + t * (RUN_FRONT - RUN_REAR);
             if (along < TRACK.length) {
               // Bottom run, travelling forward under the machine.
-              plate.position.set(plate.position.x, 0.035, along - TRACK.length / 2);
+              plate.position.set(plate.position.x, t * BELT_RISE + 0.03, z);
               plate.rotation.set(0, 0, 0);
             } else {
               // Top run, coming back the other way.
-              const back = along - TRACK.length;
               plate.position.set(
                 plate.position.x,
-                TRACK.height - 0.035,
-                TRACK.length / 2 - back,
+                TRACK.height - t * BELT_RISE - 0.03,
+                z,
               );
               plate.rotation.set(Math.PI, 0, 0);
             }
@@ -362,6 +380,40 @@ export function createViewport(
 
 function clampNumber(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+/**
+ * The belt's silhouette: the hull of the two wheels it runs on, rather than a
+ * box. A track is not a slab — it is a loop wrapped round a big drive sprocket
+ * at the back and a small idler at the front, and drawing it as a box makes the
+ * machine read as blocks stacked on blocks.
+ *
+ * The **collider stays a box** (`src/sim/tracked.ts`), so this shape is very
+ * slightly smaller than the thing that actually collides, at the four corners
+ * the rounding removes. That is a deliberate mismatch and the cheap way round:
+ * the corners are above the contact rays and below the hull, so nothing the
+ * player can see or feel happens there. Revisit it if the belt ever has to
+ * catch on anything.
+ *
+ * Built in the length/height plane and extruded across the width, so the mesh
+ * is turned a quarter turn about Y when it is placed.
+ */
+function beltGeometry(rearRadius: number, frontRadius: number): THREE.ExtrudeGeometry {
+  const rear = -(TRACK.length / 2 - rearRadius);
+  const front = TRACK.length / 2 - frontRadius;
+  const shape = new THREE.Shape();
+  shape.moveTo(rear, rearRadius);
+  shape.lineTo(front, frontRadius);
+  shape.absarc(front, 0, frontRadius, Math.PI / 2, -Math.PI / 2, true);
+  shape.lineTo(rear, -rearRadius);
+  shape.absarc(rear, 0, rearRadius, -Math.PI / 2, Math.PI / 2, true);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: TRACK.width,
+    bevelEnabled: false,
+    curveSegments: 8,
+  });
+  geometry.translate(0, 0, -TRACK.width / 2);
+  return geometry;
 }
 
 /**

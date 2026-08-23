@@ -86,14 +86,14 @@ Landscape is scenery. **Job sites** — footing, clearances, load, an unsurveyed
 obstruction — are the puzzle, and the thing that makes a load chart
 insufficient. What that means as a generator is unwritten.
 
-## Is v0's build surface the rack rather than part assembly?
+## What does a damaged machine feel like to drive?
 
-The roadmap's load-bearing scope call, and **not yet confirmed**. The claim:
-order, verb and enable are three real design decisions, so "back to build with a
-specific reason" can mean *move NAV-1 below the levers*, and the loop closes at
-rung 1 without a part model, a load chart, a cockpit editor or persistence.
+Damage to the vehicle is carded (L-038) as break-and-reset. The stronger version
+is **degradation before destruction**: a track that has lost grip, a bent frame
+that pulls to one side, a sprocket that will not take full torque. It would make
+a damaged machine a *different machine*, which is exactly the subject of the
+whole project — and it is the most expensive thing on the list.
 
-It forecloses nothing — the parts model is purely additive. What it risks is a
-v0 that never proves the *build* half of a KSP-shaped loop, which is the half
-players recognise. Argument in `docs/design/roadmap.md` § 5; decide before
-L-018 lands, because that card's shape depends on it.
+The friction model can already express most of it (per-track `MU`, a bias in the
+normal-load share), which is suspicious in a good way. Not v0; revisit when
+L-038 lands, and do not let the reset design foreclose it.

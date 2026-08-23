@@ -106,6 +106,7 @@ describe("NAV-1 in the rack", () => {
     rack.push({
       id: "PILOT",
       label: "PILOT",
+      maker: "TEST",
       considers: "the levers",
       verb: "SET",
       enabled: true,

@@ -55,6 +55,7 @@ export function createAutonav(
   return {
     id: "NAV",
     label: "NAV-1",
+    maker: "TOWA DENKI",
     considers: "bearing and distance to the pin. Nothing else.",
     verb: options.verb ?? "SET",
     enabled: options.enabled ?? false,

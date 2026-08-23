@@ -76,8 +76,17 @@ enforces itself. This is where the node-graph danger reappears in a new coat.
 | `ADD` | add intent to the input |
 | `AMP` | multiply the input by intent, read as a gain |
 
-The verb is a **property of the module**, switchable on it. Advanced modules may
-carry parameters or presets beyond that; the verb is the part the rail shows.
+The verb is a **property of the module**, switchable on it. Modules may also
+carry **settings** — bounded numbers with units, on the faceplate; see
+`docs/design/cockpit.md` for why those are never gains.
+
+`AMP` earned its keep with TILT-GUARD, the first module whose intent is a
+fraction rather than a speed. That module also shows why the verbs are not
+interchangeable: under `CAP` a positive intent gets clamped into a reversing
+signal's range and comes out *forward*, so the safety component causes the
+crash it exists to prevent. Under `AMP` it scales what arrived and keeps the
+sign. A player can switch it to `CAP` and find that out — which is the design,
+not a trap, because the chain is on screen the whole time.
 
 **Every module has a disable toggle**, and a disabled module is a
 **pass-through, not a hole** — the signal still reaches the terminal. That is
@@ -85,9 +94,9 @@ the default hot-patchable control, and the safest one.
 
 ### Order is the machine
 
-The rail is a **vertical DIN rail**, not a free-form node graph — a node graph
-is miserable on a phone, and this is mobile-first. Drag to reorder. Cap around
-**8 slots**.
+The rail is a **vertical server rack**, not a free-form node graph — a node
+graph is miserable on a phone, and this is mobile-first. Drag to reorder. Cap
+around **8 slots**.
 
 The pilot's levers are a rack entry. Put them **above** autonav with autonav on
 `CAP` and your thumbs become a governor on it — including a dead-man's throttle,
@@ -97,6 +106,12 @@ trim.
 
 Same two modules, one drag, two genuinely different machines — and unlike a
 priority stack, *both* of them use *both* modules. Neither result is a mode.
+
+TILT-GUARD makes the same point in one slot: at the bottom of the rail it is the
+last thing between the rack and the tracks and it governs everything; moved up,
+it governs only what is above it, and a `SET` module below simply overwrites it.
+A safety component that can be ordered out of the way is not a bug — it is the
+lesson, and it is why the rail shows the chain stage by stage.
 
 ## The attribution rule
 

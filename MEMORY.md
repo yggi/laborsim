@@ -13,6 +13,7 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
+| `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
@@ -87,6 +88,13 @@ v0 is **sandbox and exploration**: build a machine, take it out, see what it
 does and how it breaks. Missions, progression and economy are **deferred, not
 dropped** — a v0 decision that forecloses them is a bad v0 decision.
 
+**v0's build surface is the rack, not part assembly**, and **edit mode is
+inline** — no separate screen. You move instruments around the glass and you
+swap, reorder and reconfigure modules in the rack, in the cab, while it runs.
+Order, verb, enable and a module's settings are four real design decisions, so
+the loop closes over them without a parts model. Additive later, not foreclosed.
+The ordering argument: `docs/design/roadmap.md`.
+
 The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 
 > Two components fighting over one actuator, reachable **within ten minutes of a
@@ -96,21 +104,17 @@ If that scenario cannot be constructed on rung one, the rack is decoration.
 
 ### 3.1 The damage ledger — v0's verdict and core feedback
 
-**No job tickets in v0.** The failure loop still needs a third beat, and the
-damage ledger is it — at a fraction of a ticket economy's cost, and it is
-**the game's core feedback mechanism**, not a scoreboard.
+**No job tickets in v0.** The failure loop needs a third beat and the damage
+ledger is it: **the game's core feedback mechanism**, not a scoreboard.
+Itemised, named, priced, never aggregated — `citizen asset (scooter) damaged
+−¥3,000` — in a **condescending institutional voice**. **Harming a citizen is
+categorical failure**, never a line item; never give a person a price.
+Environments are the difficulty axis: **a quarry is simpler than a city.**
 
-- Operate through a procedural environment full of **expensive things to break**.
-- **Itemised, named, priced**, never aggregated:
-  `citizen asset (scooter) damaged −¥3,000`.
-- **Harming a citizen is categorical failure**, not a line item. Never give a
-  person a price.
-- Environments are the difficulty axis: **a quarry is simpler than a city.**
-
-Delivered in a **condescending institutional voice** — the rig is disappointed,
-patiently, and writing it down. Voice, register and worked examples:
-`docs/design/tone.md`. The attribution rule applies in full: a ledger that says
-*what* without *why* is a score, and scores do not teach.
+It goes **deep, not wide**: you feel the impact, see the thing come apart, hear
+it, and only then are told what it cost. **The machine is not exempt** — it
+breaks too, which is what needs a reset. Model, scope and build order:
+`docs/design/damage.md`. Voice: `docs/design/tone.md`.
 
 ## 4. Core loop
 
@@ -150,8 +154,8 @@ started there and production must not. Full table:
 `docs/design/machinery-ladder.md`.
 
 The ladder is non-monotonic by design: the Phantom Labor attacks the sensor
-surface that capability created, so the unscrambleable two-lever cage at rung
-one must stay a genuinely good machine, never a tutorial.
+surface capability created, so the unscrambleable two-lever cage at rung one
+must stay a genuinely good machine, never a tutorial.
 
 ## 6. The cockpit — panel budget and occlusion
 
@@ -168,17 +172,17 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
   throttle open and the ledger will tell you what it cost.
 - **Viewport budgeting is a core mechanism, not a UI style**, which couples it
   deeply to touch. This is *why* mobile-first is fixed — see § 9.
+- **The rail is a server rack, not a DIN rail**: faceplates stacked vertically,
+  screwed in, **each in its manufacturer's house style**. Kit from different
+  makers must look like kit from different makers.
 
 ## 7. Mechanics that fall out of the above
 
-Detail: `docs/design/mechanics.md`. They are listed there rather than here
-because each one *follows* from the core commitments — that is the argument for
-keeping them.
+Detail: `docs/design/mechanics.md`. Each one *follows* from the core
+commitments — that is the argument for keeping them.
 
-- **Phantom Labor** — attacks the sensor surface capability created. Antagonist
-  and difficulty curve become the same object.
-- **Hot-patching, anchored on LOTO** — lock outputs (safe, inert, late) versus
-  rewire live (gambling on transient authority handoff).
+- **Phantom Labor** — attacks the sensor surface capability created.
+- **Hot-patching, anchored on LOTO** — lock outputs versus rewire live.
 - **Component curriculum** — every rung-one component has a named, visible,
   unaffordable rung-two successor. Curriculum and economy in one object.
 
@@ -230,11 +234,9 @@ answered *can this look and feel right in a browser, on a phone?* — yes.
 
 It is **concept art with working mechanisms**, not an architecture sketch.
 **Do not port its structure.** Do port the named mechanisms — the footstep
-policy above all, then the analytic 2-bone IK, the analytic height field, the
-hydraulic rams, and the cel pipeline. What it fakes (no physics at all, cosmetic
-margin bar, scheduled rather than measured contact) and the six defects it cost
-are in `docs/design/prototype-findings.md`. The method lessons it taught are in
-`META.md`.
+policy above all, then the analytic 2-bone IK, the hydraulic rams and the cel
+pipeline. What it fakes, the six defects it cost and the method lessons it
+taught: `docs/design/prototype-findings.md` and `META.md`.
 
 ## 11. Repo map
 

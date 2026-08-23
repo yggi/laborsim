@@ -23,6 +23,7 @@ function fixedLevers(left: number, right: number, verb: Verb = "SET"): Module {
   return {
     id: "PILOT",
     label: "PILOT",
+    maker: "TEST",
     considers: "the levers, and nothing else",
     verb,
     enabled: true,

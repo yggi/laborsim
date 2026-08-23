@@ -18,6 +18,57 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — TILT-GUARD, and the rack becomes equipment
+
+Cards: [L-036] [L-037] closed · [L-039] [L-038] [L-040] opened · [L-035]
+demoted · [L-008] [L-015] reworded
+
+**v0's build surface is the rack — confirmed**, and with it the shape of edit
+mode: **inline, in the cab, while it runs.** Instruments moved around the glass;
+modules swapped, reordered and reconfigured in the rack. No separate build
+screen in v0. The NOTES thread closed into `MEMORY.md` § 3.
+
+**TILT-GUARD** — the first safety component, and the second honestly stupid one.
+Caps drive on hull pitch and roll; limits are two sliders on its faceplate.
+
+- Verb **AMP**, and the reasoning is the interesting part. `CAP` clamps a
+  positive intent into the arriving signal's *magnitude*, so a reversing machine
+  would come out going forward — the safety module causing the crash it exists
+  to prevent. `AMP` scales what arrived and keeps the sign. Both directions are
+  under test, and reverting the verb makes the test fail.
+- Attitude comes out of the quaternion as **sines**, not through `asin` — pure
+  arithmetic, so rule 2 holds without an exemption. The one exemption is the
+  degrees→sine conversion of the slider value, quantized to 1e-6 exactly as
+  `makeRampTerrain` does.
+- It ships **enabled** and deliberately timid: 25° pitch against a 43.5° climb
+  limit. Discovering that the thing which stopped you halfway up a hill is your
+  own machine being careful — and then finding its LED — is the best first
+  lesson rung 1 has.
+
+**Module settings** are now a thing modules can have: bounded numbers with
+units, on the faceplate. Explicitly *not* gains — the parameter model cannot
+express one, which is the gain-tuning trap (NOTES) being closed off by
+construction rather than by discipline.
+
+**The rack is a server rack**, not a DIN rail: ears, screws, and a house style
+per manufacturer — KIBA WORKS (chassis yellow), TOWA DENKI (navigation, centred)
+and HANSA REGELTECHNIK (safety, orange, boxed). Cosmetic, and it does real work:
+you find the orange plate, not the third row down.
+
+Also: **ATT-0**, a combined compass/attitude head, the one instrument the bare
+chassis ships. TILT-GUARD's two banded gauges, whose red/amber/green *are* its
+limits rather than a mood. The rack toggle became a **control-panel cover** at
+the seam it opens. The camera became an **item in the instrument column** rather
+than chrome. Tracks are belts wrapped round their wheels instead of boxes — the
+collider stays a box, deliberately, and the mismatch is documented where it is.
+Terrain is steeper.
+
+**One bug worth the entry.** The PILOT faceplate rendered 7 px tall with lint,
+types and 71 tests green. Two rounds of re-reading the stylesheet found nothing;
+one `getComputedStyle` dump found it instantly — the KIBA layout class was named
+`bar` and collided with the meter's `.bar` in the same scoped stylesheet. In
+META as *ask the browser what it computed*.
+
 ## 2026-08-23 — META.md, and a fresh look at the critical path
 
 Cards: none closed · board reordered · [L-031] [L-032] [L-033] [L-034] [L-035]

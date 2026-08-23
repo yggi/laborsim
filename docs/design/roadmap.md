@@ -68,15 +68,18 @@ giving up the guarantee. The architecture that makes cross-engine determinism
 possible is already enforced by test; the *verification* can wait for a machine
 that can perform it.
 
-**5. v0's build surface should be the rack, not part assembly.**
+**5. v0's build surface should be the rack, not part assembly.** *(Confirmed,
+2026-08-23, along with the shape of edit mode: inline, in the cab, while it
+runs — instruments moved around the glass, modules swapped and reconfigured in
+the rack. No separate build screen in v0. Now in `MEMORY.md` § 3.)*
 This is the scope call that decides whether v0 finishes. Build mode as KSP-style
 assembly drags in the part/module model (`L-006`), the load chart (`L-021`), the
 cockpit editor (`L-008`) and persistence (`L-012`) — four cards, none small, all
 before the loop closes once.
 
-But the loop does not need them. The rack **is** a build surface: order, verb
-and enable are three real design decisions that change how the machine behaves,
-and a run through a site already tests them. "Back to build with a specific
+But the loop does not need them. The rack **is** a build surface: order, verb,
+enable and a module's settings are four real design decisions that change how
+the machine behaves, and a run through a site already tests them. "Back to build with a specific
 reason" can mean *move NAV-1 below the levers and try again*, and that is a
 complete turn of the loop.
 
@@ -97,10 +100,13 @@ only. Neither is a crisis; both are claims we are currently *asserting*.
 
 Consequence, then attribution, then the path a new player takes to both.
 
-1. **Damage model** (`L-031`). World objects gain mass, a price and a
-   destruction threshold; contact energy above it destroys them and emits a
-   priced event. Small, and it is what makes the site an antagonist rather than
-   scenery. It also gives `L-023`'s designed site features something to do.
+1. **Damage model** (`L-031`), and **enough to break** (`L-039`). World objects
+   gain mass, a price and a destruction threshold; contact energy above it
+   destroys them and emits a priced event. It is what makes the site an
+   antagonist rather than scenery, and it gives `L-023`'s designed features
+   something to do. The scope is deliberately *deep*, not a toast notification:
+   impact, then deformation, then sound, then the written verdict — see
+   `docs/design/damage.md`.
 2. **The ledger** (`L-029`). Itemised, named, priced, condescending. Its
    attribution half — *what was driving when this happened* — is what makes it
    teach instead of score, and that is why it comes after (3) in dependency even
@@ -121,11 +127,11 @@ number, on a real phone, before the scene grows again.
 
 ### Next — make the rung deep enough to be worth replaying
 
-- **A third module**: throttle-and-steer, the named rung-2 upgrade to the
-  levers. Turns the rack from a two-slot demo into an ordering *problem*, and it
-  is the first component curriculum entry the player can actually buy into.
-- **The rail proper** (`L-015`): drag, slot styling, and the hot-patch question
-  that `L-026` really owns.
+- **The rail proper** (`L-015`): drag, and the hot-patch question that `L-026`
+  really owns. *(Slot styling and module settings landed early, with
+  TILT-GUARD — the third module the rack needed to become an ordering problem.
+  Throttle-and-steer, `L-035`, is now a curriculum item rather than a
+  structural one.)*
 - **The panel budget with teeth** (`L-025`): a fixed glass area, and a component
   refusable for want of it. NAV-1's scope already costs view; nothing yet counts.
 - **Designed site features** (`L-023`): benches, the haul road, the trench.

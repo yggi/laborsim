@@ -41,6 +41,13 @@ A grade probe reported zero climb at every angle. Ten tests were passing and the
 machine was fine — the *probe* was wrong: the ramp started 30 m away and the
 machine covers 11 m in five seconds.
 
+**Ask the browser what it computed; do not re-read the CSS.**
+A faceplate collapsed to 7 px with tests, types and lint all green. Two rounds
+went into re-reading the stylesheet. One `getComputedStyle` dump answered it:
+`display: block; height: 7px` — a house-style class named `bar` colliding with
+the meter's `.bar` in the same scoped stylesheet. Reading is a hypothesis;
+measuring is an answer.
+
 **Instrument early.**
 Carried in from the concept-3 probe, which lost rounds diagnosing from
 screenshots until a telemetry line settled it instantly. It pays twice here: the

@@ -8,19 +8,22 @@
  * while you are reading it you are not watching where you are going. The
  * machine keeps running the whole time — the same bargain as the chase view.
  *
- * Signal flows **down** the rail to an actuator terminal at the bottom.
+ * It is a **server rack, not a DIN rail**: modules are faceplates stacked
+ * vertically between two uprights, each screwed in, each from whoever built
+ * it. Signal flows **down** the stack to an actuator terminal at the bottom.
  *
- * Not the full DIN-rail treatment yet (BOARD L-015): reordering is arrows
- * rather than drag. What is here is the whole semantic model — order, verb,
- * enable — plus immediate strength feedback, which is the part you read while
- * driving rather than while thinking.
+ * Not the full treatment yet (BOARD L-015): reordering is arrows rather than
+ * drag. What is here is the whole semantic model — order, verb, enable,
+ * settings — plus immediate strength feedback, which is the part you read
+ * while driving rather than while thinking.
  *
  * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
  */
-import type { Module, Stage, Verb } from "../control/bus.ts";
+import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import { styleOf } from "./makers.ts";
 
 const {
   modules,
@@ -59,6 +62,22 @@ function toggle(module: Module) {
   onchange();
 }
 
+/**
+ * Live mirror of every setting, so turning a knob does not rebuild the rack.
+ * Order, verb and enable each change what the rail *is* and call `onchange`;
+ * a setting does not, and remounting mid-drag would drop the thumb that is
+ * dragging it. The module stays the owner — this only echoes what it accepted.
+ */
+const shown = $state<Record<string, number>>({});
+const keyOf = (module: Module, param: Param) => `${module.id}:${param.id}`;
+const settingOf = (module: Module, param: Param) =>
+  shown[keyOf(module, param)] ?? param.get();
+
+function setParam(module: Module, param: Param, value: number) {
+  param.set(value);
+  shown[keyOf(module, param)] = param.get();
+}
+
 const stageOf = (id: string): Stage | undefined => stages.find((s) => s.id === id);
 const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 </script>
@@ -72,45 +91,85 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   <div class="slots">
     {#each modules as module, i (module.id)}
       {@const stage = stageOf(module.id)}
+      {@const style = styleOf(module.maker)}
       {@const driving = module.enabled && stage && !stage.idle}
-      <div class="slot" class:off={!module.enabled} class:idle={stage?.idle}>
-        <div class="order">
+      <div
+        class="slot {style.layout}"
+        class:off={!module.enabled}
+        class:idle={stage?.idle}
+        style="--plate: {style.plate}; --bezel: {style.bezel}; --face: {style.face}; --accent: {style.accent}"
+      >
+        <!-- Rack ears. Screws, because a thing you can unbolt is a thing
+             somebody bolted in. -->
+        <div class="ear">
+          <span class="screw"></span>
+          <span class="screw"></span>
+        </div>
+
+        <div class="plate">
+          <div class="ident">
+            <span class="wordmark">{style.wordmark}</span>
+            <span class="name">{module.label}</span>
+          </div>
+          <div class="considers">{module.considers}</div>
+
+          {#if module.params?.length}
+            <!-- Settings, on the faceplate where you turn them. Not a tuning
+                 panel: bounded numbers with units, and only what the module
+                 actually offers. -->
+            <div class="params">
+              {#each module.params as param (param.id)}
+                <label class="param">
+                  <span class="plabel">{param.label}</span>
+                  <input
+                    type="range"
+                    min={param.min}
+                    max={param.max}
+                    step={param.step}
+                    value={settingOf(module, param)}
+                    disabled={!module.enabled}
+                    oninput={(e) => setParam(module, param, e.currentTarget.valueAsNumber)}
+                  />
+                  <span class="pval">{settingOf(module, param)}{param.unit}</span>
+                </label>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <div class="controls">
+          <button class="led" onclick={() => toggle(module)} aria-label="enable {module.label}"
+          ></button>
+          <button class="verb" onclick={() => cycleVerb(module)} disabled={!module.enabled}>
+            {module.verb}
+          </button>
+
+          <!-- Output strength, as a pair of meters. This is the part you read
+               at a glance; the numbers are for diagnosing, not driving. -->
+          <div class="meters">
+            {#each [["L", stage?.output.left ?? 0], ["R", stage?.output.right ?? 0]] as const as [side, value] (side)}
+              <div class="meter">
+                <span class="cap">{side}</span>
+                <span class="bar">
+                  <span
+                    class="fill"
+                    class:rev={value < 0}
+                    style="width: {driving ? strength(value) * 100 : 0}%"
+                  ></span>
+                </span>
+                {#if debug}<span class="val">{num(value)}</span>{/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="ear order">
           <button onclick={() => move(i, -1)} disabled={i === 0} aria-label="move up">▲</button>
           <button
             onclick={() => move(i, 1)}
             disabled={i === modules.length - 1}
             aria-label="move down">▼</button
           >
-        </div>
-
-        <button class="led" onclick={() => toggle(module)} aria-label="enable {module.label}"
-        ></button>
-
-        <div class="body">
-          <div class="name">{module.label}</div>
-          <div class="considers">{module.considers}</div>
-        </div>
-
-        <button class="verb" onclick={() => cycleVerb(module)} disabled={!module.enabled}>
-          {module.verb}
-        </button>
-
-        <!-- Output strength, as a pair of meters. This is the part you read
-             at a glance; the numbers below are for diagnosing, not driving. -->
-        <div class="meters">
-          {#each [["L", stage?.output.left ?? 0], ["R", stage?.output.right ?? 0]] as const as [side, value] (side)}
-            <div class="meter">
-              <span class="cap">{side}</span>
-              <span class="bar">
-                <span
-                  class="fill"
-                  class:rev={value < 0}
-                  style="width: {driving ? strength(value) * 100 : 0}%"
-                ></span>
-              </span>
-              {#if debug}<span class="val">{num(value)}</span>{/if}
-            </div>
-          {/each}
         </div>
       </div>
     {/each}
@@ -161,51 +220,172 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .head .warn {
     color: #f0a830;
   }
+  /* The cabinet interior the faceplates are screwed into. */
   .slots {
     flex: 1;
     overflow-y: auto;
+    background:
+      linear-gradient(90deg, #0a0d0e 0 16px, transparent 16px),
+      linear-gradient(270deg, #0a0d0e 0 16px, transparent 16px), #0f1214;
+    padding: 4px 0;
   }
+
+  /* -- one faceplate ----------------------------------------------------- */
   .slot {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 8px;
-    border-top: 1px solid #0d1012;
-    border-left: 4px solid #6fe3c4;
+    align-items: stretch;
+    gap: 0;
+    margin: 3px 0;
+    background: var(--plate);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid #05080a;
   }
-  .slot.idle {
-    border-left-color: #f0a830;
-  }
-  .slot.off {
-    border-left-color: #3a4240;
-    opacity: 0.6;
-  }
-  .order {
+  .ear {
+    width: 16px;
+    flex: none;
+    background: var(--bezel);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 5px 0;
+  }
+  .screw {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4a5254;
+    box-shadow: inset 0 1px 0 #7d8a8c;
   }
   .order button {
     font: inherit;
-    font-size: 9px;
+    font-size: 8px;
     line-height: 1;
-    padding: 4px 6px;
-    color: #c6d0cb;
+    padding: 3px 0;
+    width: 14px;
+    color: var(--face);
     background: #23282a;
-    border: 1px solid #0d1012;
+    border: 1px solid #05080a;
   }
   .order button:disabled {
     opacity: 0.25;
   }
+
+  .plate {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 9px;
+    border-left: 3px solid var(--accent);
+  }
+  .idle .plate {
+    border-left-color: #f0a830;
+  }
+  .off .plate {
+    border-left-color: #3a4240;
+  }
+  .off {
+    opacity: 0.62;
+  }
+  .ident {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .wordmark {
+    font-size: 7px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+  .name {
+    white-space: nowrap;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--face);
+  }
+  .considers {
+    font-size: 9px;
+    color: #78827f;
+    margin-top: 1px;
+  }
+
+  /* House styles. Same parts, arranged the way each maker arranges them. */
+  .stack .ident {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .stack .considers {
+    text-align: center;
+  }
+  .boxed .ident {
+    border: 1px solid var(--accent);
+    padding: 2px 6px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .boxed .plate {
+    border-left-width: 6px;
+    border-image: repeating-linear-gradient(
+        45deg,
+        var(--accent) 0 4px,
+        #12100c 4px 8px
+      )
+      1;
+  }
+
+  /* -- settings ---------------------------------------------------------- */
+  .params {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .param {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: #78827f;
+  }
+  .plabel {
+    width: 58px;
+    flex: none;
+  }
+  .pval {
+    width: 30px;
+    text-align: right;
+    color: var(--face);
+  }
+  .param input {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+
+  /* -- controls ---------------------------------------------------------- */
+  .controls {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 8px 7px 0;
+  }
   .led {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     flex: none;
     padding: 0;
-    border: 1px solid #0d1012;
+    border: 1px solid #05080a;
     border-radius: 2px;
-    background: #6fe3c4;
-    box-shadow: 0 0 8px #6fe3c4;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
   }
   .idle .led {
     background: #f0a830;
@@ -215,24 +395,13 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     background: #0d1012;
     box-shadow: none;
   }
-  .body {
-    flex: 1;
-    min-width: 0;
-  }
-  .name {
-    letter-spacing: 0.08em;
-  }
-  .considers {
-    font-size: 9px;
-    color: #6d7a76;
-  }
   .verb {
     font: inherit;
     font-size: 11px;
     letter-spacing: 0.12em;
     color: #14171a;
-    background: #e8b53a;
-    border: 1px solid #0d1012;
+    background: var(--accent);
+    border: 1px solid #05080a;
     padding: 6px 7px;
     flex: none;
   }
@@ -241,7 +410,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     background: #23282a;
   }
   .meters {
-    width: 86px;
+    width: 78px;
     flex: none;
     display: flex;
     flex-direction: column;
@@ -275,7 +444,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .fill {
     position: absolute;
     inset: 0 auto 0 0;
-    background: #6fe3c4;
+    background: var(--accent);
     transition: width 0.08s linear;
   }
   .fill.out {

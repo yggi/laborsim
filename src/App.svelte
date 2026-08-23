@@ -15,12 +15,15 @@ import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
 import { type Autonav, createAutonav } from "./modules/autonav.ts";
+import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
+import Attitude from "./ui/Attitude.svelte";
 import Lever from "./ui/Lever.svelte";
 import NavRadar from "./ui/NavRadar.svelte";
 import Rack from "./ui/Rack.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
+import TiltGauges from "./ui/TiltGauges.svelte";
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
@@ -32,6 +35,7 @@ let leverR = $state(0);
 const pilot: Module = {
   id: "PILOT",
   label: "PILOT",
+  maker: "KIBA WORKS",
   considers: "your two thumbs",
   verb: "SET",
   enabled: true,
@@ -56,10 +60,13 @@ let showDebug = $state(true);
 
 let setViewMode: (m: CameraMode) => void = () => {};
 
-function toggleView() {
-  mode = mode === "cab" ? "chase" : "cab";
+function setView(next: CameraMode) {
+  mode = next;
   setViewMode(mode);
 }
+
+/** Is a module with this id in the rack? Its instrument is fitted if so. */
+const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
 
 $effect(() => {
   let frame = 0;
@@ -83,6 +90,15 @@ $effect(() => {
     );
     nav = autonav;
     rack.push(autonav);
+
+    // TILT-GUARD sits at the bottom of the rail, below everything: it is the
+    // last thing between the rack and the tracks, which is where a safety
+    // component belongs and also where it is most annoying. Move it up and it
+    // guards only what is above it — that is the ordering lesson, in one slot.
+    // It ships **enabled**, because safety kit does. Finding out that the thing
+    // stopping you halfway up a grade is your own machine being careful — and
+    // then finding its LED — is the best first lesson rung 1 has to offer.
+    rack.push(createTiltGuard(() => world.machine.body.rotation()));
     const viewport = createViewport(
       canvas,
       world.terrain,
@@ -171,22 +187,48 @@ $effect(() => {
   <div class="handsoff">HANDS OFF THE WHEEL &mdash; the machine is still running</div>
 {/if}
 
-<button class="view" onclick={toggleView}>{mode === "cab" ? "CHASE" : "CAB"}</button>
-<button class="rackbtn" class:on={rackOpen} onclick={() => (rackOpen = !rackOpen)}>RACK</button>
+<!--
+  The instrument column. Everything fitted to the glass lives here, in the
+  order it was fitted: the chassis head first, then whatever the rack brought
+  with it. Each one is a piece of view you gave up (docs/design/cockpit.md) —
+  the budget that prices that is L-025, and this is the pile it will price.
+
+  The camera is an item in the same column, not a chrome button: choosing the
+  view is a thing you do with the equipment, and in the chase view it is the
+  only piece of equipment you still have.
+-->
+<div class="column">
+  <div class="item camera">
+    {#each ["cab", "chase"] as const as option (option)}
+      <button class:on={mode === option} onclick={() => setView(option)}>
+        {option === "cab" ? "CAB" : "CHASE"}
+      </button>
+    {/each}
+  </div>
+
+  {#if mode === "cab" && !rackOpen}
+    <Attitude snapshot={latest} />
+    <!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
+    {#if nav}
+      <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
+    {/if}
+    {#if fitted("TILT")}
+      <TiltGauges snapshot={latest} />
+    {/if}
+  {/if}
+</div>
+
+<!-- The cover over the control panel, at the seam it opens. Lifting it is the
+     same bargain as the chase view: you get the rack, you lose the glass. -->
+<button class="cover" class:open={rackOpen} onclick={() => (rackOpen = !rackOpen)}>
+  <span class="chev">{rackOpen ? "▼" : "▲"}</span>
+  {rackOpen ? "CLOSE COVER" : "CONTROL PANEL"}
+</button>
 
 {#if rackOpen}
   {#key rackVersion}
     <Rack modules={rack} snapshot={latest} onchange={() => rackVersion++} debug={showDebug} />
   {/key}
-{/if}
-
-<!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
-{#if nav && mode === "cab" && !rackOpen}
-  <NavRadar
-    snapshot={latest}
-    waypoints={route}
-    onselect={(i) => nav?.setTarget(i)}
-  />
 {/if}
 
 <style>
@@ -236,7 +278,8 @@ $effect(() => {
   .handsoff {
     position: fixed;
     left: 50%;
-    bottom: calc(env(safe-area-inset-bottom) + 26px);
+    /* Clear of the panel cover, which is where your hands would be. */
+    bottom: calc(env(safe-area-inset-bottom) + 62px);
     transform: translateX(-50%);
     font: 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.14em;
@@ -248,32 +291,73 @@ $effect(() => {
     pointer-events: none;
   }
 
-  .rackbtn {
+  /* The fitted glass, stacked down the right. */
+  .column {
     position: fixed;
-    right: 14px;
-    top: calc(env(safe-area-inset-top) + 48px);
+    right: 12px;
+    top: calc(env(safe-area-inset-top) + 10px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .item {
+    background: rgba(16, 19, 21, 0.94);
+    border: 1px solid #333a3b;
+    box-shadow: 0 0 0 3px #0d1012;
+  }
+  .camera {
+    display: flex;
+  }
+  .camera button {
     font: 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.14em;
-    color: #c6d0cb;
-    background: #23282a;
-    border: 1px solid #0d1012;
-    padding: 9px 12px;
+    color: #6d7a76;
+    background: transparent;
+    border: none;
+    border-left: 1px solid #333a3b;
+    padding: 8px 10px;
   }
-  .rackbtn.on {
+  .camera button:first-child {
+    border-left: none;
+  }
+  .camera button.on {
     color: #14171a;
-    background: #e8b53a;
-    border-color: #e8b53a;
+    background: #6fe3c4;
   }
 
-  .view {
+  /* Anchored on `bottom` in both states so it travels to the seam the rack
+     opens at (top: 26vh → 74vh of cover travel) instead of jumping there. */
+  .cover {
     position: fixed;
-    right: 14px;
-    top: calc(env(safe-area-inset-top) + 12px);
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     font: 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.14em;
     color: #c6d0cb;
     background: #23282a;
     border: 1px solid #0d1012;
+    border-bottom-width: 3px;
     padding: 9px 12px;
+    transition: bottom 0.28s ease;
+    z-index: 1;
+  }
+  .cover.open {
+    bottom: 74vh;
+    color: #14171a;
+    background: #e8b53a;
+    border-color: #b8891f;
+  }
+  .cover .chev {
+    color: #6d7a76;
+  }
+  .cover.open .chev {
+    color: #14171a;
   }
 </style>

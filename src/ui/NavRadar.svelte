@@ -108,11 +108,10 @@ function plot(x: number, z: number) {
 </div>
 
 <style>
+  /* Positioned by the instrument column, not by itself — an instrument is
+     fitted into the glass it was given (docs/design/cockpit.md). */
   .scope {
-    position: fixed;
-    right: 12px;
-    top: calc(env(safe-area-inset-top) + 96px);
-    width: 132px;
+    width: 116px;
     background: rgba(16, 19, 21, 0.94);
     border: 1px solid #333a3b;
     box-shadow: 0 0 0 3px #0d1012;
@@ -131,8 +130,8 @@ function plot(x: number, z: number) {
   }
   svg {
     display: block;
-    width: 132px;
-    height: 132px;
+    width: 116px;
+    height: 116px;
   }
   .ring {
     fill: none;

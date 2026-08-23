@@ -64,6 +64,36 @@ it means *reconfiguring on the move costs you exactly what it should*.
 Consequence worth noting: this makes hot-patching (L-026) a posture rather than
 a menu. Rewiring live already costs you the view; LOTO will price the rest.
 
+## A server rack, not a DIN rail
+
+The rail turned out to be vertical, so it is a **server rack**: faceplates
+stacked one above the other between two uprights, each screwed in, signal
+flowing down the stack to the actuator terminal at the bottom.
+
+And each plate is in **its manufacturer's house style** — its own colours, its
+own wordmark, its own arrangement of the same parts. KIBA WORKS builds the
+chassis and its own controls, in machine yellow. TOWA DENKI sells navigation
+electronics, lighter and newer and centred. HANSA REGELTECHNIK sells safety
+gear, orange and boxed and slightly smug.
+
+This is cosmetic and it is doing real work. A uniform grid of identical rows
+reads as a menu the game drew; a rack of mismatched kit reads as equipment
+somebody bolted in, which is what it is meant to be. It also makes the rack
+*legible at a glance while driving* — you find the orange plate, not the third
+row down.
+
+The cover over it is the same bargain as the chase camera, made with your hands
+instead of your eyes: lift it and the viewport slides up out of the way.
+
+## Modules carry settings, and settings are not gains
+
+A module may put **bounded numbers with units** on its faceplate — TILT-GUARD's
+two limit sliders are the first. That is deliberately as far as it goes: a
+setting is a knob on a component you bought, not a tuning parameter on the
+simulation. The gain-tuning trap (NOTES) is exactly what this must not become,
+so there is no way to express a gain in the parameter model and no plan to add
+one. Topology, order and limits are the game; PID tuning is not.
+
 ## Instruments carry LEDs, not just numbers
 
 Every module slot and every actuator terminal shows **output strength as a
@@ -73,6 +103,34 @@ That is the reading you take at a glance while driving.
 The numeric values stay, but demoted to **debug telemetry**. A number is
 something you read; a bar is something you notice, and the difference matters
 when your attention is on the ground rather than the panel.
+
+## ATT-0: the one instrument that ships with the bare chassis
+
+Heading and attitude in one head — a compass card round an attitude ball —
+because the pilot reads them as one question: *which way am I pointing, and how
+level am I?* Two instruments side by side would cost twice the glass to answer
+it.
+
+It is the reference point for the budget: the cage you start in is not empty
+glass, it is glass with one thing in it, and everything after that is a trade
+you made.
+
+Nothing on it is advice. It shows where north is and where the horizon is, and
+it never colours anything. The module with an opinion is TILT-GUARD, and it
+brings its own gauges.
+
+## TILT-GUARD's instrument: two gauges that show the module's own thresholds
+
+Red–amber–green–amber–red, one bar per axis. The bands are not a mood: green is
+where the module passes your command through untouched, amber is where it has
+started winding you down, red is where it has taken the drivetrain to zero.
+Move the limit sliders on the faceplate and the bands move with them, because
+they **are** the limits.
+
+So the gauge shows exactly what the module will do and nothing about whether it
+is right to do it. Sitting nose-high in the red with no drive, halfway up a
+grade the machine could have climbed, is the instrument telling the truth about
+a component that is wrong.
 
 ## NAV-1's instrument: the route scope
 

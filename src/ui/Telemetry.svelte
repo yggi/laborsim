@@ -17,7 +17,6 @@ const {
   showChain = true,
 }: { snapshot: Snapshot | undefined; showChain?: boolean } = $props();
 
-const deg = (r: number) => `${(r >= 0 ? "+" : "") + ((r * 180) / Math.PI).toFixed(0)}°`;
 const num = (n: number) => (n >= 0 ? "+" : "") + n.toFixed(2);
 
 /** Amber past two-thirds of grip, red once the track is genuinely sliding. */
@@ -36,13 +35,11 @@ function tractionClass(track: TrackState): string {
       <b>TYPE 3A / KIBA</b>
       <span>tracked platform &middot; 6.2 t</span>
     </div>
-    <div class="row">
-      SPD {m.speed.toFixed(2)} m/s &middot; PTCH {deg(m.pitch)} &middot; ROLL {deg(m.roll)}
-    </div>
+    <div class="row">SPD {m.speed.toFixed(2)} m/s</div>
     {#each [["L", m.left], ["R", m.right]] as const as [side, track] (side)}
       <div class="row {tractionClass(track)}">
-        {side} CMD {num(track.commanded)} &middot; SLIP {num(track.slip)} &middot; GRIP
-        {(track.traction * 100).toFixed(0)}% &middot; GND {track.contacts}/6
+        {side} {num(track.commanded)} &middot; SLIP {num(track.slip)} &middot; GRIP
+        {(track.traction * 100).toFixed(0)}% &middot; {track.contacts}/6
         {#if track.contacts === 0}&middot; NO CONTACT{/if}
       </div>
     {/each}
