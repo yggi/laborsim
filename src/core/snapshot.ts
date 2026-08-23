@@ -77,7 +77,9 @@ export const SNAPSHOT_HZ = 10;
 export function attitudeOf(q: BodyPose["rotation"]): { pitch: number; roll: number } {
   const [x, y, z, w] = q;
   const sinPitch = 2 * (w * x - y * z);
+  // deterministic-exempt: display only, never read back into the sim.
   const pitch = Math.asin(Math.max(-1, Math.min(1, sinPitch)));
+  // deterministic-exempt: display only, never read back into the sim.
   const roll = Math.atan2(2 * (w * z + x * y), 1 - 2 * (x * x + z * z));
   return { pitch, roll };
 }

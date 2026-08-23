@@ -19,18 +19,37 @@ export interface Pin extends Waypoint {
   readonly y: number;
 }
 
+/**
+ * Monotone in the true bearing, but built from arithmetic only — the "diamond
+ * angle". Used to put the pins into a sane going-round order without `atan2`,
+ * which is not bit-portable and would reach sim state through NAV-1.
+ */
+function pseudoAngle(x: number, z: number): number {
+  const p = x / (Math.abs(x) + Math.abs(z) + 1e-12);
+  return z > 0 ? 3 - p : 1 + p;
+}
+
 export function generateWaypoints(terrain: Terrain, count = 5): Pin[] {
   const rng = makeRng(terrain.seed ^ 0x2b17);
-  const pins: Pin[] = [];
-  const radius = Math.min(terrain.extent / 2 - 22, 74);
-  // Even angular spacing with jitter: a ring the machine has to work around,
-  // rather than a clump it can shortcut.
-  for (let i = 0; i < count; i++) {
-    const turn = (i / count + rng.range(-0.06, 0.06)) * Math.PI * 2;
-    const r = radius * rng.range(0.62, 1);
-    const x = Math.cos(turn) * r;
-    const z = Math.sin(turn) * r;
-    pins.push({ x, z, y: sampleTerrain(terrain, x, z) });
+  const outer = Math.min(terrain.extent / 2 - 22, 74);
+  const inner = outer * 0.55;
+
+  // Rejection-sample an annulus instead of stepping an angle: placing pins with
+  // cos/sin would put non-portable values into NAV-1's route, and a route is
+  // sim state. Sorting by pseudo-angle keeps the tour going one way round.
+  const placed: Array<{ x: number; z: number }> = [];
+  for (let attempt = 0; attempt < 4000 && placed.length < count; attempt++) {
+    const x = rng.range(-outer, outer);
+    const z = rng.range(-outer, outer);
+    const r = Math.sqrt(x * x + z * z);
+    if (r < inner || r > outer) continue;
+    // Keep them spread: no pin too close to another. Compared squared, because
+    // `Math.hypot` is not required to be correctly rounded either.
+    const minGap = inner * 0.7;
+    if (placed.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < minGap * minGap)) continue;
+    placed.push({ x, z });
   }
-  return pins;
+
+  placed.sort((a, b) => pseudoAngle(a.x, a.z) - pseudoAngle(b.x, b.z));
+  return placed.map((p) => ({ ...p, y: sampleTerrain(terrain, p.x, p.z) }));
 }

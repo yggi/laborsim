@@ -11,12 +11,13 @@
  */
 
 import * as THREE from "three";
+import { makeRng } from "../core/rng.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
 import type { Prop } from "../world/props.ts";
-import type { Terrain } from "../world/terrain.ts";
+import { sampleTerrain, type Terrain } from "../world/terrain.ts";
 import type { Pin } from "../world/waypoints.ts";
-import { ink, inked, toon } from "./toon.ts";
+import { ink, inked, terrainMaterial, toon } from "./toon.ts";
 
 /**
  * Cab is the primary view: rung 1's whole claim is that the two-lever cage
@@ -66,17 +67,24 @@ export function createViewport(
 
   const key = new THREE.DirectionalLight(0xfff0d8, 2.1);
   key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(2048, 2048);
   const shadowCam = key.shadow.camera;
-  shadowCam.left = -24;
-  shadowCam.right = 24;
-  shadowCam.top = 24;
-  shadowCam.bottom = -24;
-  shadowCam.far = 120;
+  // Wide enough to cover the near field the chase camera can see. Too small a
+  // frustum makes ground *outside* it sample as shadowed, which showed up as a
+  // hard black wedge across the site and read as a shading bug.
+  const SHADOW_REACH = 62;
+  shadowCam.left = -SHADOW_REACH;
+  shadowCam.right = SHADOW_REACH;
+  shadowCam.top = SHADOW_REACH;
+  shadowCam.bottom = -SHADOW_REACH;
+  shadowCam.far = 190;
   key.shadow.bias = -0.0012;
   scene.add(key);
   scene.add(key.target);
-  scene.add(new THREE.HemisphereLight(0xa8ccdd, 0x4a4033, 1.1));
+  // Generous sky fill. With a cel ramp, ground facing away from the key light
+  // lands on the darkest band across a whole hillside at once, which reads as
+  // a hole rather than a slope unless the shade side is lifted.
+  scene.add(new THREE.HemisphereLight(0xbcdcea, 0x6a6250, 1.85));
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.15, 900);
   // Starts in the cab, so the interior layer starts hidden.
@@ -198,6 +206,8 @@ export function createViewport(
   scene.add(buildPins(waypoints));
   scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }));
 
+  greeble(machine, { accent, dark, hazard, lamp: lampMat });
+
   /* -- camera state ----------------------------------------------------- */
   let mode: CameraMode = "cab";
   let pan = 0;
@@ -218,7 +228,7 @@ export function createViewport(
       machine.quaternion.set(qx, qy, qz, qw);
       machine.updateMatrixWorld(true);
 
-      key.position.set(px - 30, py + 42, pz + 22);
+      key.position.set(px - 52, py + 78, pz + 38);
       key.target.position.set(px, py, pz);
 
       const dt =
@@ -251,10 +261,17 @@ export function createViewport(
         camera.lookAt(aim);
       } else {
         const dist = 13;
+        const cx = px + Math.sin(orbit) * Math.cos(elevation) * dist;
+        const cz = pz + Math.cos(orbit) * Math.cos(elevation) * dist;
+        // Never let the observer end up underground. Without this, dragging
+        // down puts the camera beneath the heightfield and the site turns into
+        // a dark band with sky below it — which looked like a shading bug and
+        // was not one.
+        const floor = sampleTerrain(terrain, cx, cz) + 1.6;
         camera.position.set(
-          px + Math.sin(orbit) * Math.cos(elevation) * dist,
-          py + 2.2 + Math.sin(elevation) * dist,
-          pz + Math.cos(orbit) * Math.cos(elevation) * dist,
+          cx,
+          Math.max(py + 2.2 + Math.sin(elevation) * dist, floor),
+          cz,
         );
         camera.lookAt(px, py + 1, pz);
       }
@@ -327,7 +344,7 @@ function buildTerrainMesh(terrain: Terrain): THREE.Mesh {
   // probe hit this too: MeshToonMaterial ignores flatShading in that era.
   const faceted = geometry.toNonIndexed();
   faceted.computeVertexNormals();
-  const mesh = new THREE.Mesh(faceted, toon(0x8f9678, { soft: true, rimStrength: 0 }));
+  const mesh = new THREE.Mesh(faceted, terrainMaterial(0x8f9678));
   mesh.receiveShadow = true;
   return mesh;
 }
@@ -364,7 +381,7 @@ function buildProps(props: readonly Prop[], mat: PropMaterials): THREE.Group {
   for (const prop of props) {
     const node = new THREE.Group();
     node.position.set(prop.x, prop.y, prop.z);
-    node.rotation.y = prop.yaw;
+    node.quaternion.set(0, prop.yawY, 0, prop.yawW);
     node.scale.setScalar(prop.scale);
 
     if (prop.kind === "cone") {
@@ -473,4 +490,106 @@ function buildPins(waypoints: readonly Pin[]): THREE.Group {
     group.add(node);
   }
   return group;
+}
+
+/**
+ * Greebles — small procedural surface detail: panels, vents, hatches, grab
+ * rails, exhaust stacks.
+ *
+ * Cheap, and they do more than decorate. A bare box has no scale: it could be
+ * a metre or ten. Hatches and rails are things a human body uses, so they tell
+ * you how big the machine is, and they make the cel ink lines land on
+ * something instead of tracing one silhouette.
+ *
+ * Seeded, so the machine looks the same every reload. Renderer-side only: none
+ * of this exists to the sim, and none of it can be hit.
+ */
+function greeble(
+  machine: THREE.Group,
+  mat: {
+    accent: THREE.Material;
+    dark: THREE.Material;
+    hazard: THREE.Material;
+    lamp: THREE.Material;
+  },
+): void {
+  const rng = makeRng(0x1a80);
+  const deckY = TRACK.height + CLEARANCE + HULL.height;
+  const half = { x: HULL.width / 2, z: HULL.length / 2 };
+
+  // Deck plates, scattered over the hull roof but kept clear of the cab.
+  for (let i = 0; i < 9; i++) {
+    const w = rng.range(0.22, 0.55);
+    const d = rng.range(0.22, 0.5);
+    const x = rng.range(-half.x + 0.25, half.x - 0.25);
+    const z = rng.range(-half.z + 0.25, half.z - 0.25);
+    if (Math.abs(x) < CAB.width * 0.7 && Math.abs(z - CAB.z) < CAB.depth * 0.8)
+      continue;
+    const plate = inked(
+      new THREE.BoxGeometry(w, rng.range(0.05, 0.13), d),
+      mat.accent,
+      0.02,
+    );
+    plate.position.set(x, deckY, z);
+    machine.add(plate);
+  }
+
+  // Flank ribs. Mirrored, because a machine is built symmetrically even when
+  // its clutter is not.
+  const ribCount = 5;
+  for (let i = 0; i < ribCount; i++) {
+    const z = -half.z + 0.5 + (i / (ribCount - 1)) * (HULL.length - 1);
+    const h = rng.range(0.3, 0.7);
+    for (const side of [-1, 1]) {
+      const rib = inked(
+        new THREE.BoxGeometry(0.07, h, rng.range(0.1, 0.22)),
+        mat.dark,
+        0.02,
+      );
+      rib.position.set(side * (half.x + 0.03), deckY - HULL.height / 2, z);
+      machine.add(rib);
+    }
+  }
+
+  // Grab rail up the side of the cab: the clearest scale cue on the machine.
+  for (const side of [-1, 1]) {
+    const rail = inked(new THREE.BoxGeometry(0.05, 0.9, 0.05), mat.accent, 0.02);
+    rail.position.set(side * (CAB.width / 2 + 0.1), CAB.y, CAB.z - CAB.depth / 2);
+    machine.add(rail);
+  }
+
+  // Exhaust stacks and a dorsal pack behind the cab.
+  for (const side of [-1, 1]) {
+    const stack = inked(
+      new THREE.CylinderGeometry(0.08, 0.1, 0.75, 8),
+      mat.dark,
+      0.025,
+    );
+    stack.position.set(side * 0.42, deckY + 0.37, -half.z + 0.55);
+    machine.add(stack);
+  }
+  const pack = inked(new THREE.BoxGeometry(1.0, 0.42, 0.6), mat.dark, 0.025);
+  pack.position.set(0, deckY + 0.21, -half.z + 1.25);
+  machine.add(pack);
+
+  // A hazard stripe panel and a unit-number plate, low on the flanks.
+  for (const side of [-1, 1]) {
+    const stripe = inked(new THREE.BoxGeometry(0.06, 0.24, 0.9), mat.hazard, 0.02);
+    stripe.position.set(
+      side * (half.x + 0.02),
+      deckY - HULL.height + 0.3,
+      half.z - 0.8,
+    );
+    machine.add(stripe);
+  }
+
+  // A single beacon on the cab roof. Machines that move on foot-traffic sites
+  // have one, and it is the loudest "this is industrial plant" signal there is.
+  const beacon = inked(
+    new THREE.CylinderGeometry(0.1, 0.12, 0.16, 8),
+    mat.hazard,
+    0.02,
+  );
+  beacon.position.set(-CAB.width / 2 + 0.16, CAB.y + CAB.height / 2 + 0.08, CAB.z);
+  machine.add(beacon);
 }

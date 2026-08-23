@@ -19,6 +19,35 @@ export interface Rng {
 }
 
 /**
+ * A random heading as a half-angle quaternion about Y, **without trigonometry**.
+ *
+ * Rejection-samples a unit vector in the plane, then uses the half-angle
+ * identities, which need only `Math.sqrt` — and IEEE-754 requires sqrt to be
+ * correctly rounded, so this is bit-portable where `Math.sin(yaw / 2)` is not.
+ *
+ * This exists because placing site furniture with `sin`/`cos` quietly put a
+ * non-portable value into collider transforms, which is sim state.
+ */
+export function randomYawQuat(rng: Rng): { y: number; w: number } {
+  let c = 1;
+  let s = 0;
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const a = rng.range(-1, 1);
+    const b = rng.range(-1, 1);
+    const len2 = a * a + b * b;
+    if (len2 > 1e-6 && len2 <= 1) {
+      const len = Math.sqrt(len2);
+      c = a / len;
+      s = b / len;
+      break;
+    }
+  }
+  // cos(t/2) = sqrt((1+cos t)/2); sin t = 2 sin(t/2) cos(t/2).
+  const w = Math.sqrt(Math.max(0, (1 + c) / 2));
+  return w < 1e-9 ? { y: 1, w: 0 } : { y: s / (2 * w), w };
+}
+
+/**
  * mulberry32 — small, fast, and adequate for level generation and jitter.
  * Deliberately not cryptographic and deliberately not a shared global.
  */

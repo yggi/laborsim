@@ -29,6 +29,20 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
+/**
+ * Blank out comments while preserving line numbers and columns, so a per-line
+ * scan can still report where it found something. `stripComments` collapses
+ * newlines, which is fine for whole-file scans and wrong for this.
+ */
+function blankComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(
+      /(^|[^:])\/\/[^\n]*/gm,
+      (m, lead: string) => lead + " ".repeat(m.length - lead.length),
+    );
+}
+
 /** Import specifiers, ignoring the `import type` form, which erases at build. */
 function valueImports(source: string): string[] {
   const specifiers: string[] = [];
@@ -80,6 +94,54 @@ describe("rule 2 — randomness is seeded", () => {
       ).not.toMatch(/Math\.random/);
     }
   });
+});
+
+describe("rule 2 — no transcendental reaches sim state", () => {
+  /**
+   * `Math.sin`, `cos`, `tan`, `atan2`, `exp`, `pow` and friends are not
+   * required to be bit-identical across JS engines, so one in sim-visible code
+   * silently breaks cross-browser replay. `sqrt` and `round` are exempt —
+   * IEEE-754 requires both to be correctly rounded.
+   *
+   * This caught two live violations the day it was written: site furniture
+   * placed with sin/cos was writing non-portable values into collider
+   * transforms, and NAV-1's route was generated the same way. Reading the rule
+   * had not caught either.
+   *
+   * A line may opt out with a `deterministic-exempt:` comment naming why —
+   * display-only derivations, or values quantized far below any engine
+   * disagreement.
+   */
+  const BANNED = /Math\.(sin|cos|tan|asin|acos|atan2?|exp|log2?|pow|cbrt|hypot)\b/;
+
+  it.each(["sim", "control", "modules", "world", "core"])(
+    "src/%s uses no non-portable maths",
+    (tree) => {
+      let dir: string;
+      try {
+        dir = join(SRC, tree);
+        statSync(dir);
+      } catch {
+        return;
+      }
+      for (const file of filesUnder(dir)) {
+        const raw = readFileSync(file, "utf8");
+        const lines = raw.split("\n");
+        const code = blankComments(raw).split("\n");
+        lines.forEach((_line, i) => {
+          if (!BANNED.test(code[i] ?? "")) return;
+          // Look back over a whole comment block, not just a line or two.
+          const context = lines.slice(Math.max(0, i - 5), i + 1).join("\n");
+          expect(
+            context.includes("deterministic-exempt:"),
+            `${file}:${i + 1} uses non-portable maths in sim-visible code. ` +
+              "Rewrite it in arithmetic and sqrt, or justify it with a " +
+              "deterministic-exempt: comment.",
+          ).toBe(true);
+        });
+      }
+    },
+  );
 });
 
 describe("rule 3 — the snapshot boundary is one-directional", () => {

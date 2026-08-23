@@ -10,7 +10,7 @@
  * Sizes are shared with the renderer from this file — one fact, one place.
  */
 
-import { makeRng } from "../core/rng.ts";
+import { makeRng, randomYawQuat } from "../core/rng.ts";
 import { sampleTerrain, type Terrain } from "./terrain.ts";
 
 export type PropKind = "cone" | "pole" | "pipes" | "barrier" | "rock";
@@ -20,7 +20,9 @@ export interface Prop {
   readonly x: number;
   readonly y: number;
   readonly z: number;
-  readonly yaw: number;
+  /** Heading as a half-angle quaternion about Y. Not an angle: see rng.ts. */
+  readonly yawY: number;
+  readonly yawW: number;
   /** Uniform size multiplier. Rocks vary; the rest are stock parts. */
   readonly scale: number;
 }
@@ -94,7 +96,10 @@ export function generateProps(terrain: Terrain, count = 130): Prop[] {
       z,
       // Rocks sit part-buried; everything else stands on the surface.
       y: sampleTerrain(terrain, x, z) - (kind === "rock" ? 0.35 * scale : 0),
-      yaw: rng.range(0, Math.PI * 2),
+      ...(() => {
+        const q = randomYawQuat(rng);
+        return { yawY: q.y, yawW: q.w };
+      })(),
       scale,
     });
   }

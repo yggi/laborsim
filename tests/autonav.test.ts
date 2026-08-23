@@ -124,18 +124,26 @@ describe("NAV-1 in the rack", () => {
     return world;
   }
 
-  it("drives itself when the levers are wide open", () => {
+  it("closes on its pin when the levers are wide open", () => {
+    // Asserting raw displacement encoded an accident of the route: the first
+    // pin can be behind the machine, so it spends seconds turning before it
+    // goes anywhere. Closing the range is what "it navigates" actually means.
     const world = governed(MAX_TRACK_SPEED);
     for (let i = 0; i < 30; i++) world.step();
-    const start = world.snapshot();
-    for (let i = 0; i < 420; i++) world.step();
-    const end = world.snapshot();
-    const moved = Math.hypot(
-      end.machine.pose.position[0] - start.machine.pose.position[0],
-      end.machine.pose.position[2] - start.machine.pose.position[2],
-    );
+
+    const rangeToPin = () => {
+      const p = world.snapshot().machine.pose.position;
+      const pin = world.waypoints[0];
+      if (!pin) throw new Error("no route generated");
+      return Math.hypot(pin.x - p[0], pin.z - p[2]);
+    };
+
+    const before = rangeToPin();
+    for (let i = 0; i < 900; i++) world.step();
+    const after = rangeToPin();
     world.free();
-    expect(moved).toBeGreaterThan(5);
+
+    expect(after).toBeLessThan(before - 10);
   });
 
   it("is held still by parked levers — CAP is a dead-man's throttle", () => {

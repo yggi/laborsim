@@ -107,7 +107,7 @@ export function makeRampTerrain(degrees: number, flat = 30): Terrain {
   const n = GRID + 1;
   const extent = GRID * CELL;
   const heights = new Float32Array(n * n);
-  // `Math.tan` is not bit-portable, and this file otherwise bans transcendentals.
+  // deterministic-exempt: `Math.tan` is not bit-portable, but this is quantized.
   // Quantizing the slope settles it: engines disagree around 1e-16, which is
   // nine orders of magnitude below this, so every engine gets the same ramp.
   const slope = Math.round(Math.tan((degrees * Math.PI) / 180) * 1e6) / 1e6;

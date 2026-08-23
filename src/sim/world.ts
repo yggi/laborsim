@@ -86,12 +86,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     const [hx, hy, hz] = PROP_BOX[prop.kind];
     const bodyDesc = RAPIER.RigidBodyDesc.fixed()
       .setTranslation(prop.x, prop.y + hy * prop.scale, prop.z)
-      .setRotation({
-        x: 0,
-        y: Math.sin(prop.yaw / 2),
-        z: 0,
-        w: Math.cos(prop.yaw / 2),
-      });
+      .setRotation({ x: 0, y: prop.yawY, z: 0, w: prop.yawW });
     const propBody = world.createRigidBody(bodyDesc);
     world.createCollider(
       RAPIER.ColliderDesc.cuboid(
