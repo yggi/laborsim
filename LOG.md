@@ -18,6 +18,47 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — META.md, and a fresh look at the critical path
+
+Cards: none closed · board reordered · [L-031] [L-032] [L-033] [L-034] [L-035]
+opened · [L-019] split and demoted · [L-006] [L-021] demoted
+
+**`META.md` — a fifth surface.** Method lessons, each tied to the incident that
+earned it, in four sections (diagnosis, verification, design, bookkeeping). Gate
+150. The rule that keeps it honest: an entry that loses its incident has
+probably stopped being true, because an abstract rule nobody paid for is advice.
+Registered in `CLAUDE.md`'s read and write order. Two stale lines in `CLAUDE.md`
+went with it — the "four surfaces" count, and "no stack is committed yet", which
+had been false since L-013.
+
+**The critical-path review** — `docs/design/roadmap.md`. Four findings drove the
+reordering:
+
+- *Nothing has consequences.* The damage ledger is named in `MEMORY.md` § 3.1 as
+  the core feedback mechanism and does not exist in any form. Everything else is
+  tuning a loop with a missing beat.
+- *The acceptance scenario is already half-built.* Levers and NAV-1 under `CAP`
+  **are** two components fighting over one actuator. So L-018 is not "build the
+  scenario", it is "make it legible" — a smaller, better-defined card.
+- *The ten-minute clause is an onboarding requirement* that no card owned. Now
+  L-033.
+- *L-019 bundled two different things.* Same-engine record/playback is cheap and
+  needed now; cross-browser bit-determinism is expensive, unverifiable in this
+  sandbox (Chromium only, and Node is V8 too), and needed only by missions. Split
+  into L-032 (ready) and L-019 (backlog).
+
+**Rejected: build mode as part assembly in v0.** It drags four non-small cards
+in before the loop closes once. The rack is already a build surface — order,
+verb, enable — so "back to build with a reason" can mean *move NAV-1 below the
+levers*. Recorded as a NOTES thread rather than as MEMORY, because it is a
+recommendation awaiting confirmation, and it is the call that decides whether v0
+finishes. L-006 and L-021 went to backlog behind it.
+
+Also opened L-034: mobile-first is a hard pillar and no frame has ever been
+timed on a phone, with ink shells doubling every mesh. Folded the two overlapping
+NOTES budget threads into one, since bytes, frames and world size are one
+question.
+
 ## 2026-08-23 — the dark area was the contour code
 
 Cards: none closed · [L-025] narrowed

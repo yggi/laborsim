@@ -25,28 +25,22 @@ Card format:
 
 ## ready
 
-### [L-015] The rail — drag to reorder, and the DIN-rail treatment
-- **what:** the pipeline model, verbs and reordering all work; what is missing
-  is the *rail*. Drag rather than arrows, slot styling, ~8 slots, and deciding
-  whether it is editable during sim (which is L-026, not a UX choice).
-- **done-when:** you can drag a slot with a thumb and the machine changes.
+Order and reasoning: `docs/design/roadmap.md`. The first four cards close the
+core loop once, at rung 1, over the rack as the build surface.
 
-### [L-018] Acceptance test — two components, one actuator
-- **what:** construct the milestone scenario on rung 1: two components fighting
-  over one actuator, reachable within ten minutes of a first session.
-- **done-when:** a fresh player hits the conflict in under ten minutes and can
-  say what each module did to the signal, from a replay.
-- **needs:** L-019
+### [L-031] Damage model — the world can be broken
+- **what:** world objects get mass, a price and a destruction threshold. Contact
+  energy above it destroys the object and emits a priced, named event on the sim
+  side. No presentation — that is L-029.
+- **done-when:** driving into the scooter destroys it and the sim records what,
+  where, how hard and what it cost.
 
-### [L-019] Replay determinism spike
-- **what:** establish that a failure can be recorded and replayed identically.
-  Use `@dimforge/rapier3d-deterministic` and assert on `world.takeSnapshot()`
-  hashes. Must also settle our own sim code: JS transcendentals are not
-  bit-portable across engines, and `H(x,z)` is built from them.
-- **done-when:** the same input trace yields the same snapshot hash on two
-  different browsers, and the cost of that guarantee is in `MEMORY.md`.
-  Same-machine determinism already holds and is under test; this card is the
-  cross-browser half.
+### [L-032] Record and playback — one engine
+- **what:** an input trace plus the seed reproduces a run exactly in this
+  browser. Rack state (order, verbs, enables) is part of the trace, because the
+  ledger has to say what was driving. Splits off the cross-browser half (L-019).
+- **done-when:** replaying a recorded run yields the same damage events in the
+  same order, asserted in a test.
 
 ### [L-029] The damage ledger — v0's verdict and core feedback
 - **what:** itemised, named, Yen-priced damage in a condescending institutional
@@ -54,24 +48,72 @@ Card format:
   Quarry (few hazards, nobody to hurt) as the easy environment tier.
 - **done-when:** a run ends with a line-by-line account that says *what* and
   *why*, each line traceable to what you did and what was driving.
-- **needs:** L-016, L-027
+- **needs:** L-031, L-032
 
-### [L-021] Load chart v0
-- **what:** compute a payload-vs-reach envelope from geometry, mass, actuator
-  torque and support polygon for the rung-1 machine, and show it in build.
-- **done-when:** changing a part visibly moves the chart before you drive.
-- **needs:** L-014
+### [L-018] The acceptance scenario, made legible
+- **what:** levers and NAV-1 under `CAP` already are two components fighting
+  over one actuator. The machinery exists; nothing records the conflict, prices
+  it, or names it. Make it land.
+- **done-when:** a player can say what each module did to the signal, from a
+  replay, after breaking something because of it.
+- **needs:** L-029, L-032
 
-### [L-006] Part/module model
-- **what:** how a component declares attachment, the signals it consumes and
-  produces, its sensor dependency, latency and actuator authority — and how a
-  *part* (no loop) differs from a *component* (closes a loop).
-- **done-when:** a track drive and an autonav are both expressible without
-  special-casing.
+### [L-033] First run — the ten-minute path
+- **what:** the other half of the acceptance criterion, which no card owned. A
+  first session opens on two unlabelled levers; nothing walks anyone to the
+  conflict. Diegetic register: induction briefing, not a tutorial overlay.
+- **done-when:** someone who has never seen the game reaches the conflict in
+  under ten minutes without being told how.
+- **needs:** L-018
+
+### [L-034] Measure the mobile frame
+- **what:** frame time and draw-call count on a real mid-range phone, with the
+  current scene (~130 props, ink shells doubling meshes, greebles, grousers).
+  Mobile-first is a pillar we have never measured.
+- **done-when:** a number exists, and a written first-load and frame budget with
+  it.
+
+### [L-015] The rail — drag to reorder, and the DIN-rail treatment
+- **what:** the pipeline model, verbs and reordering all work; what is missing
+  is the *rail*. Drag rather than arrows, slot styling, ~8 slots, and deciding
+  whether it is editable during sim (which is L-026, not a UX choice).
+- **done-when:** you can drag a slot with a thumb and the machine changes.
+
+### [L-035] Throttle-and-steer — the third module
+- **what:** the named rung-2 successor to the two levers, and the first
+  component curriculum entry. Turns the rack from a two-slot demo into an
+  ordering problem.
+- **done-when:** three modules contend for one actuator and order changes which
+  one you feel.
 
 ---
 
 ## backlog
+
+### [L-019] Cross-browser determinism — the other half
+- **what:** bit-identical `world.takeSnapshot()` hashes across engines. The
+  architecture that makes it possible is enforced by test already; this is the
+  verification. Deferred: it needs a second engine to check against, and nothing
+  in v0 depends on it — shared or cross-site verified solutions do, and those
+  are missions.
+- **done-when:** the same input trace yields the same snapshot hash on two
+  different browsers, and the cost of that guarantee is in `MEMORY.md`.
+- **needs:** L-032
+
+### [L-021] Load chart v0
+- **what:** compute a payload-vs-reach envelope from geometry, mass, actuator
+  torque and support polygon, and show it in build. Belongs with rung 2, where
+  payload against reach is the point and equal-share normal load gives out.
+- **done-when:** changing a part visibly moves the chart before you drive.
+- **needs:** L-006
+
+### [L-006] Part/module model
+- **what:** how a component declares attachment, the signals it consumes and
+  produces, its sensor dependency, latency and actuator authority — and how a
+  *part* (no loop) differs from a *component* (closes a loop). Not v0: v0's
+  build surface is the rack, and this gets easier once rung 2 exists as code.
+- **done-when:** a track drive and an autonav are both expressible without
+  special-casing.
 
 ### [L-023] Terrain — the probe's designed site features
 - **what:** noise terrain and clustered site furniture exist. Still missing are

@@ -4,14 +4,16 @@
 KSP-inspired build/sim loop, multi-layer educational physics & kinematics engine.
 
 This file is the contract for how to work in this repo. It is short on purpose.
-Everything else lives in the four surfaces below, each with a hard size gate.
+Everything else lives in the surfaces below, each with a hard size gate.
 
 ## Read order (every session, before touching anything)
 
 1. `CLAUDE.md` — this file. Rules of engagement.
 2. `MEMORY.md` — what the project *is*. Crystallized, durable, index to `docs/`.
-3. `NOTES.md` — what is *unresolved right now*. Open threads only.
-4. `BOARD.md` — what to *do next*. Cards in doing / ready / backlog.
+3. `META.md` — how the work *goes*. Method lessons, each with the scar that
+   earned it. Short. Read it; it is cheaper than re-earning them.
+4. `NOTES.md` — what is *unresolved right now*. Open threads only.
+5. `BOARD.md` — what to *do next*. Cards in doing / ready / backlog.
 
 Read `LOG.md` only when you need history (why was X done, what was tried).
 Do not read it as context by default.
@@ -22,14 +24,17 @@ Do not read it as context by default.
 2. `BOARD.md` — move cards, add cards you discovered. Trim history.
 3. `NOTES.md` — delete threads you closed, add threads you opened.
 4. `MEMORY.md` — only if something became *durably true*. Rare. Deliberate.
+5. `META.md` — only when the work taught you something about *working*, and it
+   cost something to learn. Rarer still.
 
-A change that touches code and leaves all four files untouched is incomplete.
+A change that touches code and leaves these files untouched is incomplete.
 
-## The four surfaces
+## The surfaces
 
 | File | Holds | Never holds | Gate |
 |---|---|---|---|
 | `MEMORY.md` | durable facts, decisions, structure, conventions | tasks, status, speculation | 300 lines |
+| `META.md` | method lessons, each with its incident | project facts, tasks | 150 lines |
 | `NOTES.md` | open, uncrystallized threads | anything settled, anything actionable-as-a-task | 100 lines |
 | `BOARD.md` | task cards | rationale, narrative | see below |
 | `LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
@@ -38,6 +43,8 @@ Gate overflow is a signal, not an error. Handle it:
 
 - **MEMORY.md > 300** → spill the fattest section to `docs/design/<topic>.md`,
   leave a one-line entry + link in the MEMORY index. The index never spills.
+- **META.md > 150** → entries have gone abstract. Merge or cut; an entry that
+  has lost the incident that earned it has probably stopped being true.
 - **NOTES.md > 100** → threads have gone stale. Each one either crystallizes
   into MEMORY, becomes a BOARD card, or gets deleted. Nothing else.
 - **BOARD.md** → `doing` ≤ 3 cards, `ready` ≤ 10, `backlog` ≤ 40,
@@ -78,8 +85,8 @@ These decide design arguments. If a change makes one weaker, say so out loud.
   broad layer that doesn't.
 - Uncertain about intent? Put it in `NOTES.md` as a thread and keep going on the
   parts that don't depend on it. Do not silently pick and bury the choice.
-- No stack, engine or renderer is committed yet. See `BOARD.md`. Do not
-  introduce one as a side effect of another task.
+- The stack is settled (`MEMORY.md` § 9) and its rejected options are recorded
+  with reasons. Do not reopen one as a side effect of another task.
 
 ## Repo map
 

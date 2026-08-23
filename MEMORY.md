@@ -1,7 +1,7 @@
 # MEMORY.md — project memory
 
 Durable, crystallized truth about `laborsim`. Facts and settled decisions only.
-Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
+Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `META.md`.
 
 **Gate: 300 lines.** On overflow, spill the fattest section to
 `docs/design/<topic>.md` and leave a one-line index entry below.
@@ -19,6 +19,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | `docs/design/missions.md` | **exploratory** — Zachtronics budgeting, and why it inverts the chase camera |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/roadmap.md` | **forward-looking** — critical-path review and the argument behind the board's order |
 | `docs/design/stack.md` | the stack, and the rejected options with their reasons |
 | `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
 | `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
@@ -232,11 +233,8 @@ It is **concept art with working mechanisms**, not an architecture sketch.
 policy above all, then the analytic 2-bone IK, the analytic height field, the
 hydraulic rams, and the cel pipeline. What it fakes (no physics at all, cosmetic
 margin bar, scheduled rather than measured contact) and the six defects it cost
-are in `docs/design/prototype-findings.md`.
-
-**Method, learned the hard way: instrument early.** Rounds were lost diagnosing
-from screenshots; a telemetry line settled it immediately. The readout the
-player needs to diagnose a failure is the readout the developer needs.
+are in `docs/design/prototype-findings.md`. The method lessons it taught are in
+`META.md`.
 
 ## 11. Repo map
 

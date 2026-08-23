@@ -11,21 +11,22 @@ or delete. Do not grow the file.
 
 ---
 
-## First-load weight on mobile
+## The mobile budget — bytes, frames, and world size
 
-The empty scaffold already builds to **3.44 MB raw / 1.25 MB gzipped**, and
-there is no game in it. Three.js and Rapier are roughly comparable
-contributors, and the `-compat` flavour of Rapier inlines its wasm as base64,
-which costs about a third in size over shipping the binary.
+One thread, because they are one question: mobile-first is a hard pillar and
+**nothing about it has been measured.**
 
-Mobile-first is a hard pillar, so this is a real budget question, not a
-premature optimisation — but it is also not urgent while there is nothing to
-load. Levers, cheapest first: drop `-compat` for the plain deterministic build
-plus `vite-plugin-wasm` (wasm streams and compresses properly), code-split the
-build mode away from the sim, and lazily load instruments.
+*Bytes.* The empty scaffold already built to 3.44 MB raw / 1.25 MB gzipped, and
+`-compat` inlines Rapier's wasm as base64 at about a third extra size. Levers,
+cheapest first: plain deterministic build plus `vite-plugin-wasm`, code-split
+build mode from sim, lazily load instruments.
 
-Worth setting an explicit first-load budget *before* the bundle grows enough to
-make the choice for us.
+*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser
+track geometry — and no frame ever timed on a phone. L-034 gets the number.
+
+*World size and part counts*, and whether the sim runs off the main thread,
+follow from those two numbers rather than preceding them. Must be answered
+before `src/sim/` grows.
 
 ## Missions, and what "operator interaction" means
 
@@ -85,8 +86,14 @@ Landscape is scenery. **Job sites** — footing, clearances, load, an unsurveyed
 obstruction — are the puzzle, and the thing that makes a load chart
 insufficient. What that means as a generator is unwritten.
 
-## Scale, and what "browser" costs us
+## Is v0's build surface the rack rather than part assembly?
 
-World size, part counts, whether sim runs off the main thread. Now constrained
-by mobile-first and by Rapier's wasm budget. Must be answered before `src/sim/`
-gets real.
+The roadmap's load-bearing scope call, and **not yet confirmed**. The claim:
+order, verb and enable are three real design decisions, so "back to build with a
+specific reason" can mean *move NAV-1 below the levers*, and the loop closes at
+rung 1 without a part model, a load chart, a cockpit editor or persistence.
+
+It forecloses nothing — the parts model is purely additive. What it risks is a
+v0 that never proves the *build* half of a KSP-shaped loop, which is the half
+players recognise. Argument in `docs/design/roadmap.md` § 5; decide before
+L-018 lands, because that card's shape depends on it.
