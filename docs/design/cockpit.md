@@ -49,23 +49,28 @@ So mobile-first is **fixed**, and it is upstream of stack, layout and control
 design alike. A desktop-first cockpit would be a different mechanic wearing the
 same name.
 
-## The chase camera
+## The chase camera — "hands off the wheel"
 
-**Available — but you cannot drive from it.**
+**Available — but you cannot drive from it, and the world does not wait.**
 
-While the chase view is up you **do not see the cockpit and have no control over
-the vehicle.** It is an observation mode: look at your machine, survey the site,
-understand what just happened. Then get back in the seat.
+While the chase view is up you do not see the cockpit and have no control over
+the vehicle. Critically, this is **not a pause and not an auto-stop**: the sim
+keeps stepping and the machine keeps doing whatever you last told it to. Leave
+the throttle locked open and go sightseeing, and you will return to an itemised
+account of what that cost.
 
-This keeps occlusion honest without the harshness of cab-only. The chase view
-cannot be *strictly better* than the cab, because it cannot drive. It costs you
-the machine for as long as you use it — which is exactly the same shape as every
-other trade in this design: a real capability with a real price, legible before
-you pay it.
+That is what makes it a real trade rather than a free look. The chase view
+cannot be *strictly better* than the cab, because it cannot drive and it cannot
+protect you — the same shape as every other capability here: a real gain at a
+real price, legible before you pay it.
+
+The intended texture: you come to a stop, get out, walk around the machine, see
+that you have wedged it — exactly what an operator actually does — and the
+discipline of stopping *first* is a thing you learn by not doing it once.
 
 Specific contexts may disable it entirely as a challenge condition.
 
-It also sits comfortably in the training frame: a rig plausibly has an external
+It sits comfortably in the training frame: a rig plausibly has an external
 observation view, and stepping out to use it is a thing the rig can record.
 
 Still open: **field stowing of panels** — allowed at a cost in hands or seconds,

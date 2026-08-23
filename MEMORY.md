@@ -18,6 +18,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
 | `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
 
 ---
@@ -89,24 +90,23 @@ The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 
 If that scenario cannot be constructed on rung one, the rack is decoration.
 
-### 3.1 The damage counter — v0's verdict
+### 3.1 The damage ledger — v0's verdict and core feedback
 
-**No job tickets in v0.** The failure loop still needs a third beat — a verdict —
-and the damage counter is it, at a fraction of a ticket economy's cost:
+**No job tickets in v0.** The failure loop still needs a third beat, and the
+damage ledger is it — at a fraction of a ticket economy's cost, and it is
+**the game's core feedback mechanism**, not a scoreboard.
 
-- Operate and navigate through a procedural environment full of **expensive
-  things to break**. Damage accumulates as a running cost.
-- **Harming a citizen is failure**, full stop — not a large number, a different
-  category.
+- Operate through a procedural environment full of **expensive things to break**.
+- **Itemised, named, priced**, never aggregated:
+  `citizen asset (scooter) damaged −¥3,000`.
+- **Harming a citizen is categorical failure**, not a line item. Never give a
+  person a price.
 - Environments are the difficulty axis: **a quarry is simpler than a city.**
-  Fewer things to hit, nobody to hurt, forgiving ground.
 
-This gives the verdict without gating: you are not being scored against a
-contract, you are being told what you cost. It fits the training frame exactly —
-this is what a training rig reports.
-
-The attribution rule applies to it in full. A damage counter that says *what* you
-broke without *why* is a score, and scores do not teach.
+Delivered in a **condescending institutional voice** — the rig is disappointed,
+patiently, and writing it down. Voice, register and worked examples:
+`docs/design/tone.md`. The attribution rule applies in full: a ledger that says
+*what* without *why* is a score, and scores do not teach.
 
 ## 4. Core loop
 
@@ -143,9 +143,10 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **Components ship instruments; those instruments are mandatory; the player
   places them.** So the rack and the cockpit are one decision, and a component
   can be **refused for want of glass**. OS-mode is tuning, never a gate.
-- **The chase camera exists, but you cannot drive from it** — no cockpit, no
-  vehicle control while it is up. It is an observation mode, so it can never be
-  strictly better than the cab. Some contexts disable it as a challenge.
+- **The chase camera is "hands off the wheel", not pause.** No cockpit, no
+  vehicle control — but **the sim keeps stepping and the vehicle does not
+  auto-stop.** Leave the throttle open and go sightseeing, and the ledger will
+  tell you what it cost. Some contexts disable it as a challenge.
 - **Viewport budgeting is a core mechanism, not a UI style**, which couples it
   deeply to touch. This is *why* mobile-first is fixed — see § 9.
 

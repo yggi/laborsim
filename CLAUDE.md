@@ -64,6 +64,11 @@ These decide design arguments. If a change makes one weaker, say so out loud.
    thing you can drive.
 5. **Educational means inspectable.** Every simulated quantity must be
    surfaceable to the player. A layer you cannot open is not a teaching layer.
+6. **You are an operator, not a demigod.** The fantasy is *not* an invincible
+   war mecha. It is a humble, unstable, hard-to-operate contraption you are
+   trying not to break everything with. Retrofuturistic forklift-operator
+   training, not power. If a change makes the machine feel heroic rather than
+   awkward, it is working against the game.
 
 ## Working rules
 

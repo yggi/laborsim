@@ -18,6 +18,42 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — tone crystallized, chase view is hands-off-the-wheel
+
+Cards: [L-029] reshaped
+
+A sixth guiding principle went into `CLAUDE.md`, which is a rare thing to add:
+**you are an operator, not a demigod.** The fantasy is not an invincible war
+mecha; it is a humble, unstable, hard-to-operate contraption you are trying not
+to break everything with. Retrofuturistic forklift-operator training, not power.
+It earns principle status because it *decides arguments* — if a change makes the
+machine feel heroic rather than awkward, it is working against the game, and
+that is now a check anyone can apply without asking.
+
+`docs/design/tone.md` carries the detail, including a working-with / working-
+against table for proposals, because this is the kind of decision that erodes
+quietly rather than being overturned.
+
+**The damage counter was promoted to the damage ledger** and reclassified: it is
+the game's *core feedback mechanism*, not a verdict it happens to also provide.
+Itemised, named, Yen-priced, never aggregated — `citizen asset (scooter)
+damaged −¥3,000`. Delivered in a condescending institutional voice: the rig is
+not angry, it is disappointed, patiently, and writing it down. Harming a citizen
+stays categorical failure and never gets a price.
+
+The voice turns out to do structural work rather than just being funny. The same
+speaker that reports `citizen asset (scooter) damaged −¥3,000` can report
+`NAV-1 retained bus authority; pilot input suppressed` without changing gear —
+so the attribution rule and the comedy come out of one mouth, and the training
+frame licenses both.
+
+**Chase view resolved to "hands off the wheel"**, which is stronger than the
+stop-and-survey reading I had been leaning toward. It is not a pause and not an
+auto-stop: the sim keeps stepping and the machine keeps doing whatever it was
+last told. Leave the throttle locked open and go sightseeing, and the ledger
+will explain the consequences afterwards. Last chase-camera thread closed; only
+panel field-stowing survives from that cluster.
+
 ## 2026-08-23 — stack settled, architecture rules anchored
 
 Cards: none closed · [L-013] fully specified

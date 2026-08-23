@@ -74,11 +74,12 @@ Card format:
   different browsers, and the cost of that guarantee is in `MEMORY.md`.
 - **needs:** L-014, NOTES thread "Determinism discipline"
 
-### [L-029] Damage counter — v0's verdict
-- **what:** running cost for things you break; harming a citizen is categorical
-  failure. Quarry (few hazards, no people) as the easy environment tier.
-- **done-when:** a run ends with a cost breakdown that says *what* and *why*,
-  not just a number.
+### [L-029] The damage ledger — v0's verdict and core feedback
+- **what:** itemised, named, Yen-priced damage in a condescending institutional
+  voice. Never aggregated. Citizens are categorical failure, never a line item.
+  Quarry (few hazards, nobody to hurt) as the easy environment tier.
+- **done-when:** a run ends with a line-by-line account that says *what* and
+  *why*, each line traceable to what you did and what was driving.
 - **needs:** L-016, L-027
 
 ### [L-021] Load chart v0

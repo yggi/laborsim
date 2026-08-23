@@ -11,21 +11,6 @@ or delete. Do not grow the file.
 
 ---
 
-## Does the world keep running in chase view?
-
-The chase camera costs you the cockpit and all vehicle control. Unstated: does
-the **sim keep stepping** while you are out there?
-
-- **Keeps running** — you must come to a stop before surveying, or you are
-  coasting blind. Surveying becomes a decision with a time cost, which pairs
-  well with the damage counter, and the machine can be damaged while you look.
-- **Pauses** — the chase view becomes a free look, and "no control" costs
-  nothing. That undercuts the trade the decision was made to create.
-
-Leaning strongly to the first, but it is a real fork and it changes what the
-button means. Note the pleasing side effect of the first: it reproduces what a
-real operator does — stop, get out, walk around the machine, look.
-
 ## Field stowing of panels
 
 Left over from the chase-camera decision. Instruments are installed, not
