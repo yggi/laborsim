@@ -18,6 +18,61 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — the rack is a pipeline, and NAV-1 drives
+
+Cards: closed [L-007] [L-017] · [L-015] retargeted · arbitration model replaced
+
+**The rack stopped being a priority stack and became a pipeline**, on a
+proposal that turned out to be strictly better than what was settled. Each
+module takes the signal from the module above, folds in its own intent by its
+**verb**, and passes it down to an actuator terminal at the bottom of the rail.
+
+That reframing dissolved three open questions in one move. Per-actuator
+granularity stops needing a mechanism — a module transforms what it cares about
+and passes the rest through. Suppress-versus-inhibit stops needing two entry
+kinds — rung 3's forklift constraint is just `clamp(input, envelope)`, an
+ordinary stage. And suppression itself survives as the verb `SET`, so nothing
+built was lost. Three problems, one model: usually the sign you have found the
+right shape rather than a cleverer one.
+
+Verbs are **SET, CAP, ADD, AMP**, and the three-letter rule is the good part.
+It makes a fifth verb typographically awkward on purpose — a complexity budget
+that enforces itself, aimed squarely at the node-graph-by-accretion danger. The
+verb is a property of the module and switchable on it; every module also has a
+disable toggle, and **a disabled module is a pass-through, not a hole**.
+
+`CAP` produced a mechanic nobody designed: a lever at rest caps to zero, so
+parking the levers above a CAP module stops the machine whatever is driving it.
+A dead-man's throttle, falling out of the verb rather than being a special case.
+Pinned by a test.
+
+**NAV-1 exists** and considers bearing and distance to the pin and nothing
+else — the honesty is the design, not a limitation. Its heading error comes
+from a dot and a cross product rather than `atan2`, because a transcendental
+there would close a loop straight back into sim state; rule 2 doing real work
+rather than being decoration. The sign was derived and pinned by tests before
+running it, having shipped a mirrored control once already.
+
+**Attribution had to be rethought and came out better.** Under a pipeline there
+is no owner to name — everyone shaped the signal — so instead of a banner
+naming a winner, the chain is shown stage by stage down to the terminal:
+`PILOT [SET] +2.20/+2.20 ↓ NAV-1 [CAP] +1.79/+2.20 ↓ TERMINAL`. That is the
+multi-layer inspectability pillar landing where it counts, and it reads the
+same live or in replay.
+
+Built the rail as a working panel rather than the full DIN-rail treatment:
+order, verb and enable all functional, reordering by arrows rather than drag.
+L-015 is retargeted to the drag-and-styling work, which is worth designing once
+there is more than one thing to drag. Each slot carries its module's
+one-sentence statement of what it considers, which turned out to be the most
+valuable thing on it.
+
+Grounding note, since the question was asked before building: what the rack was
+*needed* for was never the rail — it was the second module. A rack with one
+entry is furniture. Building NAV first was right, and it immediately paid: the
+props and terrain added last session became the things a blind autopilot drives
+into.
+
 ## 2026-08-23 — cel pipeline, a site worth driving through
 
 Cards: closed [L-024] · [L-023] narrowed · history trimmed to its gate

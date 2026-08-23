@@ -8,7 +8,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import type { CommandSource, TrackCommand } from "../src/control/bus.ts";
+import type { Module, TrackCommand, Verb } from "../src/control/bus.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
 import { makeRampTerrain } from "../src/world/terrain.ts";
@@ -17,14 +17,21 @@ beforeAll(async () => {
   await initPhysics();
 }, 30_000);
 
-/** A source that holds one command forever, standing in for held levers. */
-function fixedLevers(left: number, right: number): CommandSource {
+/** A module that holds one command forever, standing in for held levers. */
+function fixedLevers(left: number, right: number, verb: Verb = "SET"): Module {
   const command: TrackCommand = { left, right };
-  return { id: "PILOT", label: "PILOT", enabled: true, command: () => command };
+  return {
+    id: "PILOT",
+    label: "PILOT",
+    considers: "the levers, and nothing else",
+    verb,
+    enabled: true,
+    intent: () => command,
+  };
 }
 
 function drive(left: number, right: number, steps: number, seed = 20260823) {
-  const world = createWorld({ seed, sources: [fixedLevers(left, right)] });
+  const world = createWorld({ seed, modules: [fixedLevers(left, right)] });
   // Let it settle onto the ground before commanding anything.
   for (let i = 0; i < 30; i++) world.step();
   const start = world.snapshot();
@@ -120,7 +127,7 @@ describe("slip is real and reported", () => {
   it("is large when a track is commanded but cannot bite", () => {
     // Full command from rest: the drivetrain outruns the ground for a moment.
     const world = createWorld({
-      sources: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
     });
     for (let i = 0; i < 30; i++) world.step();
     let peak = 0;
@@ -138,7 +145,7 @@ describe("grades, and where traction runs out", () => {
   function climb(degrees: number, seconds: number) {
     const world = createWorld({
       terrain: makeRampTerrain(degrees, 5),
-      sources: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
     });
     for (let i = 0; i < 60; i++) world.step();
     const start = world.snapshot();
@@ -182,39 +189,85 @@ describe("grades, and where traction runs out", () => {
   });
 });
 
-describe("the actuator bus", () => {
-  it("does nothing at all with no command source", () => {
-    const world = createWorld({ sources: [] });
+describe("the rack is a pipeline", () => {
+  it("halts with an empty rack rather than doing something undefined", () => {
+    const world = createWorld({ modules: [] });
     for (let i = 0; i < 90; i++) world.step();
     const snap = world.snapshot();
     world.free();
-    expect(snap.busOwner).toBeNull();
+    expect(snap.stages).toEqual([]);
     expect(snap.machine.left.commanded).toBe(0);
   });
 
-  it("names its owner, and names who it suppressed", () => {
-    const pilot = fixedLevers(1, 1);
-    const nav: CommandSource = {
-      id: "NAV",
-      label: "NAV-1",
-      enabled: true,
-      command: () => ({ left: -1, right: -1 }),
-    };
-    // Ordering is priority: NAV sits above PILOT, so NAV drives.
-    const world = createWorld({ sources: [pilot, nav] });
+  it("reports every stage, so no module can drop out silently", () => {
+    const world = createWorld({
+      modules: [
+        fixedLevers(1, 1),
+        { ...fixedLevers(0, 0), enabled: false, id: "OFF", label: "OFF" },
+      ],
+    });
     world.step();
     const snap = world.snapshot();
     world.free();
-    expect(snap.busOwner).toBe("NAV-1");
-    expect(snap.suppressed).toEqual(["PILOT"]);
-    expect(snap.machine.left.commanded).toBeLessThan(0);
+    expect(snap.stages.map((s) => s.label)).toEqual(["PILOT", "OFF"]);
+    // A disabled module is a pass-through, not a hole: the signal survives it.
+    expect(snap.stages[1]?.output.left).toBe(1);
+    expect(snap.stages[1]?.enabled).toBe(false);
+  });
+});
+
+describe("verbs", () => {
+  /** Run one step and read the command that reached the terminal. */
+  function terminal(modules: Module[]): TrackCommand {
+    const world = createWorld({ modules });
+    world.step();
+    const last = world.snapshot().stages.at(-1);
+    world.free();
+    return last?.output ?? { left: 0, right: 0 };
+  }
+
+  it("SET ignores what arrived — this is plain suppression", () => {
+    const out = terminal([fixedLevers(2, 2), fixedLevers(-1, -1, "SET")]);
+    expect(out).toEqual({ left: -1, right: -1 });
+  });
+
+  it("CAP holds the downstream module under what arrived", () => {
+    const out = terminal([fixedLevers(0.5, 0.5), fixedLevers(2, 2, "CAP")]);
+    expect(out).toEqual({ left: 0.5, right: 0.5 });
+  });
+
+  it("CAP at zero is a dead-man's throttle", () => {
+    // Levers parked above a CAP module stop the machine whatever is driving.
+    const out = terminal([fixedLevers(0, 0), fixedLevers(2, 2, "CAP")]);
+    expect(out).toEqual({ left: 0, right: 0 });
+  });
+
+  it("CAP keeps the downstream module's own sign", () => {
+    const out = terminal([fixedLevers(1, 1), fixedLevers(-2, -2, "CAP")]);
+    expect(out).toEqual({ left: -1, right: -1 });
+  });
+
+  it("ADD trims what arrived", () => {
+    const out = terminal([fixedLevers(1, 1), fixedLevers(0.5, -0.5, "ADD")]);
+    expect(out).toEqual({ left: 1.5, right: 0.5 });
+  });
+
+  it("AMP reads its intent as a gain", () => {
+    const out = terminal([fixedLevers(2, 2), fixedLevers(0.25, 0.5, "AMP")]);
+    expect(out).toEqual({ left: 0.5, right: 1 });
+  });
+
+  it("order is the machine: the same pair, swapped, behaves differently", () => {
+    const governed = terminal([fixedLevers(0.5, 0.5), fixedLevers(2, 2, "CAP")]);
+    const trimmed = terminal([fixedLevers(2, 2, "SET"), fixedLevers(0.5, 0.5, "ADD")]);
+    expect(governed).not.toEqual(trimmed);
   });
 });
 
 describe("determinism holds with the machine driving", () => {
   it("gives an identical fingerprint for an identical trace", () => {
     const run = () => {
-      const world = createWorld({ sources: [fixedLevers(MAX_TRACK_SPEED, 0.3)] });
+      const world = createWorld({ modules: [fixedLevers(MAX_TRACK_SPEED, 0.3)] });
       for (let i = 0; i < 240; i++) world.step();
       const fp = world.fingerprint();
       world.free();

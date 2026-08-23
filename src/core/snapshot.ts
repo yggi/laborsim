@@ -1,3 +1,5 @@
+import type { Stage } from "../control/bus.ts";
+
 /**
  * Architecture rule 3: state crosses from sim to UI in one direction, through
  * an explicit snapshot. Commands cross back as discrete queued inputs, never as
@@ -49,9 +51,15 @@ export interface Snapshot {
   readonly tick: number;
   readonly simSeconds: number;
   readonly machine: MachineState;
-  /** Who owns the actuator bus right now, and who wanted it and lost. */
-  readonly busOwner: string | null;
-  readonly suppressed: readonly string[];
+  /**
+   * The rack, stage by stage, from the top of the rail to the terminal.
+   *
+   * Not "who won" — under a pipeline nobody wins, everyone shapes. Showing the
+   * value at each stage is a stronger answer to the attribution rule than
+   * naming an owner, and it is the multi-layer inspectability pillar landing
+   * where it matters most.
+   */
+  readonly stages: readonly Stage[];
 }
 
 /**

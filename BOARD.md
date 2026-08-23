@@ -25,25 +25,18 @@ Card format:
 
 ## ready
 
-### [L-015] The rack — priority stack and arbitration
-- **what:** ordered command layers, highest active wins the actuator bus.
-  Vertical DIN rail, drag to reorder, ~8 slots. Pilot levers are a rack entry.
-- **done-when:** dragging PILOT below NAV visibly changes who owns the bus.
-- **needs:** L-014
-
-### [L-017] The attribution rule
-- **what:** whenever an input is ignored, the reason is on screen before the
-  player asks — active/idle/overridden LEDs, a bus-owner readout, suppressed
-  controls visibly disabled.
-- **done-when:** no suppressed input anywhere reads as a dead control.
-- **needs:** L-015
+### [L-015] The rail — drag to reorder, and the DIN-rail treatment
+- **what:** the pipeline model, verbs and reordering all work; what is missing
+  is the *rail*. Drag rather than arrows, slot styling, ~8 slots, and deciding
+  whether it is editable during sim (which is L-026, not a UX choice).
+- **done-when:** you can drag a slot with a thumb and the machine changes.
 
 ### [L-018] Acceptance test — two components, one actuator
 - **what:** construct the milestone scenario on rung 1: two components fighting
   over one actuator, reachable within ten minutes of a first session.
 - **done-when:** a fresh player hits the conflict in under ten minutes and can
-  say which component won and why.
-- **needs:** L-017
+  say what each module did to the signal, from a replay.
+- **needs:** L-019
 
 ### [L-019] Replay determinism spike
 - **what:** establish that a failure can be recorded and replayed identically.
@@ -92,13 +85,6 @@ Card format:
 - **done-when:** installing an instrument measurably costs you view, and the
   chase view cannot be used to drive.
 
-### [L-007] `autonav` as the reference dumb module
-- **what:** the canonical predictable-failure component — steers to the pin,
-  knows nothing about slope or ground. Needs a named rung-two successor visible
-  and unaffordable from day one.
-- **done-when:** it drives into a ditch it never noticed, and the cab says why.
-- **needs:** L-015
-
 ### [L-009] Phantom Labor — the hazard equalizer
 - **what:** attacks the sensor surface that capability created. Makes the
   ladder non-monotonic; the two-lever cage is what cannot be scrambled.
@@ -138,6 +124,16 @@ Card format:
 
 ## history
 
+### [L-007] `autonav` as the reference dumb module — **closed**
+NAV-1 steers on bearing and distance to the pin and considers nothing else,
+which is the design rather than a limitation. Heading error from a dot and a
+cross product, so no transcendental closes a loop back into the sim.
+
+### [L-017] The attribution rule — **closed for rung 1**
+Under a pipeline there is no owner to name, so the chain is shown stage by
+stage down to the terminal, with active/idle/bypassed LEDs and each module's
+one-sentence statement of what it considers.
+
 ### [L-024] Cel pipeline port — **closed**
 Stepped toon ramp, guarded fresnel rim, per-axis inverted-hull ink. Banded sky
 dome. Site furniture as real colliders in `src/world/props.ts`, clustered into
@@ -163,15 +159,4 @@ it tips when pushed past the limit, and nothing was hand-tuned to make it.
 TS · Vite 8 · Svelte 5 · Vitest 4 · Biome · Three · Rapier deterministic-compat.
 `dev`, `build`, `test`, `typecheck`, `lint` all green. The three architecture
 rules are enforced by `tests/architecture.test.ts`, not just documented.
-
-### [L-020] Decide: authored or derived cockpit — **closed**
-Middle ground: components ship **mandatory** instruments, the player **places**
-them within the panel budget. → `MEMORY.md` § 6.1.
-
-### [L-005] Define the v0 vertical slice — **closed**
-Answered by `HANDOVER.md` § 10: the acceptance test on rung 1. Became L-018.
-
-### [L-004] Pin the control-hierarchy shape — **closed**
-Answered: a linear priority stack with subsumption semantics, not a tree or a
-graph. Position is priority. → `docs/design/arbitration.md`.
 

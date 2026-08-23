@@ -11,7 +11,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | File | Holds |
 |---|---|
 | `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
-| `docs/design/arbitration.md` | the rack, subsumption, components-as-loops, the attribution rule |
+| `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
@@ -77,7 +77,7 @@ Four load-bearing commitments follow from it:
 
 1. **The load chart is the Δv** → `docs/design/load-chart.md`
 2. **Arbitration is the game** → `docs/design/arbitration.md`
-3. **The rack** — position is priority → `docs/design/arbitration.md`
+3. **The rack is a pipeline** — order is the machine → `docs/design/arbitration.md`
 4. **Panel budget and occlusion** — § 6 below
 
 ## 3. Scope of v0
@@ -162,10 +162,9 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **Components ship instruments; those instruments are mandatory; the player
   places them.** So the rack and the cockpit are one decision, and a component
   can be **refused for want of glass**. OS-mode is tuning, never a gate.
-- **The chase camera is "hands off the wheel", not pause.** No cockpit, no
-  vehicle control — but **the sim keeps stepping and the vehicle does not
-  auto-stop.** Leave the throttle open and go sightseeing, and the ledger will
-  tell you what it cost. Some contexts disable it as a challenge.
+- **The chase camera is "hands off the wheel", not pause.** No cockpit and no
+  control, but **the sim keeps stepping and nothing auto-stops** — leave the
+  throttle open and the ledger will tell you what it cost.
 - **Viewport budgeting is a core mechanism, not a UI style**, which couples it
   deeply to touch. This is *why* mobile-first is fixed — see § 9.
 

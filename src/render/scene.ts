@@ -15,6 +15,7 @@ import type { Snapshot } from "../core/snapshot.ts";
 import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
 import type { Prop } from "../world/props.ts";
 import type { Terrain } from "../world/terrain.ts";
+import type { Pin } from "../world/waypoints.ts";
 import { ink, inked, toon } from "./toon.ts";
 
 /**
@@ -52,6 +53,7 @@ export function createViewport(
   canvas: HTMLCanvasElement,
   terrain: Terrain,
   props: readonly Prop[],
+  waypoints: readonly Pin[],
 ): Viewport {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 2));
@@ -193,6 +195,7 @@ export function createViewport(
     }
   }
 
+  scene.add(buildPins(waypoints));
   scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }));
 
   /* -- camera state ----------------------------------------------------- */
@@ -446,4 +449,28 @@ function buildSky(): THREE.Mesh {
         }`,
     }),
   );
+}
+
+/**
+ * NAV-1's route, staked out on the ground. The pins are visible because the
+ * failure has to be legible: watching the machine grind toward a marker it can
+ * see and a boulder it cannot is the whole lesson.
+ */
+function buildPins(waypoints: readonly Pin[]): THREE.Group {
+  const group = new THREE.Group();
+  const post = new THREE.CylinderGeometry(0.09, 0.09, 4, 6);
+  const flag = new THREE.BoxGeometry(0.9, 0.7, 0.06);
+  const mat = toon(0xe0503c, { rim: 0xffd2c8, rimStrength: 0.9 });
+  for (const pin of waypoints) {
+    const node = new THREE.Group();
+    node.position.set(pin.x, pin.y, pin.z);
+    const mast = inked(post, mat, 0.025);
+    mast.position.y = 2;
+    node.add(mast);
+    const banner = inked(flag, mat, 0.025);
+    banner.position.set(0.45, 3.5, 0);
+    node.add(banner);
+    group.add(node);
+  }
+  return group;
 }

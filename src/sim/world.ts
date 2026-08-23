@@ -8,7 +8,7 @@
  */
 
 import RAPIER from "@dimforge/rapier3d-deterministic-compat";
-import { type CommandSource, resolveBus } from "../control/bus.ts";
+import { type Module, runRack, type Stage } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import { hashBytes } from "../core/hash.ts";
 import { attitudeOf, type Snapshot } from "../core/snapshot.ts";
@@ -22,6 +22,7 @@ import {
   heightAt,
   type Terrain,
 } from "../world/terrain.ts";
+import { generateWaypoints, type Pin } from "../world/waypoints.ts";
 import { spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
 
 /**
@@ -45,6 +46,7 @@ export interface SimWorld {
   fingerprint(): string;
   readonly terrain: Terrain;
   readonly props: readonly Prop[];
+  readonly waypoints: readonly Pin[];
   readonly machine: TrackedMachine;
   free(): void;
   readonly tick: number;
@@ -52,15 +54,15 @@ export interface SimWorld {
 
 export interface SimOptions {
   readonly seed?: number;
-  /** Ordered low to high priority, exactly as on the rail. */
-  readonly sources?: readonly CommandSource[];
+  /** Ordered top of the rail to the actuator terminal. Order is the game. */
+  readonly modules?: readonly Module[];
   /** Override the generated site — used by grade tests and set exercises. */
   readonly terrain?: Terrain;
 }
 
 export function createWorld(options: SimOptions = {}): SimWorld {
   const seed = options.seed ?? 20260823;
-  const sources = options.sources ?? [];
+  const modules = options.modules ?? [];
 
   const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = STEP_SECONDS;
@@ -105,15 +107,15 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     (options.terrain ? 0 : heightAt(0, 0, seed)) + TRACK.height + CLEARANCE + 0.1;
   const machine = spawnTrackedMachine(world, vec(0, startY, 0));
 
+  const waypoints = generateWaypoints(terrain);
+
   let tick = 0;
-  let busOwner: string | null = null;
-  let suppressed: string[] = [];
+  let stages: readonly Stage[] = [];
 
   return {
     step() {
-      const bus = resolveBus(sources);
-      busOwner = bus.owner?.label ?? null;
-      suppressed = bus.suppressed.map((s) => s.label);
+      const bus = runRack(modules);
+      stages = bus.stages;
       machine.drive(bus.command.left, bus.command.right, STEP_SECONDS);
       world.step();
       tick++;
@@ -135,8 +137,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
           speed: machine.speed(),
           ...attitudeOf(pose.rotation),
         },
-        busOwner,
-        suppressed,
+        stages,
       };
     },
     fingerprint() {
@@ -144,6 +145,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     },
     terrain,
     props,
+    waypoints,
     machine,
     free() {
       world.free();

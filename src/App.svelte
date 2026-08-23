@@ -10,13 +10,15 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
-import type { CommandSource } from "./control/bus.ts";
+import type { Module } from "./control/bus.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
+import { createAutonav } from "./modules/autonav.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
 import Lever from "./ui/Lever.svelte";
+import Rack from "./ui/Rack.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
 
 let canvas: HTMLCanvasElement;
@@ -25,16 +27,27 @@ let mode = $state<CameraMode>("cab");
 let leverL = $state(0);
 let leverR = $state(0);
 
-/** The pilot is a rack entry like any other. Today it is the only one. */
-const pilot: CommandSource = {
+/** The pilot is a rack entry like any other, and can be reordered like one. */
+const pilot: Module = {
   id: "PILOT",
   label: "PILOT",
+  considers: "your two thumbs",
+  verb: "SET",
   enabled: true,
-  command: () => ({
+  intent: () => ({
     left: leverL * MAX_TRACK_SPEED,
     right: leverR * MAX_TRACK_SPEED,
   }),
 };
+
+/**
+ * The rack, mutated in place. `runRack` walks this array every step, so
+ * reordering a slot takes effect on the next tick — which is exactly the live
+ * rewiring that LOTO hot-patching (BOARD L-026) will one day price.
+ */
+const rack: Module[] = $state([pilot]);
+let rackOpen = $state(false);
+let rackVersion = $state(0);
 
 let setViewMode: (m: CameraMode) => void = () => {};
 
@@ -51,8 +64,25 @@ $effect(() => {
   void initPhysics().then(() => {
     if (disposed) return;
 
-    const world = createWorld({ sources: [pilot] });
-    const viewport = createViewport(canvas, world.terrain, world.props);
+    const world = createWorld({ modules: rack });
+    // NAV needs the pose of the machine it is driving, so it is built once the
+    // world exists and pushed onto the rail below the pilot.
+    rack.push(
+      createAutonav(
+        world.waypoints,
+        () => {
+          const t = world.machine.body.translation();
+          return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
+        },
+        { verb: "CAP", enabled: false },
+      ),
+    );
+    const viewport = createViewport(
+      canvas,
+      world.terrain,
+      world.props,
+      world.waypoints,
+    );
     const clock = makeClock();
     setViewMode = viewport.setMode;
 
@@ -121,7 +151,7 @@ $effect(() => {
 
 <div class="cabframe" class:cab={mode === "cab"}></div>
 
-<Telemetry snapshot={latest} />
+<Telemetry snapshot={latest} showChain={!rackOpen} />
 
 {#if mode === "cab"}
   <div class="levers left"><Lever label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} /></div>
@@ -131,6 +161,13 @@ $effect(() => {
 {/if}
 
 <button class="view" onclick={toggleView}>{mode === "cab" ? "CHASE" : "CAB"}</button>
+<button class="rackbtn" class:on={rackOpen} onclick={() => (rackOpen = !rackOpen)}>RACK</button>
+
+{#if rackOpen}
+  {#key rackVersion}
+    <Rack modules={rack} stages={latest?.stages ?? []} onchange={() => rackVersion++} />
+  {/key}
+{/if}
 
 <style>
   /* width/height must be explicit: an abs-positioned <canvas> with width:auto
@@ -181,6 +218,23 @@ $effect(() => {
     padding: 7px 13px;
     white-space: nowrap;
     pointer-events: none;
+  }
+
+  .rackbtn {
+    position: fixed;
+    right: 14px;
+    top: calc(env(safe-area-inset-top) + 48px);
+    font: 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.14em;
+    color: #c6d0cb;
+    background: #23282a;
+    border: 1px solid #0d1012;
+    padding: 9px 12px;
+  }
+  .rackbtn.on {
+    color: #14171a;
+    background: #e8b53a;
+    border-color: #e8b53a;
   }
 
   .view {

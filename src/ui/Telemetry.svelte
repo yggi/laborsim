@@ -12,7 +12,10 @@
  */
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
 
-const { snapshot }: { snapshot: Snapshot | undefined } = $props();
+const {
+  snapshot,
+  showChain = true,
+}: { snapshot: Snapshot | undefined; showChain?: boolean } = $props();
 
 const deg = (r: number) => `${(r >= 0 ? "+" : "") + ((r * 180) / Math.PI).toFixed(0)}°`;
 const num = (n: number) => (n >= 0 ? "+" : "") + n.toFixed(2);
@@ -43,12 +46,31 @@ function tractionClass(track: TrackState): string {
         {#if track.contacts === 0}&middot; NO CONTACT{/if}
       </div>
     {/each}
+    <!--
+      The chain, stage by stage. Under a pipeline there is no owner to name —
+      so instead of "who won", show the signal at every stage. That is a
+      stronger answer to the attribution rule and it is the inspectability
+      pillar landing where it counts.
+    -->
+    <!-- The rack panel shows the same chain, editable. Two copies of one fact
+         is the duplication that cost the probe three defects. -->
+    {#if showChain}
     <div class="row bus">
-      BUS &mdash; {snapshot.busOwner ?? "NO COMMAND LAYER"}
-      {#if snapshot.suppressed.length}
-        <span class="warn">&middot; SUPPRESSED: {snapshot.suppressed.join(", ")}</span>
+      {#if snapshot.stages.length === 0}
+        RACK EMPTY &mdash; TERMINAL AT HALT
+      {:else}
+        {#each snapshot.stages as stage (stage.id)}
+          <span class:warn={stage.idle} class:off={!stage.enabled}>
+            {stage.label}
+            {#if !stage.enabled}[BYPASS]{:else if stage.idle}[IDLE]{:else}[{stage.verb}]{/if}
+            {num(stage.output.left)}/{num(stage.output.right)}
+          </span>
+          <span class="arrow">&darr;</span>
+        {/each}
+        <span>TERMINAL</span>
       {/if}
     </div>
+    {/if}
   </div>
 {/if}
 
@@ -77,8 +99,18 @@ function tractionClass(track: TrackState): string {
     margin-top: 3px;
   }
   .bus {
-    color: #6d7a76;
+    color: #6fe3c4;
     margin-top: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.35;
+  }
+  .bus .arrow {
+    color: #6d7a76;
+  }
+  .bus .off {
+    color: #6d7a76;
   }
   .ok {
     color: #6fe3c4;
