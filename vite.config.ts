@@ -6,7 +6,9 @@ import { defineConfig } from "vitest/config";
  * bundle has to know its own base or every asset 404s. CI passes it in from the
  * Pages config; locally it stays "/". Trailing slash is required.
  */
-const base = process.env.BASE_PATH ? `${process.env.BASE_PATH.replace(/\/$/, "")}/` : "/";
+const base = process.env.BASE_PATH
+  ? `${process.env.BASE_PATH.replace(/\/$/, "")}/`
+  : "/";
 
 export default defineConfig({
   base,
