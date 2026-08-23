@@ -12,7 +12,7 @@
 
 import * as THREE from "three";
 import type { Snapshot } from "../core/snapshot.ts";
-import { CAB, CLEARANCE, EYE, GAUGE, HULL, TRACK } from "../core/spec.ts";
+import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
 import type { Terrain } from "../world/terrain.ts";
 
 /**
@@ -67,6 +67,7 @@ export function createViewport(canvas: HTMLCanvasElement, terrain: Terrain): Vie
 
   const paint = new THREE.MeshLambertMaterial({ color: 0xdca42a });
   const dark = new THREE.MeshLambertMaterial({ color: 0x39413f });
+  const accent = new THREE.MeshLambertMaterial({ color: 0x8a8f84 });
   // Actually transparent: the eye sits behind this pane, so an opaque one is a
   // cyan wall. From outside it still reads as glass.
   const glass = new THREE.MeshLambertMaterial({
@@ -97,14 +98,82 @@ export function createViewport(canvas: HTMLCanvasElement, terrain: Terrain): Vie
   windscreen.position.set(0, CAB.y + 0.1, CAB.z + CAB.depth / 2 + 0.02);
   machine.add(windscreen);
 
+  // Front markers. The hull is a symmetric box, so without these there is no
+  // way to tell which end you are looking at — which is exactly how mirrored
+  // steering shipped unnoticed once. Lamps read as "front" instantly and at
+  // any angle, which a painted stripe does not.
+  const lampMat = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
+  const noseZ = HULL.length / 2 + 0.03;
+  const noseY = TRACK.height + CLEARANCE + HULL.height * 0.72;
   for (const side of [-1, 1]) {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.08), lampMat);
+    lamp.position.set(side * HULL.width * 0.33, noseY, noseZ);
+    machine.add(lamp);
+  }
+  const bumper = new THREE.Mesh(
+    new THREE.BoxGeometry(HULL.width * 0.98, 0.18, 0.12),
+    accent,
+  );
+  bumper.position.set(0, TRACK.height + CLEARANCE + 0.16, noseZ);
+  machine.add(bumper);
+
+  /**
+   * Sprockets and idlers, one pair per track. They exist for three reasons and
+   * every one of them is load-bearing:
+   *
+   *   - a big drive sprocket at the rear and a small idler at the front make
+   *     the machine's facing unmistakable;
+   *   - they spin at *commanded* track speed, so a spinning track under a
+   *     stationary machine is slip you can see rather than only read;
+   *   - left and right spin independently, so mirrored steering would now be
+   *     visible instead of silent.
+   */
+  const SPROCKET_R = TRACK.height / 2;
+  const IDLER_R = TRACK.height * 0.38;
+  const wheelGeom = {
+    sprocket: new THREE.CylinderGeometry(
+      SPROCKET_R,
+      SPROCKET_R,
+      TRACK.width * 1.05,
+      10,
+    ),
+    idler: new THREE.CylinderGeometry(IDLER_R, IDLER_R, TRACK.width * 1.05, 8),
+  };
+
+  interface Wheel {
+    pivot: THREE.Group;
+    radius: number;
+  }
+  const wheels: { left: Wheel[]; right: Wheel[] } = { left: [], right: [] };
+
+  for (const [name, x] of [
+    ["left", LEFT_X],
+    ["right", RIGHT_X],
+  ] as const) {
     const track = new THREE.Mesh(
       new THREE.BoxGeometry(TRACK.width, TRACK.height, TRACK.length),
       dark,
     );
-    track.position.set((side * GAUGE) / 2, TRACK.height / 2, 0);
+    track.position.set(x, TRACK.height / 2, 0);
     track.castShadow = true;
     machine.add(track);
+
+    for (const [kind, z, radius] of [
+      ["sprocket", -(TRACK.length / 2 - SPROCKET_R), SPROCKET_R],
+      ["idler", TRACK.length / 2 - IDLER_R, IDLER_R],
+    ] as const) {
+      // The pivot spins about X; the mesh inside is turned to put the
+      // cylinder's axis along X. Doing both on one object needs Euler-order
+      // care, and a group needs none.
+      const pivot = new THREE.Group();
+      pivot.position.set(x, TRACK.height / 2, z);
+      const mesh = new THREE.Mesh(wheelGeom[kind], accent);
+      mesh.rotation.z = Math.PI / 2;
+      mesh.castShadow = true;
+      pivot.add(mesh);
+      machine.add(pivot);
+      wheels[name].push({ pivot, radius });
+    }
   }
 
   /* -- camera state ----------------------------------------------------- */
@@ -115,6 +184,9 @@ export function createViewport(canvas: HTMLCanvasElement, terrain: Terrain): Vie
   let elevation = 0.35;
   const eye = new THREE.Vector3();
   const aim = new THREE.Vector3();
+  // Wheel spin is integrated from snapshot time, not wall time, so a replay
+  // turns them exactly as the live run did.
+  let lastSimSeconds: number | undefined;
 
   return {
     render(snapshot: Snapshot) {
@@ -126,6 +198,20 @@ export function createViewport(canvas: HTMLCanvasElement, terrain: Terrain): Vie
 
       key.position.set(px - 30, py + 42, pz + 22);
       key.target.position.set(px, py, pz);
+
+      const dt =
+        lastSimSeconds === undefined ? 0 : snapshot.simSeconds - lastSimSeconds;
+      lastSimSeconds = snapshot.simSeconds;
+      if (dt > 0) {
+        for (const [name, track] of [
+          ["left", snapshot.machine.left],
+          ["right", snapshot.machine.right],
+        ] as const) {
+          for (const wheel of wheels[name]) {
+            wheel.pivot.rotation.x += (track.commanded / wheel.radius) * dt;
+          }
+        }
+      }
 
       if (mode === "cab") {
         // The eye rides the hull, so the cab pitches and rolls with the machine.

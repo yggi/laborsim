@@ -18,6 +18,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/stack.md` | the stack, and the rejected options with their reasons |
 | `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
 | `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
 | `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
@@ -213,21 +214,9 @@ deterministic and `world.takeSnapshot()` hashes identically across machines,
 which makes replay a test rather than an aspiration. It costs SIMD and parallel
 features. Rapier also rules out single-file HTML output — it wants a bundler.
 
-Rejected, with reasons, so they are not relitigated:
-
-- **Godot** — its web export cannot run C# at all (no .NET in the browser
-  sandbox) and is Compatibility-renderer only, so GDScript would be the only
-  option for a control-loop-heavy sim on the one platform that must ship. Add an
-  order-of-magnitude larger first load, and the fact that half this game is 2D
-  UI where the DOM wins. *Would be reconsidered only if mobile-first browser
-  stopped being a requirement — and it will not.*
-- **Babylon.js** — genuinely competitive (TS-native, built-in inspector, Havok),
-  but the switching cost lands exactly on the cel pipeline, which is Three-
-  specific, already proven, and the artful part. Do not rewrite the proof.
-- **Jolt** — better articulated-body support and it ships a tracked-vehicle
-  controller, which rung 1 could use. Declined deliberately: **a black-box
-  vehicle controller is an anti-feature here.** Differential drive with friction
-  *is* the teaching layer; we write that one.
+Rejected, with reasons, in `docs/design/stack.md`: **Godot** (its web export
+cannot run C# at all), **Babylon.js** (switching cost lands on the proven cel
+pipeline), **Jolt** (its vehicle controller is the black box we refuse).
 
 No further dependencies without a reason. The art direction is procedural boxes
 and cylinders, so **no asset pipeline is needed for a long time** — do not build
@@ -301,6 +290,10 @@ that file first.
 - **One fact, one place.** Three of the four probe defects came from keeping one
   fact in two places (heading in `body.yaw` *and* `root.rotation.y`; hull height
   from soles *and* from ground). Delete the duplicate rather than syncing it.
+- **Body axes: forward is +Z, up is +Y, so right is −X and left is +X.**
+  Named as `LEFT_X`/`RIGHT_X` in `core/spec.ts` rather than written inline —
+  getting them the wrong way round silently mirrors the steering, which is
+  invisible on a symmetric hull. It shipped that way once.
 - **Write the full rotation triple** — `rotation.set(k,0,0)`, not
   `rotation.x = k` — so a hinge's one-axis constraint is explicit in the code
   rather than assumed. `Object3D.add()` returns the *parent*.

@@ -12,6 +12,21 @@ export const TRACK = { length: 3.4, width: 0.55, height: 0.5 };
 /** Track centre-to-centre. Wider gauge, harder to tip, slower to turn. */
 export const GAUGE = 1.78;
 
+/**
+ * Which side of the machine is which, in body space.
+ *
+ * The machine's forward is +Z and its up is +Y, and in a right-handed frame
+ * `forward = up × right`. Solving that gives **right = −X, left = +X** — check
+ * it against three.js if it looks backwards: a camera's forward is −Z, up +Y,
+ * right +X, and `(0,1,0) × (1,0,0) = (0,0,−1)` ✓.
+ *
+ * These exist as named constants because getting them the wrong way round
+ * silently mirrors the steering, which is invisible on a symmetric hull. It
+ * shipped that way once.
+ */
+export const LEFT_X = GAUGE / 2;
+export const RIGHT_X = -GAUGE / 2;
+
 /** Belly clearance above the bottom of the tracks. This is what beaches you. */
 export const CLEARANCE = 0.42;
 

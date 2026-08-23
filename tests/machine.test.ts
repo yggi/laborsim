@@ -72,6 +72,36 @@ describe("tank steering", () => {
     expect(distance(start, end)).toBeLessThan(3);
   });
 
+  // These pin the *direction*, which the tests above did not, so the machine
+  // shipped once with mirrored steering: the left lever drove the right track.
+  // Symmetric geometry made it invisible in every screenshot.
+  //
+  // Forward is +Z, up is +Y, and `forward = up × right`, so right is −X and
+  // left is +X. Rotation about +Y by a positive angle carries +Z toward +X,
+  // which is the machine's left. So a right turn is a *negative* quaternion y.
+  it("turns right when the left track outruns the right", () => {
+    const { end } = drive(MAX_TRACK_SPEED, -MAX_TRACK_SPEED, 180);
+    expect(end.machine.pose.rotation[1]).toBeLessThan(0);
+  });
+
+  it("turns left when the right track outruns the left", () => {
+    const { end } = drive(-MAX_TRACK_SPEED, MAX_TRACK_SPEED, 180);
+    expect(end.machine.pose.rotation[1]).toBeGreaterThan(0);
+  });
+
+  it("curves right when only the left track drives", () => {
+    const { end } = drive(MAX_TRACK_SPEED, 0, 180);
+    expect(end.machine.pose.rotation[1]).toBeLessThan(0);
+  });
+
+  it("drives up +Z, not sideways or backwards, with both levers forward", () => {
+    const { start, end } = drive(MAX_TRACK_SPEED, MAX_TRACK_SPEED, 180);
+    const dz = end.machine.pose.position[2] - start.machine.pose.position[2];
+    const dx = end.machine.pose.position[0] - start.machine.pose.position[0];
+    expect(dz).toBeGreaterThan(3);
+    expect(Math.abs(dx)).toBeLessThan(Math.abs(dz) / 2);
+  });
+
   it("curves when one track outruns the other", () => {
     const straight = drive(MAX_TRACK_SPEED, MAX_TRACK_SPEED, 180);
     const curved = drive(MAX_TRACK_SPEED, MAX_TRACK_SPEED * 0.4, 180);

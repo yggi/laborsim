@@ -18,6 +18,49 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — mirrored steering, and giving the machine a face
+
+Reported from the live build: steering went the wrong way, and — the more
+useful half of the report — it was impossible to say *which* thing was
+mirrored, left/right or forward/back, because the hull is a symmetric box with
+no moving parts.
+
+**The bug was real and derivable rather than guessable.** Forward is +Z and up
+is +Y, and in a right-handed frame `forward = up × right`, which gives right =
+−X and left = +X. Check against three.js if that looks wrong: a camera's
+forward is −Z, up +Y, right +X, and `(0,1,0) × (1,0,0) = (0,0,−1)` ✓. The code
+placed `offsets.left` at −GAUGE/2, i.e. on the machine's *right* side, so the
+left lever drove the right track. The sides are now named constants `LEFT_X`
+and `RIGHT_X` in `core/spec.ts`, used by the sim and the renderer alike, with
+the derivation written above them.
+
+Also corrected a latent misnomer: the `right` vector in the track model came
+from `cross(normal, forward)`, which points **left**. It caused no bug because
+lateral damping is symmetric in that axis, but a wrongly-named axis in a file
+full of cross products is a trap. It is `cross(forward, normal)` now.
+
+**The existing tests could not have caught this.** They asserted that yaw
+*changed*, never which way. Four direction tests now pin it, and I verified
+they actually bite by reintroducing the bug: three fail with it, all pass
+without. A test that passes either way is worthless.
+
+The second half of the report was the more interesting one, so the machine got
+**sprockets and idlers** — a large drive sprocket at the rear, small idler at
+the front, spinning at commanded track speed. They do three jobs at once: they
+make the facing unmistakable, they make left and right visibly independent so
+this class of bug can never be silent again, and they turn **slip into
+something you can see** — a track spinning under a stationary machine, rather
+than a number you have to read. That last one is the inspectability pillar
+getting a free win. Spin integrates from snapshot time, not wall time, so a
+replay turns them exactly as the live run did.
+
+Headlamps and a bumper at the nose finish the job: the front now reads at any
+angle, which a painted stripe would not.
+
+Housekeeping: MEMORY had drifted to 307 against its 300 gate — I called the
+gates clear in an earlier session when they were not. The stack section's
+rejected-options block spilled to `docs/design/stack.md`.
+
 ## 2026-08-23 — playable from GitHub Pages
 
 Cards: closed [L-030]

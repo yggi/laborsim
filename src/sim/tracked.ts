@@ -28,7 +28,15 @@
 import type { RigidBody, World } from "@dimforge/rapier3d-deterministic-compat";
 import RAPIER from "@dimforge/rapier3d-deterministic-compat";
 import type { TrackState } from "../core/snapshot.ts";
-import { CLEARANCE, GAUGE, HULL, MASS, MAX_TRACK_SPEED, TRACK } from "../core/spec.ts";
+import {
+  CLEARANCE,
+  HULL,
+  LEFT_X,
+  MASS,
+  MAX_TRACK_SPEED,
+  RIGHT_X,
+  TRACK,
+} from "../core/spec.ts";
 import {
   clamp,
   cross,
@@ -98,13 +106,13 @@ export function spawnTrackedMachine(world: World, at: Vec3): TrackedMachine {
     .setDensity(0);
   world.createCollider(hull, body);
 
-  for (const side of [-1, 1]) {
+  for (const x of [LEFT_X, RIGHT_X]) {
     const track = RAPIER.ColliderDesc.cuboid(
       TRACK.width / 2,
       TRACK.height / 2,
       TRACK.length / 2,
     )
-      .setTranslation((side * GAUGE) / 2, trackY, 0)
+      .setTranslation(x, trackY, 0)
       .setFriction(0)
       .setRestitution(0)
       .setDensity(0);
@@ -119,15 +127,15 @@ export function spawnTrackedMachine(world: World, at: Vec3): TrackedMachine {
   let stateL = idleTrack();
   let stateR = idleTrack();
 
-  function sampleOffsets(side: number): Vec3[] {
+  function sampleOffsets(x: number): Vec3[] {
     const out: Vec3[] = [];
     for (let i = 0; i < SAMPLES_PER_TRACK; i++) {
       const t = SAMPLES_PER_TRACK === 1 ? 0.5 : i / (SAMPLES_PER_TRACK - 1);
-      out.push(vec((side * GAUGE) / 2, 0, (t - 0.5) * TRACK.length));
+      out.push(vec(x, 0, (t - 0.5) * TRACK.length));
     }
     return out;
   }
-  const offsets = { left: sampleOffsets(-1), right: sampleOffsets(1) };
+  const offsets = { left: sampleOffsets(LEFT_X), right: sampleOffsets(RIGHT_X) };
 
   function applyTrack(
     offsetsForSide: Vec3[],
@@ -152,7 +160,8 @@ export function spawnTrackedMachine(world: World, at: Vec3): TrackedMachine {
       acc.contacts++;
 
       const forward = normalize(reject(rotate(q, vec(0, 0, 1)), hit.normal));
-      const right = normalize(cross(hit.normal, forward));
+      // forward x normal, not normal x forward: the latter points LEFT.
+      const right = normalize(cross(forward, hit.normal));
 
       const v = pointVelocity(body, hit.point);
       const along = dot(v, forward);
