@@ -8,6 +8,8 @@
  * fixed steps, same physics state, bit for bit. Attribution is the design, and
  * a failure you cannot reproduce cannot be blamed on a design decision.
  *
+ * Machine *behaviour* lives in machine.test.ts. This file is about the rules.
+ *
  * See docs/design/architecture-rules.md.
  */
 
@@ -15,18 +17,18 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { makeClock, STEP_SECONDS } from "../src/core/clock.ts";
 import { makeRng } from "../src/core/rng.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
+import { generateTerrain, heightAt, makeRampTerrain } from "../src/world/terrain.ts";
 
 beforeAll(async () => {
   await initPhysics();
 }, 30_000);
 
-function runFor(steps: number): { fingerprint: string; height: number } {
+function runFor(steps: number): string {
   const world = createWorld();
   for (let i = 0; i < steps; i++) world.step();
   const fingerprint = world.fingerprint();
-  const height = world.snapshot().bodies[0]?.position[1] ?? Number.NaN;
   world.free();
-  return { fingerprint, height };
+  return fingerprint;
 }
 
 describe("the sim runs headless", () => {
@@ -37,25 +39,51 @@ describe("the sim runs headless", () => {
     expect(world.tick).toBe(1);
     world.free();
   });
-
-  it("drops the crate under gravity", () => {
-    const start = createWorld().snapshot().bodies[0]?.position[1] ?? 0;
-    const after = runFor(60).height;
-    expect(after).toBeLessThan(start);
-  });
 });
 
 describe("the sim is deterministic", () => {
   it("produces an identical fingerprint for an identical run", () => {
-    const a = runFor(180);
-    const b = runFor(180);
-    expect(b.fingerprint).toBe(a.fingerprint);
+    expect(runFor(180)).toBe(runFor(180));
   });
 
   it("diverges when the run length differs", () => {
     // Guards against a fingerprint that is accidentally constant, which would
     // make the test above pass while proving nothing.
-    expect(runFor(30).fingerprint).not.toBe(runFor(180).fingerprint);
+    expect(runFor(30)).not.toBe(runFor(180));
+  });
+});
+
+describe("terrain is reproducible without transcendentals", () => {
+  it("generates byte-identical heights from one seed", () => {
+    expect(Array.from(generateTerrain(7).heights)).toEqual(
+      Array.from(generateTerrain(7).heights),
+    );
+  });
+
+  it("differs between seeds", () => {
+    expect(Array.from(generateTerrain(7).heights)).not.toEqual(
+      Array.from(generateTerrain(8).heights),
+    );
+  });
+
+  it("quantizes every height, so float drift cannot move a vertex", () => {
+    for (const h of generateTerrain(3).heights) {
+      expect(Number.isInteger(h * 1024)).toBe(true);
+    }
+  });
+
+  it("grades the starting pad flat", () => {
+    expect(heightAt(0, 0, 99)).toBe(0);
+    expect(heightAt(6, -4, 99)).toBe(0);
+  });
+
+  it("builds ramps at the grade asked for", () => {
+    const ramp = makeRampTerrain(45, 0);
+    const n = 129;
+    // 45 degrees is a 1:1 rise, measured across one cell in +Z.
+    const a = ramp.heights[64 * n + 100] as number;
+    const b = ramp.heights[64 * n + 101] as number;
+    expect(b - a).toBeCloseTo(2, 2);
   });
 });
 
@@ -79,7 +107,6 @@ describe("the clock is fixed-step", () => {
 
   it("drops the backlog rather than freezing on a long stall", () => {
     const clock = makeClock();
-    const { steps } = clock.advance(60);
-    expect(steps).toBe(5);
+    expect(clock.advance(60).steps).toBe(5);
   });
 });

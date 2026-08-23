@@ -25,18 +25,6 @@ Card format:
 
 ## ready
 
-### [L-014] Rung 1 — tracked platform, drivable
-- **what:** the ladder's first machine on real terrain: body-frame velocity, two
-  levers, clear view. No balance controller, no rack yet.
-- **done-when:** you can drive it around a heightfield site on a phone.
-- **needs:** L-013
-
-### [L-016] Telemetry line from frame one
-- **what:** the developer/pilot readout — speed, attitude, contact, actuator
-  state. Built *before* it is needed, not after a bug forces it.
-- **done-when:** every quantity the tracked platform simulates is on screen.
-- **needs:** L-013
-
 ### [L-015] The rack — priority stack and arbitration
 - **what:** ordered command layers, highest active wins the actuator bus.
   Vertical DIN rail, drag to reorder, ~8 slots. Pilot levers are a rack entry.
@@ -64,7 +52,8 @@ Card format:
   bit-portable across engines, and `H(x,z)` is built from them.
 - **done-when:** the same input trace yields the same snapshot hash on two
   different browsers, and the cost of that guarantee is in `MEMORY.md`.
-- **needs:** L-014, NOTES thread "Determinism discipline"
+  Same-machine determinism already holds and is under test; this card is the
+  cross-browser half.
 
 ### [L-029] The damage ledger — v0's verdict and core feedback
 - **what:** itemised, named, Yen-priced damage in a condescending institutional
@@ -91,16 +80,11 @@ Card format:
 
 ## backlog
 
-### [L-022] Rapier on rung 1
-- **what:** bodies, contacts, motorized joints for the tracked platform, where
-  tipping is emergent and there is no balance controller to tune.
-- **done-when:** it tips when overloaded, and nothing was hand-tuned to make it.
-- **needs:** L-014, "Is Rapier in?" thread
-
-### [L-023] Terrain — port the analytic height field
-- **what:** carry `H(x,z)` across from the probe; feet, mesh and site map all
-  sample the same function. Becomes the Rapier heightfield source.
-- **done-when:** contact is exact rather than raycast-approximate.
+### [L-023] Terrain — the probe's designed site features
+- **what:** generic value-noise terrain exists. Still missing are the *designed*
+  features from the probe: quarry benches, the graded haul road, the trench,
+  spoil mounds. Landscape is scenery; these are the parts you get stuck on.
+- **done-when:** a site has at least one feature that defeats a careless driver.
 
 ### [L-024] Cel pipeline port
 - **what:** gradient-ramp toon, guarded fresnel rim, inverted-hull ink shells.
@@ -159,6 +143,17 @@ Card format:
 
 ## history
 
+### [L-016] Telemetry line from frame one — **closed**
+Speed, attitude, per-track command/slip/grip/contacts, and the bus owner with
+its suppressed layers. Colour-coded on grip. Shipped with rung 1, not after it.
+
+### [L-014] Rung 1 — tracked platform, drivable — **closed**
+Custom track friction model (Rapier has no anisotropic friction), six ray
+samples per track, one tuned constant. Climb limit `atan(MU)` ≈ 43.5°; past it
+the machine rears and flips, emergently. Cab view primary, two non-centring
+levers, actuator bus in from the first commit. Absorbs L-022 (Rapier on rung 1):
+it tips when pushed past the limit, and nothing was hand-tuned to make it.
+
 ### [L-013] Scaffold the toolchain — **closed**
 TS · Vite 8 · Svelte 5 · Vitest 4 · Biome · Three · Rapier deterministic-compat.
 `dev`, `build`, `test`, `typecheck`, `lint` all green. The three architecture
@@ -184,4 +179,4 @@ The probe already proved the browser can carry this. Replaced by L-013 + L-014.
 
 ### [L-001] Choose the stack — **closed**
 Vite · Svelte 5 · Vitest · Three.js · Rapier (wasm), mobile-first.
-Rapier carries a caveat — see the "Is Rapier in?" thread.
+Rapier since confirmed, and in use on rung 1.

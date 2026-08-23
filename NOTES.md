@@ -34,22 +34,18 @@ toggled — but may they be *stowed* in the field at a cost in hands or seconds,
 or not at all? The chase camera's shape suggests an answer (available, but it
 costs you something real while it is up), which has not been confirmed.
 
-## Determinism discipline: transcendentals are not portable
+## Does equal-share normal load hold up for the load chart?
 
-Rapier's `-deterministic` wasm build is bit-level cross-platform, and
-`world.createSnapshot()` hashes identically across machines — so the *physics*
-side of replay is solved and testable from day one.
+The track model splits weight equally across every sample touching ground. That
+was enough for rung 1 and it produced a textbook friction limit — but it ignores
+**load transfer**, and a machine nose-down on a grade or braking hard really
+does put more weight on one end of the track.
 
-**Our own sim code is not covered by that.** ECMAScript does not require
-`Math.sin`, `cos`, `exp` or `pow` to be bit-identical across engines, and the
-probe's analytic height field `H(x,z)` is built almost entirely from them. Two
-players on different browsers could generate microscopically different terrain
-and diverge.
-
-Options: bake the field once and ship it as data; use our own polyfilled
-transcendentals in anything sim-visible; or scope replay to same-device only
-and say so. Unresolved, but it must be decided **before** `H(x,z)` is ported,
-because it determines whether terrain is code or an asset.
+The load chart (L-021) is about precisely that: payload against reach, with
+tipping as a named failure mode. Equal-share cannot express it. The fix is to
+weight each sample's normal load by hull attitude and acceleration, which is a
+contained change to one function — but it wants doing when the load chart lands,
+not speculatively before.
 
 ## What does "multi-layer" cut along, for the player?
 

@@ -18,6 +18,7 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
 | `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
 | `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
 
@@ -115,6 +116,22 @@ patiently, and writing it down. Voice, register and worked examples:
 3. **Site** — drive it. Find out where the chart lied.
 4. **Diagnose** — the failure is attributable to one decision, from a replay.
 5. **Back to build** — with a specific reason.
+
+### 4.1 Rung 1 is built
+
+Detail: `docs/design/tracked-platform.md`. The load-bearing claims:
+
+- Rapier has no anisotropic friction and its vehicle controller models *wheels*,
+  so **the track friction model is ours** — and that is the design, not a
+  workaround. The friction model is the teaching layer.
+- Colliders carry friction 0; six ray samples per track apply impulses capped at
+  `mu · N · dt`. **One tuned constant** (`MU = 0.95`); everything else is a
+  dimension or a mass.
+- The climb limit is `atan(MU)` ≈ **43.5°** — what a friction cone does, not a
+  number chosen to feel right. Past it the machine rears, loses contact and
+  **flips over backwards.** No tipping logic exists anywhere.
+- **Slip — commanded track speed minus actual ground speed — is rung 1's
+  teaching quantity**, and it is on the telemetry line from the first commit.
 
 ## 5. The machinery ladder
 

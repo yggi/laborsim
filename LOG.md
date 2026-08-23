@@ -63,6 +63,69 @@ flavour inlining wasm as base64 at about a third overhead. Mobile-first is a
 hard pillar, so a first-load budget should be set before the bundle grows enough
 to make the choice for us.
 
+## 2026-08-23 — L-014: rung 1 drives
+
+Cards: closed [L-014] [L-016] · absorbed [L-022]
+
+The tracked platform exists and you can drive it on a phone. Four decisions
+came in first: two independent track levers (tank steering, two thumbs — with
+throttle-and-steer demoted to a rung-two *upgrade*, which is the component
+curriculum working); levers that do not self-centre, grabbing on touch and
+staying where dropped, with a dead zone that snaps to a clear HALT; cab view as
+the primary sim view; and no blade, on the grounds that a tank can do plenty of
+damage to a construction site without one.
+
+**The track model is ours, and that is the design.** Rapier has no anisotropic
+collider friction and its vehicle controller models wheels with suspension, so
+neither shortcut applies — verified rather than assumed. Hull and track
+colliders carry friction 0, Rapier supplies normal support and collisions only,
+and six ray samples per track apply impulses capped at `mu · N · dt`. A black
+box producing correct-looking motion would have been a layer the player cannot
+open, which principle 5 forbids outright.
+
+One tuned constant, `MU = 0.95`. Everything else is a dimension or a mass, and
+the behaviour falls out rather than being scripted. The climb limit measured at
+`atan(MU)` ≈ 43.5°: it climbs 42° at 95% grip and fails past that. Push it to
+50° and it grinds partway up, rears to −72°, loses contact, **flips over
+backwards and slides to the bottom.** There is no tipping logic anywhere. That
+is the "fail stupidly, but predictably" pillar arriving for free, and it is now
+pinned by tests so a model change has to be deliberate.
+
+Profiling caught what the green tests did not. The first grade probe reported
+zero climb at every angle — the ramp started 30 m away and the machine covers
+11 m in five seconds, so it never reached it. Worth remembering: 10 passing
+tests said the machine was fine, and it *was* fine; the probe was wrong. Look
+at the numbers, not only at the ticks.
+
+Verified Rapier's heightfield indexing empirically instead of guessing: the
+slow-varying index is X and the fast one is Z, which is the opposite of what
+the generator assumed. Both the collider and the terrain mesh are built from
+that one verified fact.
+
+**The transcendental thread is closed, by avoiding the problem rather than
+managing it.** Terrain is value noise from an integer hash — integer ops,
+multiply, add and `Math.sqrt`, which IEEE-754 requires to be correctly rounded.
+Heights are quantized to 1/1024 m as belt and braces. One licensed exception is
+recorded: pitch and roll for display use `asin`/`atan2`, and that is safe
+precisely because nothing reads them back into the sim. The ban is on
+transcendentals that close a loop.
+
+The actuator bus went in from the first commit even though only the levers
+write to it, because the acceptance test needs two components fighting over one
+actuator *on rung 1*. It already reports its owner and who it suppressed, and a
+test drives NAV over PILOT to prove it.
+
+The chase camera cost almost nothing to implement, which is a good sign about
+the decision: hiding the levers *is* "hands off the wheel". The bus keeps
+carrying whatever the levers were last set to and the machine keeps doing it.
+No pause, no auto-stop, no special case in the sim at all.
+
+Two smaller things found by looking at real screenshots rather than trusting
+the build: the operator's eye was inside the hull box, so the cab view showed
+none of the machine — moved into the cab so the hood is visible as a reference;
+and the windscreen was an opaque box 0.47 m from the eye, i.e. a cyan wall, now
+actual transparent glass.
+
 ## 2026-08-23 — tone crystallized, chase view is hands-off-the-wheel
 
 Cards: [L-029] reshaped

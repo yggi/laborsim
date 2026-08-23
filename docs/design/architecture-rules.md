@@ -49,10 +49,22 @@ not a feature bolted on later; it is the thing that makes failure teach.
 `world.takeSnapshot()` hash on two different browsers. Rapier's
 `-deterministic` build guarantees its half; this rule guarantees ours.
 
-**Caveat, unresolved:** JS does not require `Math.sin`, `cos`, `exp` or `pow` to
-be bit-identical across engines, and the probe's `H(x,z)` is built almost
-entirely from them. See the NOTES thread; it must be settled before the height
-field is ported, because it decides whether terrain is code or an asset.
+**Transcendentals — settled at L-014.** JS does not require `Math.sin`, `cos`,
+`exp` or `pow` to be bit-identical across engines, and the probe's `H(x,z)` was
+built almost entirely from them. The answer was not to quantize around the
+problem but to avoid it: terrain is **value noise from an integer hash**, so
+generation uses only integer ops, multiplication, addition and `Math.sqrt` —
+and IEEE-754 requires `sqrt` and `round` to be correctly rounded, so both are
+portable. Heights are quantized to 1/1024 m as well, so a future accidental
+transcendental cannot move a vertex.
+
+The same discipline applies to `src/core/vec.ts` and the track model: arithmetic
+and `sqrt` only, no trig.
+
+The one licensed exception is **derived, read-only display values** — the pitch
+and roll in `snapshot.ts` use `asin`/`atan2`. That is safe precisely because
+nothing reads them back into the simulation. The ban is on transcendentals that
+close a loop, not on arithmetic that leaves one.
 
 ## 3. One-directional snapshot boundary
 
