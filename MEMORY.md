@@ -192,7 +192,7 @@ cockpit would be a different mechanic wearing the same name. This is upstream of
 stack, layout and control design alike.
 
 Use `@dimforge/rapier3d-deterministic`: it is bit-level cross-platform
-deterministic and `world.createSnapshot()` hashes identically across machines,
+deterministic and `world.takeSnapshot()` hashes identically across machines,
 which makes replay a test rather than an aspiration. It costs SIMD and parallel
 features. Rapier also rules out single-file HTML output — it wants a bundler.
 

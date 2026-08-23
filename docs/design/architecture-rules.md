@@ -46,7 +46,7 @@ blamed on a design decision, and the whole loop collapses to vibes. Replay is
 not a feature bolted on later; it is the thing that makes failure teach.
 
 **Check:** the L-019 spike — the same input trace yields the same
-`world.createSnapshot()` hash on two different browsers. Rapier's
+`world.takeSnapshot()` hash on two different browsers. Rapier's
 `-deterministic` build guarantees its half; this rule guarantees ours.
 
 **Caveat, unresolved:** JS does not require `Math.sin`, `cos`, `exp` or `pow` to

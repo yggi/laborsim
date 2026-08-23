@@ -18,6 +18,51 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — L-013: toolchain up, architecture rules made executable
+
+Cards: closed [L-013]
+
+Scaffold stands: TypeScript, Vite 8, Svelte 5, Vitest 4, Biome, Three 0.185,
+Rapier 0.20 deterministic-compat. `dev`, `build`, `test`, `typecheck` and `lint`
+are all green, and the commands are in `README.md`.
+
+The part worth recording is that **the three architecture rules are now
+executable rather than aspirational.** `tests/architecture.test.ts` reads the
+source tree and fails the build on a violation: no renderer import under
+`src/sim`, `src/control`, `src/modules` or `src/core`; no DOM access in sim
+code; no `Math.random` anywhere in `src`; no renderer or physics import under
+`src/ui`; no reactive scene-graph wrapper in dependencies. Breaking a rule now
+has to be a deliberate act that edits `docs/design/architecture-rules.md` first.
+
+That test caught itself on the first run — `rng.ts` has to name `Math.random` in
+order to forbid it, and the scan flagged its own doc comment. Fixed by stripping
+comments before scanning, which is the right answer anyway: the rules are about
+code, not prose.
+
+`tests/determinism.test.ts` proves the other half: 15 tests, the sim stepping in
+plain Node with `document` undefined, and identical `takeSnapshot()` fingerprints
+across two separate runs of 180 steps. Replay determinism is now a standing test
+rather than a claim, which was the point of choosing the deterministic build.
+A deliberate counter-test asserts that different run lengths *do* diverge, so a
+constant fingerprint cannot make the suite pass while proving nothing.
+
+Corrected a documentation error carried in from the Rapier docs: the JS API is
+`world.takeSnapshot()`, not `createSnapshot()`. Fixed in `MEMORY.md`, `BOARD.md`
+and `architecture-rules.md`. Found by probing the actual API rather than
+trusting the prose — worth repeating for anything load-bearing.
+
+Two smaller decisions. Biome excludes `prototype/` so the frozen probe is never
+reformatted, and disables the unused-import rules for `.svelte` files because
+Biome parses only the `<script>` block and cannot see template usage —
+`svelte-check` covers that properly. The dev server binds to `0.0.0.0` so the
+cockpit can be opened on a real phone from day one.
+
+New thread on first-load weight: the *empty* scaffold is already 3.44 MB raw /
+1.25 MB gzipped, with Three and Rapier roughly comparable and the `-compat`
+flavour inlining wasm as base64 at about a third overhead. Mobile-first is a
+hard pillar, so a first-load budget should be set before the bundle grows enough
+to make the choice for us.
+
 ## 2026-08-23 — tone crystallized, chase view is hands-off-the-wheel
 
 Cards: [L-029] reshaped

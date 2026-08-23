@@ -11,6 +11,22 @@ or delete. Do not grow the file.
 
 ---
 
+## First-load weight on mobile
+
+The empty scaffold already builds to **3.44 MB raw / 1.25 MB gzipped**, and
+there is no game in it. Three.js and Rapier are roughly comparable
+contributors, and the `-compat` flavour of Rapier inlines its wasm as base64,
+which costs about a third in size over shipping the binary.
+
+Mobile-first is a hard pillar, so this is a real budget question, not a
+premature optimisation — but it is also not urgent while there is nothing to
+load. Levers, cheapest first: drop `-compat` for the plain deterministic build
+plus `vite-plugin-wasm` (wasm streams and compresses properly), code-split the
+build mode away from the sim, and lazily load instruments.
+
+Worth setting an explicit first-load budget *before* the bundle grows enough to
+make the choice for us.
+
 ## Field stowing of panels
 
 Left over from the chase-camera decision. Instruments are installed, not

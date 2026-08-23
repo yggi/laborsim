@@ -25,14 +25,6 @@ Card format:
 
 ## ready
 
-### [L-013] Scaffold the toolchain
-- **what:** TypeScript + Vite + Svelte 5 + Vitest + Biome + Three.js +
-  `@dimforge/rapier3d-deterministic`. No game code. The three architecture rules
-  are enforced by the layout from the first commit, not adopted later.
-- **done-when:** `npm run dev`, `build`, `test` and `lint` all work from a clean
-  clone; a Vitest suite steps a Rapier world headless in plain Node; the
-  commands are in `README.md`.
-
 ### [L-014] Rung 1 — tracked platform, drivable
 - **what:** the ladder's first machine on real terrain: body-frame velocity, two
   levers, clear view. No balance controller, no rack yet.
@@ -67,7 +59,7 @@ Card format:
 
 ### [L-019] Replay determinism spike
 - **what:** establish that a failure can be recorded and replayed identically.
-  Use `@dimforge/rapier3d-deterministic` and assert on `world.createSnapshot()`
+  Use `@dimforge/rapier3d-deterministic` and assert on `world.takeSnapshot()`
   hashes. Must also settle our own sim code: JS transcendentals are not
   bit-portable across engines, and `H(x,z)` is built from them.
 - **done-when:** the same input trace yields the same snapshot hash on two
@@ -166,6 +158,11 @@ Card format:
 ---
 
 ## history
+
+### [L-013] Scaffold the toolchain — **closed**
+TS · Vite 8 · Svelte 5 · Vitest 4 · Biome · Three · Rapier deterministic-compat.
+`dev`, `build`, `test`, `typecheck`, `lint` all green. The three architecture
+rules are enforced by `tests/architecture.test.ts`, not just documented.
 
 ### [L-020] Decide: authored or derived cockpit — **closed**
 Middle ground: components ship **mandatory** instruments, the player **places**
