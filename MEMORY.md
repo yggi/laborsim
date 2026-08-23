@@ -34,6 +34,28 @@ your assumptions was wrong.
 **What is being simulated is not combat and not locomotion. It is the gap
 between what a machine is rated to do and what it does on the day.**
 
+### 1.1 The diegetic frame — a training system
+
+**The whole thing is, in-universe, a Labor design, operation and safety training
+system.** The player is not piloting a Labor; they are using the rig that
+teaches people to. Tonal anchor: the simulator sequence that opens *Patlabor 2*.
+
+This is not flavour — it is the frame that licenses most of the design, and it
+should be checked before inventing machinery to justify something:
+
+- **Inspectability is diegetic.** An open sim layer is not a debug overlay
+  breaking fiction; it is the training rig's instrumentation. The "educational
+  means inspectable" pillar stops fighting the fiction and starts being it.
+- **Replay is native.** Training systems record and review sessions. Attribution
+  from a replay needs no in-world excuse.
+- **Failure is affordable.** Killing a citizen is a training failure, not a
+  moral event the game has to dramatise. It can be scored bluntly and reset.
+- **Sandbox is the native mode.** A training rig has free-drive. v0 needs no
+  story-shaped reason to exist.
+- **Procedural sites are the point** — a rig generates exercises. Difficulty is
+  the site, not a curve.
+- **It sets the UI register**: industrial training software, not a game HUD.
+
 ## 2. The design thesis
 
 KSP does not work because of parts or physics. It works because of a
@@ -63,6 +85,25 @@ The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 > first session**, and attributable **from a replay**.
 
 If that scenario cannot be constructed on rung one, the rack is decoration.
+
+### 3.1 The damage counter — v0's verdict
+
+**No job tickets in v0.** The failure loop still needs a third beat — a verdict —
+and the damage counter is it, at a fraction of a ticket economy's cost:
+
+- Operate and navigate through a procedural environment full of **expensive
+  things to break**. Damage accumulates as a running cost.
+- **Harming a citizen is failure**, full stop — not a large number, a different
+  category.
+- Environments are the difficulty axis: **a quarry is simpler than a city.**
+  Fewer things to hit, nobody to hurt, forgiving ground.
+
+This gives the verdict without gating: you are not being scored against a
+contract, you are being told what you cost. It fits the training frame exactly —
+this is what a training rig reports.
+
+The attribution rule applies to it in full. A damage counter that says *what* you
+broke without *why* is a score, and scores do not teach.
 
 ## 4. Core loop
 
@@ -102,8 +143,29 @@ a gauge you wanted. Real cabs are cramped for the same reason.
 **Panels must be installed, not toggled.** If they can be tapped away, players
 run naked-cage and peek at the map on demand, and the mechanic is gone.
 
-Occlusion only bites **if the pilot camera is the only camera** — see `NOTES.md`,
-this is unresolved and upstream of a lot of UI.
+### 6.1 The cockpit is authored, from a mandatory manifest
+
+Settled, between the authored cockpit of the brief and the derived cockpit of
+`HANDOVER.md` § 9.4: **components ship instruments, and those instruments are
+mandatory and must be placed by the player within the viewport.**
+
+The consequences are why this is the right call, not just the compromise:
+
+- **The rack and the cockpit become one decision.** Fitting a component means
+  fitting its instrument. Capability literally costs you sight.
+- **An empty or incoherent cockpit is unreachable** — which was the whole case
+  for deriving it. Every chassis ships stock wiring that works.
+- **The panel budget gets teeth.** Adding a component can make a machine
+  unflyable because its instrument will not fit. That is a real design failure
+  the player can see coming and argue with.
+- **Placement stays authored**, so the DIN rail keeps something to do and the
+  cockpit is still where a parts list becomes a thing you can drive.
+
+OS-mode is tuning, never a gate.
+
+Occlusion only bites **if the pilot camera is the only camera** — still open in
+`NOTES.md`, and now more urgent, since mandatory instruments mean occlusion is
+no longer something a player can opt out of.
 
 ## 7. Mechanics that fall out of the above
 

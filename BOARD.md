@@ -66,18 +66,19 @@ Card format:
 
 ### [L-019] Replay determinism spike
 - **what:** establish that a failure can be recorded and replayed identically.
-  Attribution depends on it, and it constrains the physics integration.
-- **done-when:** the same input trace produces the same failure twice, and the
-  cost of keeping that guarantee is written into `MEMORY.md`.
-- **needs:** L-014
+  Use `@dimforge/rapier3d-deterministic` and assert on `world.createSnapshot()`
+  hashes. Must also settle our own sim code: JS transcendentals are not
+  bit-portable across engines, and `H(x,z)` is built from them.
+- **done-when:** the same input trace yields the same snapshot hash on two
+  different browsers, and the cost of that guarantee is in `MEMORY.md`.
+- **needs:** L-014, NOTES thread "Determinism discipline"
 
-### [L-020] Decide: authored or derived cockpit
-- **what:** resolve the conflict between the authored cockpit of the brief and
-  the derived cockpit of `HANDOVER.md` § 9.4. Not a build task — a decision,
-  with the losing option written down as rejected.
-- **done-when:** `MEMORY.md` states which, the NOTES thread is deleted, and
-  L-008 is unblocked or deleted.
-- **needs:** NOTES thread "Is the cockpit authored or derived?"
+### [L-029] Damage counter — v0's verdict
+- **what:** running cost for things you break; harming a citizen is categorical
+  failure. Quarry (few hazards, no people) as the easy environment tier.
+- **done-when:** a run ends with a cost breakdown that says *what* and *why*,
+  not just a number.
+- **needs:** L-016, L-027
 
 ### [L-021] Load chart v0
 - **what:** compute a payload-vs-reach envelope from geometry, mass, actuator
@@ -116,7 +117,7 @@ Card format:
 - **what:** fixed glass area, instruments declare their size, installed rather
   than toggled.
 - **done-when:** installing an instrument measurably costs you view.
-- **needs:** L-020, chase-camera thread
+- **needs:** chase-camera thread
 
 ### [L-007] `autonav` as the reference dumb module
 - **what:** the canonical predictable-failure component — steers to the pin,
@@ -143,10 +144,12 @@ Card format:
 - **done-when:** two generated sites demand different machines.
 - **needs:** NOTES thread "What does the procedural generator generate?"
 
-### [L-008] DIN-rail cockpit editor
-- **what:** whatever L-020 decides the player drags.
-- **done-when:** a cockpit built in OS-mode reads live values on site.
-- **needs:** L-020
+### [L-008] Cockpit editor — place the mandatory instruments
+- **what:** every component ships instruments the player *must* fit into the
+  viewport. Placement is authored; the manifest is not.
+- **done-when:** fitting a component means fitting its instrument, and a
+  component can be refused for want of glass.
+- **needs:** L-025
 
 ### [L-012] Persistence
 - **what:** save and load a machine — geometry, rack order, cockpit layout.
@@ -161,6 +164,10 @@ Card format:
 ---
 
 ## history
+
+### [L-020] Decide: authored or derived cockpit — **closed**
+Middle ground: components ship **mandatory** instruments, the player **places**
+them within the panel budget. → `MEMORY.md` § 6.1.
 
 ### [L-005] Define the v0 vertical slice — **closed**
 Answered by `HANDOVER.md` § 10: the acceptance test on rung 1. Became L-018.

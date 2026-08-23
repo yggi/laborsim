@@ -18,6 +18,52 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-23 — diegetic frame, cockpit resolved, damage counter
+
+Cards: closed [L-020] · added [L-029]
+
+Three orientations landed, one of which reframes the project.
+
+**The whole thing is, in-universe, a Labor design, operation and safety training
+system** — the player uses the rig that teaches Labor operators, tonally
+anchored on the *Patlabor 2* opening. Recorded as `MEMORY.md` § 1.1 because it
+is not flavour: it licenses inspectability without breaking fiction (an open sim
+layer is the rig's instrumentation, not a debug overlay), makes replay native,
+makes failure affordable, makes sandbox the default mode, makes procedural sites
+the point rather than a shortcut, and sets the UI register. Several problems that
+looked like they needed machinery are now answered by the frame instead. Check it
+before inventing more.
+
+**Cockpit resolved to the middle ground** (L-020): components ship instruments,
+those instruments are *mandatory*, and the player *places* them in the viewport.
+This takes the best of both prior positions — the empty-cockpit failure state
+that motivated "derived" becomes unreachable, while placement stays authored so
+the DIN rail keeps a job. The consequence worth noting: the rack and the cockpit
+collapse into one decision, and capability now literally costs sight. A component
+can be refused for want of glass.
+
+**No job tickets in v0. A damage counter is the verdict instead** — running cost
+for expensive things you break, with harming a citizen as categorical failure
+rather than a big number. Environment is the difficulty axis: a quarry is
+simpler than a city. This supplies the failure loop's missing third beat at a
+fraction of a ticket economy's cost, and it fits the training frame exactly.
+Two threads closed on this; the attribution rule was carried over to it — a
+counter that says what you broke without why is a score, and scores do not teach.
+
+Stack discussion opened. Verified two facts rather than asserting them:
+Godot 4's web export cannot run C# at all (the .NET runtime does not work in the
+browser sandbox) and is Compatibility-renderer only, which makes GDScript the
+only web-viable language on the platform where this project has to ship.
+Rapier's `-deterministic` wasm build is bit-level cross-platform and
+`world.createSnapshot()` hashes identically across machines — better than
+assumed, and it turns replay determinism into a test we can write on day one.
+
+That last finding exposed a new problem, now a thread: **JS transcendentals are
+not bit-portable across engines**, and the probe's `H(x,z)` is built almost
+entirely from `Math.sin`/`exp`/`pow`. Rapier's guarantee does not cover our own
+code. Must be decided before the height field is ported, because it determines
+whether terrain is code or an asset.
+
 ## 2026-08-23 — concept-3 prototype and handover folded in
 
 Cards: closed [L-001] [L-002] [L-003 partial] [L-004] [L-005]

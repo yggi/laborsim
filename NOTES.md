@@ -11,54 +11,37 @@ or delete. Do not grow the file.
 
 ---
 
-## Is the cockpit authored or derived?
-
-**Direct conflict, unresolved, and it is upstream of a whole mode.**
-
-The founding brief has the player *placing and connecting UI controls and
-widgets into the viewport* — an authored cockpit, a DIN-rail component view,
-the bridge between build and sim. `HANDOVER.md` § 9.4 argues the opposite:
-three modes is a stall risk, so components **ship their own instruments** and
-the cockpit is **derived**, with OS-mode living inside build while wearing the
-sim's pilot viewport. Two modes, not three.
-
-Both keep the DIN rail; they disagree on what the player drags onto it —
-*components* (derived instruments follow) or *instruments* (placed by hand).
-Derived is cheaper and dodges an empty-cockpit failure state; authored is the
-thing that was actually asked for. A middle reading exists — components ship
-instruments, the player places them within the panel budget — and may be the
-answer, but it has not been chosen. **Every chassis must ship stock wiring that
-works, and OS-mode must be tuning, never a gate**, under any of the three.
-
 ## Does an external chase camera exist in the shipped game?
 
 Occlusion is a core mechanic and a chase view defeats it — the probe's external
 view is strictly better than the cab whenever panels are installed. Cab-only is
-coherent but harsh on mobile, which is the primary target. Unresolved, and
-upstream of a lot of UI.
+coherent but harsh on mobile, which is the primary target.
+
+**Sharpened by § 6.1**: instruments are now mandatory, so occlusion is not
+opt-out. A chase camera is therefore not a comfort setting, it is an escape
+hatch from a core mechanic. The training frame offers a possible out — a rig
+plausibly has an external observation view, and using it could simply be
+recorded rather than forbidden.
 
 Sub-question: **field stowing of panels** — allowed at a cost in hands or
 seconds, or not at all?
 
-## Does v0 need the ticket?
+## Determinism discipline: transcendentals are not portable
 
-The brief defers missions and progression from v0. `HANDOVER.md` § 3 argues job
-tickets are not gamification but **the third beat of the failure loop** — KSP
-always answers *did you make orbit*, and without a verdict the loop has no
-close. Refusing a contract costing less than failing it is what makes the
-sandbox real: you are not gated, you are quoting.
+Rapier's `-deterministic` wasm build is bit-level cross-platform, and
+`world.createSnapshot()` hashes identically across machines — so the *physics*
+side of replay is solved and testable from day one.
 
-For now the acceptance test stands in as v0's verdict. Whether that is enough,
-or whether a minimal ticket has to land inside v0 to make failure mean anything,
-is open. Deciding it late is the risk.
+**Our own sim code is not covered by that.** ECMAScript does not require
+`Math.sin`, `cos`, `exp` or `pow` to be bit-identical across engines, and the
+probe's analytic height field `H(x,z)` is built almost entirely from them. Two
+players on different browsers could generate microscopically different terrain
+and diverge.
 
-## Is Rapier in?
-
-The brief named Vite, Vitest, Svelte 5 and Three.js. `HANDOVER.md` names Rapier
-too. Recorded in MEMORY as the engine of record because the physics argument
-depends on it (determinism for replay, motorized joints), but it has not been
-confirmed by the same voice that named the rest, and it is the one choice that
-rules out the single-file build. Confirm before it is load-bearing.
+Options: bake the field once and ship it as data; use our own polyfilled
+transcendentals in anything sim-visible; or scope replay to same-device only
+and say so. Unresolved, but it must be decided **before** `H(x,z)` is ported,
+because it determines whether terrain is code or an asset.
 
 ## What does "multi-layer" cut along, for the player?
 
