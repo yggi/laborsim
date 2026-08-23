@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>LABOR SIM — capability probe</title>
+<style>
+  :root{
+    --cab:      #14171a;
+    --bezel:    #23282a;
+    --bezel-hi: #333a3b;
+    --rail:     #1a1e20;
+    --ink:      #c6d0cb;
+    --ink-dim:  #6d7a76;
+    --phos:     #6fe3c4;
+    --amber:    #f0a830;
+    --alert:    #e0503c;
+    --hazard:   #e8b53a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--cab);
+    color:var(--ink);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    -webkit-user-select:none;user-select:none;touch-action:none}
+  /* width/height must be explicit: an abs-positioned <canvas> with width:auto
+     lays out at its INTRINSIC (drawing-buffer) size, not the inset box. */
+  canvas#gl{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
+
+  /* ---- cab frame: the viewport is a window, not a screen ---- */
+  #cabframe{position:fixed;inset:0;pointer-events:none;z-index:5;
+    box-shadow:inset 0 0 0 6px #0d1012, inset 0 0 120px rgba(0,0,0,.55);}
+  #cabframe.cab{box-shadow:inset 0 0 0 6px #0d1012, inset 0 0 160px rgba(0,0,0,.75);}
+  #cabframe.cab::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:10px;
+    transform:translateX(-50%);background:linear-gradient(90deg,#0d1012,#2a2f31 40%,#0d1012);
+    opacity:.9}
+  #cabframe.cab::after{content:"";position:absolute;left:0;right:0;top:0;height:64px;
+    background:linear-gradient(#0d1012,rgba(13,16,18,0));}
+
+  .hud{position:fixed;z-index:10}
+
+  /* ---- header ---- */
+  #plate,#authority,#note{pointer-events:none}
+  #plate{top:calc(env(safe-area-inset-top) + 10px);left:12px;font-size:10px;line-height:1.5;letter-spacing:.08em}
+  #plate b{display:block;font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif;
+    font-weight:700;font-size:17px;letter-spacing:.14em;color:var(--ink)}
+  #plate span{color:var(--ink-dim);white-space:pre}
+
+  /* ---- authority banner: the attribution rule ---- */
+  #authority{top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);
+    font-size:10px;letter-spacing:.14em;padding:5px 12px;border:1px solid var(--bezel-hi);
+    background:rgba(20,23,26,.85);white-space:nowrap;transition:color .2s,border-color .2s}
+  #authority.ovr{color:var(--amber);border-color:var(--amber)}
+
+  /* ---- instrument panels: they cost viewport ---- */
+  .panel{background:rgba(16,19,21,.94);border:1px solid var(--bezel-hi);
+    box-shadow:0 0 0 3px #0d1012, 0 8px 24px rgba(0,0,0,.6);
+    transition:opacity .25s, transform .25s}
+  .panel.off{opacity:0;transform:scale(.94);pointer-events:none}
+  .panel h4{margin:0;padding:4px 7px;font-size:9px;letter-spacing:.16em;color:var(--ink-dim);
+    background:var(--bezel);font-weight:400}
+  #map{top:calc(env(safe-area-inset-top) + 46px);right:12px;width:132px}
+  #map canvas{display:block;width:132px;height:132px}
+  #sys{right:12px;bottom:112px;width:132px;padding-bottom:6px}
+  .bar{display:flex;align-items:center;gap:5px;padding:2px 7px;font-size:9px;letter-spacing:.06em}
+  .bar i{font-style:normal;width:30px;color:var(--ink-dim)}
+  .bar u{flex:1;height:5px;background:#0d1012;text-decoration:none;display:block;position:relative;overflow:hidden}
+  .bar u b{position:absolute;inset:0 100% 0 0;background:var(--phos);transition:right .12s linear,background .2s}
+
+  /* ---- pilot inputs ---- */
+  #levers{left:12px;bottom:104px;display:flex;gap:10px;align-items:flex-end}
+  .lever{width:44px;height:132px;background:var(--rail);border:1px solid var(--bezel-hi);
+    position:relative;box-shadow:0 0 0 3px #0d1012}
+  .lever .slot{position:absolute;left:50%;top:10px;bottom:10px;width:3px;transform:translateX(-50%);background:#0d1012}
+  .lever .knob{position:absolute;left:5px;right:5px;height:26px;background:linear-gradient(#4a5350,#262c2b);
+    border:1px solid #0d1012;border-radius:3px}
+  .lever .knob::after{content:"";position:absolute;left:6px;right:6px;top:11px;height:2px;background:#0d1012}
+  .lever label{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:8px;
+    letter-spacing:.1em;color:var(--ink-dim)}
+  .lever.locked{opacity:.35}
+  #steer{width:132px;height:44px}
+  #steer .slot{left:10px;right:10px;top:50%;bottom:auto;width:auto;height:3px;transform:translateY(-50%)}
+  #steer .knob{left:auto;top:5px;bottom:5px;height:auto;width:26px}
+  #steer .knob::after{left:11px;right:auto;top:6px;bottom:6px;height:auto;width:2px}
+
+  /* ---- the rack: a DIN rail. position is priority. ---- */
+  #rack{left:0;right:0;bottom:0;padding:0 8px calc(env(safe-area-inset-bottom) + 8px);
+    background:linear-gradient(rgba(13,16,18,0),#0d1012 22%);}
+  #railhdr{display:flex;justify-content:space-between;align-items:baseline;
+    font-size:8px;letter-spacing:.14em;color:var(--ink-dim);padding:6px 4px 4px}
+  #railhdr b{color:var(--ink);font-weight:400}
+  #rail{display:flex;gap:4px;background:var(--rail);border-top:1px solid var(--bezel-hi);
+    border-bottom:2px solid #0a0c0d;padding:5px 5px 6px;overflow-x:auto;scrollbar-width:none}
+  #rail::-webkit-scrollbar{display:none}
+  .mod{flex:1 0 auto;min-width:62px;background:var(--bezel);border:1px solid #0d1012;
+    border-top:2px solid var(--bezel-hi);padding:5px 5px 4px;cursor:pointer;position:relative}
+  .mod .led{width:6px;height:6px;background:#0d1012;box-shadow:inset 0 0 0 1px #000;margin-bottom:4px}
+  .mod .nm{font-size:9px;letter-spacing:.05em;color:var(--ink)}
+  .mod .st{font-size:7px;letter-spacing:.1em;color:var(--ink-dim);margin-top:2px}
+  .mod.on  .led{background:var(--phos);box-shadow:0 0 6px var(--phos)}
+  .mod.ovr .led{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .mod.on  .st{color:var(--phos)}
+  .mod.ovr .st{color:var(--amber)}
+  .mod.fault .led{background:var(--alert);box-shadow:0 0 6px var(--alert)}
+  .mod.fault .st{color:var(--alert)}
+  .mod.locked{opacity:.55;cursor:default}
+
+  #tools{display:flex;gap:4px;padding:5px 0 0}
+  .tool{flex:1;font:inherit;font-size:8.5px;letter-spacing:.1em;color:var(--ink-dim);
+    background:var(--bezel);border:1px solid #0d1012;padding:6px 2px;cursor:pointer}
+  .tool.act{color:var(--cab);background:var(--hazard);border-color:var(--hazard)}
+
+  #note{left:12px;top:calc(env(safe-area-inset-top) + 70px);max-width:150px;font-size:9px;
+    line-height:1.6;color:var(--amber);letter-spacing:.04em;transition:opacity .4s}
+  #note.hide{opacity:0}
+  #err{position:fixed;inset:0;z-index:99;background:#14171a;color:var(--alert);padding:24px;
+    font-size:12px;line-height:1.6;display:none;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="cabframe"></div>
+
+<div class="hud" id="plate">
+  <b>TYPE&nbsp;7B&nbsp;/&nbsp;KIBA</b>
+  <span>ind. multipurpose labor &middot; 7.9 m &middot; 6.2 t</span>
+  <span id="tele" style="display:block;margin-top:5px;color:var(--phos);font-size:9px"></span>
+</div>
+
+<div class="hud" id="authority">ACTUATOR BUS — PILOT</div>
+
+<div class="hud" id="note">Drag the view to orbit. Pull the THR lever. Then tap NAV and watch who wins the bus.</div>
+
+<div class="hud panel off" id="map"><h4>SITE MAP</h4><canvas width="264" height="264"></canvas></div>
+
+<div class="hud panel off" id="sys"><h4>ACTUATOR LOAD</h4>
+  <div class="bar"><i>L HIP</i><u><b id="b0"></b></u></div>
+  <div class="bar"><i>L KNEE</i><u><b id="b1"></b></u></div>
+  <div class="bar"><i>R HIP</i><u><b id="b2"></b></u></div>
+  <div class="bar"><i>R KNEE</i><u><b id="b3"></b></u></div>
+  <div class="bar"><i>CoM</i><u><b id="b4"></b></u></div>
+</div>
+
+<div class="hud" id="levers">
+  <div class="lever" id="thr"><div class="slot"></div><div class="knob"></div><label>THR</label></div>
+</div>
+
+<div class="hud" id="rack">
+  <div id="railhdr"><span>RACK — PRIORITY ASCENDS &rarr;</span><b id="clock">00:00</b></div>
+  <div id="rail"></div>
+  <div id="tools">
+    <button class="tool" id="tSwap">SWAP PILOT/NAV</button>
+    <button class="tool" id="tPanels">PANELS</button>
+    <button class="tool" id="tCam">CAB VIEW</button>
+    <button class="tool act" id="tLine">INK</button>
+  </div>
+</div>
+
+<div id="err"></div>
+
+<script>
+window.onerror = function(m,s,l){ var e=document.getElementById('err');
+  e.style.display='block'; e.textContent='RUNTIME FAULT\n\n'+m+'\n@'+l; };
+
+window.__boot = function(){
+"use strict";
+var T = THREE, MU = T.MathUtils;
+
+/* ========================================================================
+   0.  TERRAIN  — analytic field. Feet and body sample the same function
+       the mesh was built from, so contact is exact, not raycast-approximate.
+   ===================================================================== */
+function smooth(a,b,x){ x=MU.clamp((x-a)/(b-a),0,1); return x*x*(3-2*x); }
+function H(x,z){
+  // rolling base
+  var h = 1.55*Math.sin(x*0.061)*Math.cos(z*0.054)
+        + 0.80*Math.sin(x*0.131+1.7)*Math.cos(z*0.112-0.4)
+        + 0.32*Math.sin(x*0.310-0.6)*Math.sin(z*0.271+2.1);
+  // a long ridge, so there is a skyline to walk toward
+  h += 5.4*Math.exp(-Math.pow((x*0.66 + z*0.75 - 64)/21, 2));
+  // quarry benches cut into the west face — three terraces with graded risers
+  var b = (-x*0.86 + z*0.50);
+  var st = MU.clamp((b-16)/15, 0, 3);
+  h += 1.85*(Math.floor(st) + smooth(0.58,0.96, st - Math.floor(st)));
+  // haul road: a flat cut carved through whatever it crosses
+  var road = Math.exp(-Math.pow((z - 0.20*x - 4)/7.5, 2));
+  h = MU.lerp(h, h*0.22 - 0.5, road*0.88);
+  // spoil mounds
+  h += 2.6*Math.exp(-(Math.pow((x+36)/12,2) + Math.pow((z+28)/12,2)));
+  h += 1.7*Math.exp(-(Math.pow((x-20)/8,2)  + Math.pow((z-32)/8,2)));
+  // trench along the north edge
+  h -= 2.3*Math.exp(-Math.pow((z-42)/5,2)) * smooth(-56,-28,-Math.abs(x-6));
+  // graded working pad, where the machine starts
+  h = MU.lerp(h, 0.06, (1 - smooth(13,34, Math.sqrt(x*x+z*z))) * 0.94);
+  return h;
+}
+var _n = new T.Vector3();
+function N(x,z){ var e=0.6;
+  _n.set(H(x-e,z)-H(x+e,z), 2*e, H(x,z-e)-H(x,z+e)).normalize(); return _n.clone(); }
+
+/* ========================================================================
+   1.  RENDERER / SCENE
+   ===================================================================== */
+var canvas = document.getElementById('gl');
+var renderer = new T.WebGLRenderer({canvas:canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1, 2));
+renderer.outputEncoding = T.sRGBEncoding;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = T.PCFSoftShadowMap;
+
+var scene = new T.Scene();
+var SKY_LO = 0xbfd4d8, SKY_HI = 0x5f8fb0;
+scene.fog = new T.Fog(0xb9ccd2, 60, 320);
+
+var camera = new T.PerspectiveCamera(46, 1, 0.3, 900);
+
+// gradient dome — anime skies are flat washes, not HDRIs
+(function(){
+  var g = new T.SphereGeometry(600, 24, 14);
+  var m = new T.ShaderMaterial({side:T.BackSide, depthWrite:false, fog:false,
+    uniforms:{lo:{value:new T.Color(SKY_LO)}, hi:{value:new T.Color(SKY_HI)}},
+    vertexShader:'varying float vy; void main(){ vy=normalize(position).y; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} ',
+    fragmentShader:'varying float vy; uniform vec3 lo; uniform vec3 hi; void main(){ float t=smoothstep(-0.08,0.62,vy); vec3 c=mix(lo,hi,t); float band=floor(t*7.0)/7.0; c=mix(c,mix(lo,hi,band),0.35); gl_FragColor=vec4(c,1.0);} '});
+  scene.add(new T.Mesh(g,m));
+})();
+
+var key = new T.DirectionalLight(0xfff0d8, 1.25);
+key.position.set(-34, 46, 24);
+key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+var sc = key.shadow.camera;
+sc.left=-26; sc.right=26; sc.top=26; sc.bottom=-26; sc.near=1; sc.far=140;
+key.shadow.bias = -0.0012;
+scene.add(key); scene.add(key.target);
+scene.add(new T.HemisphereLight(0xa8ccdd, 0x4a4033, 0.62));
+
+/* ========================================================================
+   2.  CEL SHADING
+       (a) 4-step gradient ramp on MeshToonMaterial  -> banded diffuse
+       (b) fresnel rim injected via onBeforeCompile   -> the anime edge light
+       (c) inverted-hull backface shells              -> the ink line
+   ===================================================================== */
+function ramp(steps){
+  var d = new Uint8Array(steps.length*4);
+  for(var i=0;i<steps.length;i++){ d[i*4]=d[i*4+1]=d[i*4+2]=steps[i]; d[i*4+3]=255; }
+  var t = new T.DataTexture(d, steps.length, 1, T.RGBAFormat);
+  t.magFilter = t.minFilter = T.NearestFilter;
+  t.generateMipmaps = false; t.needsUpdate = true; return t;
+}
+var RAMP  = ramp([52,116,186,255]);
+var RAMP2 = ramp([70,150,255]);
+
+var rimOn = {value:1.0};
+function toon(hex, rimHex, rimK){
+  var m = new T.MeshToonMaterial({color:hex, gradientMap:RAMP});
+  m.onBeforeCompile = function(sh){
+    // Guard: only inject if this build exposes the varyings we need.
+    if(sh.fragmentShader.indexOf('vViewPosition') < 0) return;
+    sh.uniforms.uRimC = {value:new T.Color(rimHex||0xa9ecff)};
+    sh.uniforms.uRimK = {value:(rimK===undefined?0.85:rimK)};
+    sh.uniforms.uRimOn = rimOn;
+    sh.fragmentShader = 'uniform vec3 uRimC; uniform float uRimK; uniform float uRimOn;\n' + sh.fragmentShader;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>',
+      'float _r = 1.0 - max(dot(normalize(normal), normalize(vViewPosition)), 0.0);\n'+
+      '_r = smoothstep(0.52, 0.78, pow(_r, 1.9));\n'+
+      'gl_FragColor.rgb += uRimC * _r * uRimK * uRimOn;\n'+
+      '#include <dithering_fragment>');
+  };
+  return m;
+}
+var OT = 0.036;                                   // ink line thickness, metres
+var inkMat = new T.MeshBasicMaterial({color:0x101a1e, side:T.BackSide});
+
+var M = {
+  armor : toon(0xd2d6c8, 0xbdf0ff, 0.85),
+  dark  : toon(0x39413f, 0x9fdcf0, 0.95),
+  accent: toon(0xdca42a, 0xffe9a8, 0.70),
+  hyd   : toon(0x93a3ab, 0xffffff, 1.05),
+  rubber: toon(0x22282a, 0x7fbcd0, 0.60),
+  glass : new T.MeshBasicMaterial({color:0x4fdcea}),
+  lamp  : new T.MeshBasicMaterial({color:0xffd9a0})
+};
+
+var inkShells = [];
+function box(w,h,d,mat,ink){
+  var g = new T.BoxGeometry(w,h,d);
+  var m = new T.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true;
+  if(ink!==false){
+    var o = new T.Mesh(g, inkMat);
+    o.scale.set((w+2*OT)/w,(h+2*OT)/h,(d+2*OT)/d);
+    m.add(o); inkShells.push(o);
+  }
+  return m;
+}
+function cyl(r,h,seg,mat,ink){
+  var g = new T.CylinderGeometry(r,r,h,seg||10);
+  var m = new T.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true;
+  if(ink!==false){
+    var o = new T.Mesh(g, inkMat);
+    o.scale.set((r+OT)/r,(h+2*OT)/h,(r+OT)/r);
+    m.add(o); inkShells.push(o);
+  }
+  return m;
+}
+function at(o,x,y,z){ o.position.set(x,y,z); return o; }
+
+/* ========================================================================
+   3.  GROUND
+   ===================================================================== */
+var SPAN = 220, SEG = 120;              // 1.8 m cells — terraces need the resolution
+(function(){
+  var g = new T.PlaneGeometry(SPAN, SPAN, SEG, SEG);
+  g.rotateX(-Math.PI/2);
+  var p = g.attributes.position;
+  for(var i=0;i<p.count;i++) p.setY(i, H(p.getX(i), p.getZ(i)));
+  // MeshToonMaterial ignores flatShading in r128 — split the verts instead,
+  // so computeVertexNormals yields genuine per-face normals.
+  g = g.toNonIndexed();
+  g.computeVertexNormals();
+  var m = new T.MeshToonMaterial({color:0x8f9678, gradientMap:RAMP2});
+  var mesh = new T.Mesh(g,m); mesh.receiveShadow = true; scene.add(mesh);
+})();
+
+// site furniture — seeded, so the "procedural environment" claim is testable
+var seed = 20260822;
+function rnd(){ seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; }
+(function(){
+  var props = new T.Group(); scene.add(props);
+  for(var i=0;i<34;i++){
+    var a = rnd()*Math.PI*2, r = 16 + rnd()*88;
+    var x = Math.cos(a)*r, z = Math.sin(a)*r;
+    var kind = rnd(), o;
+    if(kind < 0.34){                                     // traffic cone
+      o = new T.Group();
+      var cone = new T.Mesh(new T.ConeGeometry(0.34,1.0,8), M.accent);
+      cone.castShadow = true; o.add(at(cone,0,0.5,0));
+      var oc = new T.Mesh(cone.geometry, inkMat); oc.scale.set(1.1,1.07,1.1); cone.add(oc);
+      o.add(at(box(0.8,0.09,0.8,M.rubber),0,0.05,0));
+    } else if(kind < 0.62){                              // marker pole
+      o = new T.Group();
+      o.add(at(cyl(0.05,3.0,6,M.dark),0,1.5,0));
+      var f = box(0.6,0.42,0.04,M.accent); o.add(at(f,0.3,2.7,0));
+    } else if(kind < 0.85){                              // pipe stack
+      o = new T.Group();
+      for(var k=0;k<3;k++){
+        var pipe = cyl(0.32,2.6,8,M.dark); pipe.rotation.z = Math.PI/2;
+        o.add(at(pipe, (k-1)*0.68, 0.34, 0));
+      }
+      var top = cyl(0.32,2.6,8,M.dark); top.rotation.z = Math.PI/2;
+      o.add(at(top, -0.34, 0.94, 0));
+    } else {                                             // barrier
+      o = new T.Group();
+      o.add(at(box(2.4,0.5,0.16,M.accent),0,0.95,0));
+      o.add(at(box(0.14,1.0,0.5,M.dark),-1.0,0.5,0));
+      o.add(at(box(0.14,1.0,0.5,M.dark), 1.0,0.5,0));
+    }
+    o.position.set(x, H(x,z), z);
+    o.rotation.y = rnd()*Math.PI*2;
+    props.add(o);
+  }
+  // rock outcrops — faceted, so the toon ramp has something to band across
+  for(var j=0;j<18;j++){
+    var a2 = rnd()*Math.PI*2, r2 = 24 + rnd()*80;
+    var rx = Math.cos(a2)*r2, rz = Math.sin(a2)*r2;
+    var s = 0.9 + rnd()*2.6;
+    var rock = new T.Mesh(new T.IcosahedronGeometry(s, 0), M.dark);
+    rock.castShadow = true; rock.receiveShadow = true;
+    var rs = new T.Mesh(rock.geometry, inkMat);
+    rs.scale.setScalar((s+OT)/s); rock.add(rs);
+    rock.scale.set(1, 0.55 + rnd()*0.4, 1);
+    rock.rotation.set(rnd(), rnd()*6.28, rnd()*0.4);
+    rock.position.set(rx, H(rx,rz) - s*0.25, rz);
+    props.add(rock);
+  }
+})();
+
+/* ========================================================================
+   4.  THE LABOR — rig
+       root -> pelvis -> {torso -> {arms, head}, hipL/R -> knee -> ankle}
+   ===================================================================== */
+var L1 = 2.10, L2 = 2.00, ANK = 0.34, HIPX = 0.64, HIPY = 4.44;
+var LEGLEN = L1 + L2 + ANK;
+
+var root = new T.Group(); scene.add(root);
+var pelvis = new T.Group(); root.add(pelvis);
+
+// -- pelvis / waist
+pelvis.add(at(box(1.86,0.94,1.16,M.dark), 0, HIPY-0.16, 0));
+pelvis.add(at(box(2.02,0.24,1.24,M.accent), 0, HIPY-0.62, 0));
+var hipAxle = cyl(0.30,2.06,10,M.hyd); hipAxle.rotation.z = Math.PI/2;
+pelvis.add(at(hipAxle, 0, HIPY, 0));
+
+// -- torso
+var torso = new T.Group(); at(torso,0,HIPY+0.44,0); pelvis.add(torso);
+torso.add(at(box(2.32,1.86,1.46,M.armor), 0, 0.92, 0));           // chest
+torso.add(at(box(1.30,0.96,0.16,M.dark), 0, 0.92, 0.76));         // cockpit hatch
+torso.add(at(box(1.06,0.34,0.10,M.glass), 0, 1.22, 0.85));        // cab glass
+torso.add(at(box(1.34,0.06,0.12,M.accent), 0, 0.60, 0.80));
+torso.add(at(box(2.42,0.22,1.50,M.dark), 0, 1.90, 0));            // collar
+torso.add(at(box(0.9,0.5,0.34,M.dark), 0, 1.10,-0.86));           // dorsal pack
+torso.add(at(cyl(0.16,0.9,8,M.hyd), 0.30, 1.86,-0.92));           // exhausts
+torso.add(at(cyl(0.16,0.9,8,M.hyd),-0.30, 1.86,-0.92));
+torso.add(at(box(0.30,0.62,0.06,M.accent), 0.86, 0.92, 0.74));    // unit number plate
+
+// -- head
+var head = new T.Group(); at(head,0,2.20,0); torso.add(head);
+head.add(at(box(0.86,0.52,0.78,M.armor),0,0.26,0));
+head.add(at(box(0.66,0.16,0.10,M.glass),0,0.30,0.40));
+head.add(at(box(0.94,0.12,0.20,M.accent),0,0.52,0.10));
+head.add(at(cyl(0.05,0.7,6,M.hyd),0.40,0.80,-0.10));
+head.add(at(box(0.16,0.16,0.16,M.lamp),-0.34,0.34,0.36));
+
+// -- arms
+function buildArm(side){
+  var sh = new T.Group(); at(sh, side*1.36, 1.54, 0); torso.add(sh);
+  sh.add(at(box(0.94,0.90,0.98,M.dark),side*0.16,0,0));
+  sh.add(at(box(0.40,0.60,1.02,M.accent),side*0.66,0.14,0));
+  var up = new T.Group(); at(up,side*0.12,-0.36,0); sh.add(up);
+  up.add(at(cyl(0.26,1.34,10,M.hyd),0,-0.67,0));
+  up.add(at(box(0.60,0.90,0.62,M.armor),0,-0.50,0));
+  var el = new T.Group(); at(el,0,-1.42,0); up.add(el);
+  var elAxle = cyl(0.28,0.72,10,M.dark); elAxle.rotation.z = Math.PI/2; el.add(elAxle);
+  var fa = new T.Group(); at(fa,0,-0.14,0); el.add(fa);
+  fa.add(at(box(0.66,1.22,0.70,M.armor),0,-0.66,0));
+  fa.add(at(box(0.20,0.90,0.74,M.accent),side*0.36,-0.62,0));
+  var hand = new T.Group(); at(hand,0,-1.36,0); fa.add(hand);
+  hand.add(at(box(0.42,0.44,0.56,M.dark),0,-0.18,0));
+  hand.add(at(box(0.14,0.52,0.16,M.hyd),0,-0.52,0.18));
+  hand.add(at(box(0.14,0.52,0.16,M.hyd),0,-0.52,-0.18));
+  return {sh:sh, up:up, el:el, fa:fa};
+}
+var armL = buildArm(1), armR = buildArm(-1);
+
+// -- legs
+function buildLeg(side){
+  var hip = new T.Group(); at(hip, side*HIPX, HIPY, 0); pelvis.add(hip);
+  hip.add(at(box(0.92,0.86,0.94,M.dark),0,-0.10,0));
+  hip.add(at(cyl(0.30,1.42,10,M.hyd),0,-0.90,0));
+  hip.add(at(box(0.80,1.10,0.86,M.armor),0,-1.10,0.04));
+  hip.add(at(box(0.24,0.90,0.30,M.accent),side*0.46,-1.10,0));
+
+  var knee = new T.Group(); at(knee,0,-L1,0); hip.add(knee);
+  var kneeAxle = cyl(0.30,0.86,10,M.dark); kneeAxle.rotation.z = Math.PI/2; knee.add(kneeAxle);
+  knee.add(at(box(0.56,0.34,0.66,M.accent),0,0.10,0.34));
+  knee.add(at(cyl(0.24,1.20,10,M.hyd),0,-0.72,0));
+  knee.add(at(box(0.76,1.06,0.78,M.armor),0,-1.10,0));
+  knee.add(at(box(0.34,0.70,0.24,M.dark),0,-1.10,-0.52));
+
+  var ankle = new T.Group(); at(ankle,0,-L2,0); knee.add(ankle);
+  var foot = new T.Group(); ankle.add(foot);
+  foot.add(at(box(1.16,0.26,1.94,M.dark),0,-ANK+0.13,0.14));
+  foot.add(at(box(1.24,0.10,0.72,M.rubber),0,-ANK+0.05,0.72));
+  foot.add(at(box(1.24,0.10,0.72,M.rubber),0,-ANK+0.05,-0.28));
+  foot.add(at(box(0.66,0.34,0.30,M.accent),0,-ANK+0.34,0.92));
+
+  return {hip:hip, knee:knee, ankle:ankle, foot:foot, side:side,
+          plant:new T.Vector3(side*HIPX,0,0), lift:new T.Vector3(side*HIPX,0,0),
+          sole:new T.Vector3(side*HIPX,0,0), wasStance:true, load:0, rake:0, toe:0};
+}
+var legL = buildLeg(1), legR = buildLeg(-1);
+var legs = [legL, legR];
+
+/* -- hydraulic rams: two-point constraints, solved every frame.
+      This is the detail that reads "machine" rather than "character". -- */
+var pistons = [];
+function ram(pA, aP, pB, bP, R, r){
+  var barrel = new T.Group(); barrel.position.copy(aP); pA.add(barrel);
+  var body = cyl(R, 0.86, 8, M.dark); at(body,0,0.43,0); barrel.add(body);
+  var rod  = cyl(r, 1.0, 8, M.hyd, false); at(rod,0,0.5,0); barrel.add(rod);
+  var anchor = new T.Object3D(); anchor.position.copy(bP); pB.add(anchor);
+  var p = {barrel:barrel, rod:rod, anchor:anchor}; pistons.push(p); return p;
+}
+var _wp = new T.Vector3(), _dir = new T.Vector3(), _Y = new T.Vector3(0,1,0);
+function solveRams(){
+  for(var i=0;i<pistons.length;i++){
+    var p = pistons[i];
+    p.anchor.getWorldPosition(_wp);
+    p.barrel.parent.worldToLocal(_wp);
+    _dir.copy(_wp).sub(p.barrel.position);
+    var d = _dir.length(); if(d < 0.02) continue;
+    _dir.multiplyScalar(1/d);
+    p.barrel.quaternion.setFromUnitVectors(_Y, _dir);
+    p.rod.scale.y = d;
+  }
+}
+[legL, legR].forEach(function(lg){
+  ram(lg.hip,  new T.Vector3(lg.side*0.30,-0.34,-0.52), lg.knee, new T.Vector3(0,-0.30,-0.62), 0.15, 0.085);
+  ram(lg.knee, new T.Vector3(0,-0.40, 0.46), lg.ankle, new T.Vector3(0,0.10, 0.34), 0.11, 0.062);
+});
+ram(armL.sh, new T.Vector3(0.34,-0.28,-0.42), armL.el, new T.Vector3(0,0.12,-0.34), 0.10, 0.055);
+ram(armR.sh, new T.Vector3(-0.34,-0.28,-0.42), armR.el, new T.Vector3(0,0.12,-0.34), 0.10, 0.055);
+
+/* ========================================================================
+   5.  ANALYTIC 2-BONE IK
+       Foot-in-hip-space is  v = (0, -L1 - L2 cos k, -L2 sin k)  when the
+       knee rotates +k about local X.  So |v|^2 = L1^2+L2^2+2 L1 L2 cos k
+       gives k directly, and the hip orientation is the minimal rotation
+       taking v-hat to the target direction. No solver, no sign guessing.
+   ===================================================================== */
+var _m4 = new T.Matrix4(), _tl = new T.Vector3(), _u = new T.Vector3();
+function solveLeg(lg, targetWorld){
+  pelvis.updateWorldMatrix(true,false);
+  _m4.copy(pelvis.matrixWorld).invert();
+  _tl.copy(targetWorld).applyMatrix4(_m4).sub(lg.hip.position);
+  var d = _tl.length();
+  var dmax = (L1+L2)*0.994, dmin = Math.abs(L1-L2)+0.35;
+  var over = d/dmax;                                   // >1 => cannot reach
+  d = MU.clamp(d, dmin, dmax);
+  var ck = MU.clamp((d*d - L1*L1 - L2*L2)/(2*L1*L2), -1, 1);
+  var k = Math.acos(ck);
+  lg.knee.rotation.set(k, 0, 0);          // full write: a knee is a hinge, one axis only
+  _u.set(0, -(L1 + L2*ck), -L2*Math.sin(k)).normalize();
+  _tl.normalize();
+  lg.hip.quaternion.setFromUnitVectors(_u, _tl);
+  lg.load = MU.clamp(over*over*0.9 + (1 - k/Math.PI)*0.35, 0, 1);
+}
+
+/* ========================================================================
+   6.  GAIT
+   ===================================================================== */
+var body = {x:0, z:0, y:0, yaw:0, v:0, pitch:0, roll:0};
+var phase = 0, DUTY = 0.62;
+var _up = new T.Vector3(), _fw = new T.Vector3(), _rt = new T.Vector3(), _f2 = new T.Vector3();
+var _q = new T.Quaternion(), _pq = new T.Quaternion(), _rq = new T.Quaternion();
+var _q2 = new T.Quaternion(), _X = new T.Vector3(1,0,0);
+var _upL = new T.Vector3(), _upR = new T.Vector3();
+var _tgtL = new T.Vector3(), _tgtR = new T.Vector3(), _hp = new T.Vector3();
+var DMAX = (L1+L2)*0.990;
+
+// Highest the hip may sit and still let this leg reach its foot target.
+function hipCeil(lg, tgt){
+  var hx = body.x + Math.cos(body.yaw)*lg.side*HIPX;
+  var hz = body.z - Math.sin(body.yaw)*lg.side*HIPX;
+  var hd = Math.hypot(tgt.x-hx, tgt.z-hz);
+  return tgt.y + Math.sqrt(Math.max(DMAX*DMAX - hd*hd, 0.04));
+}
+
+function footTarget(lg, off, dt, groundAdapt){
+  var p = (phase + off) % 1, stance = p < DUTY, s;
+  var T_ = strideTime(), stride = body.v * T_ * DUTY;
+  var fwd = {x:Math.sin(body.yaw), z:Math.cos(body.yaw)};
+  var rgt = {x:Math.cos(body.yaw), z:-Math.sin(body.yaw)};
+
+  if(stance){
+    if(!lg.wasStance){ lg.plant.copy(lg.sole); lg.plant.y = groundAdapt ? H(lg.plant.x,lg.plant.z) : 0; }
+    lg.sole.copy(lg.plant);
+  } else {
+    s = (p - DUTY)/(1 - DUTY);
+    if(lg.wasStance) lg.lift.copy(lg.sole);
+    var remain = (1-s) * T_ * (1-DUTY);
+    var tx = body.x + fwd.x*(stride*0.5 + body.v*remain) + rgt.x*lg.side*HIPX;
+    var tz = body.z + fwd.z*(stride*0.5 + body.v*remain) + rgt.z*lg.side*HIPX;
+    var ty = groundAdapt ? H(tx,tz) : 0;
+    var e = s*s*(3-2*s);
+    lg.sole.set(MU.lerp(lg.lift.x,tx,e), MU.lerp(lg.lift.y,ty,e), MU.lerp(lg.lift.z,tz,e));
+    lg.sole.y += (0.34 + Math.min(stride*0.30, 0.9)) * Math.sin(Math.PI*s);
+  }
+  lg.wasStance = stance;
+  // Signed distance of the sole ahead of the hull, along the heading.
+  lg.rake = (lg.sole.x - body.x)*fwd.x + (lg.sole.z - body.z)*fwd.z;
+  return stance;
+}
+function strideTime(){ return MU.clamp(1.45 - body.v*0.13, 0.72, 1.45); }
+
+function orientFoot(lg, stance, groundAdapt){
+  _up.copy(groundAdapt ? N(lg.sole.x, lg.sole.z) : _Y);
+  if(!stance) _up.lerp(_Y, 0.5).normalize();
+  // Heading comes from the rendered root, not from body.yaw. One source of
+  // truth: whatever the hull is actually pointing at, the feet point at too.
+  root.getWorldQuaternion(_rq);
+  _fw.set(0,0,1).applyQuaternion(_rq); _fw.y = 0;
+  if(_fw.lengthSq() < 1e-6) _fw.set(0,0,1); else _fw.normalize();
+  _rt.crossVectors(_up,_fw).normalize();
+  _f2.crossVectors(_rt,_up).normalize();
+  _m4.makeBasis(_rt,_up,_f2);
+  _q.setFromRotationMatrix(_m4);
+  // Heel/toe. A rigid flat sole through a 2.5 m stride is exactly what reads
+  // as "leaning back on its heels": the leg rakes but the foot never rolls.
+  // Local +X pitches the toe down for positive angles.
+  var want = stance ? MU.clamp(-lg.rake*0.26, -0.34, 0.50) : -0.14;
+  lg.toe += (want - lg.toe) * 0.30;
+  _q2.setFromAxisAngle(_X, lg.toe);
+  _q.multiply(_q2);
+  lg.ankle.parent.getWorldQuaternion(_pq).invert();
+  lg.ankle.quaternion.copy(_pq.multiply(_q));
+}
+
+/* ========================================================================
+   7.  RACK  — components, ordering, arbitration
+   ===================================================================== */
+var RACK = [
+  {id:'DRV',  nm:'LOCO.DRV', on:true,  locked:true,  cmd:false, note:'gait generator'},
+  {id:'STAB', nm:'STAB-2',   on:true,  locked:false, cmd:false, note:'attitude hold'},
+  {id:'GND',  nm:'GND-ADPT', on:true,  locked:false, cmd:false, note:'contact IK'},
+  {id:'PLT',  nm:'PILOT',    on:true,  locked:false, cmd:true,  note:'levers'},
+  {id:'NAV',  nm:'NAV-1',    on:false, locked:false, cmd:true,  note:'waypoint follow'}
+];
+function mod(id){ for(var i=0;i<RACK.length;i++) if(RACK[i].id===id) return RACK[i]; }
+function idx(id){ for(var i=0;i<RACK.length;i++) if(RACK[i].id===id) return i; }
+function owner(){                       // highest active command layer wins the bus
+  for(var i=RACK.length-1;i>=0;i--) if(RACK[i].cmd && RACK[i].on) return RACK[i];
+  return null;
+}
+var railEl = document.getElementById('rail');
+function drawRack(){
+  var own = owner();
+  railEl.innerHTML = '';
+  RACK.forEach(function(c){
+    var d = document.createElement('div');
+    var ovr = c.cmd && c.on && own && own !== c;
+    d.className = 'mod' + (c.locked?' locked':'') + (c.on ? (ovr?' ovr':' on') : '');
+    d.innerHTML = '<div class="led"></div><div class="nm">'+c.nm+'</div>'+
+                  '<div class="st">'+(c.on ? (ovr?'OVERRIDDEN':'ACTIVE') : 'IDLE')+'</div>';
+    if(!c.locked) d.onclick = function(){ c.on = !c.on; drawRack(); flashNote(
+      c.on ? c.nm+' online — '+c.note : c.nm+' offline. Watch what it was holding for you.'); };
+    railEl.appendChild(d);
+  });
+  var a = document.getElementById('authority');
+  a.textContent = 'ACTUATOR BUS — ' + (own ? own.nm : 'NO COMMAND LAYER');
+  a.className = (own && own.id==='NAV') ? 'hud ovr' : 'hud';
+  document.getElementById('thr').className = 'lever' + ((own && own.id!=='PLT') ? ' locked' : '');
+}
+
+/* ========================================================================
+   8.  INPUT — levers, orbit, pinch
+   ===================================================================== */
+var thrVal = 0, steerVal = 0;
+function makeLever(el, vertical, onVal){
+  var knob = el.querySelector('.knob'), dragging = false;
+  function place(v){
+    if(vertical){ var span = el.clientHeight - 10 - knob.offsetHeight;
+      knob.style.top = (10 + (1-v)*span) + 'px'; }
+    else { var s2 = el.clientWidth - 10 - knob.offsetWidth;
+      knob.style.left = (5 + (v*0.5+0.5)*s2) + 'px'; }
+  }
+  function from(e){
+    var r = el.getBoundingClientRect();
+    if(vertical) return MU.clamp(1 - (e.clientY - r.top - 18)/(r.height-36), 0, 1);
+    return MU.clamp(((e.clientX - r.left - 18)/(r.width-36))*2 - 1, -1, 1);
+  }
+  el.addEventListener('pointerdown', function(e){
+    if(el.classList.contains('locked')) return;
+    dragging = true; el.setPointerCapture(e.pointerId);
+    var v = from(e); onVal(v); place(v); hideNote();
+  });
+  el.addEventListener('pointermove', function(e){
+    if(!dragging) return; var v = from(e); onVal(v); place(v);
+  });
+  el.addEventListener('pointerup', function(){ dragging=false; });
+  el.addEventListener('pointercancel', function(){ dragging=false; });
+  return {place:place};
+}
+var thrUI = makeLever(document.getElementById('thr'), true, function(v){ thrVal = v; });
+thrUI.place(0);
+
+// orbit camera
+var cam = {az:2.5, el:0.24, dist:19, mode:'ext', pan:0, tilt:0};
+var ptrs = {}, lastPinch = 0;
+canvas.addEventListener('pointerdown', function(e){ ptrs[e.pointerId] = {x:e.clientX,y:e.clientY}; hideNote(); });
+canvas.addEventListener('pointerup',   function(e){ delete ptrs[e.pointerId]; lastPinch=0; });
+canvas.addEventListener('pointercancel', function(e){ delete ptrs[e.pointerId]; lastPinch=0; });
+canvas.addEventListener('pointermove', function(e){
+  var p = ptrs[e.pointerId]; if(!p) return;
+  var dx = e.clientX-p.x, dy = e.clientY-p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  var ids = Object.keys(ptrs);
+  if(ids.length >= 2){
+    var a = ptrs[ids[0]], b = ptrs[ids[1]];
+    var dd = Math.hypot(a.x-b.x, a.y-b.y);
+    if(lastPinch && cam.mode === 'ext') cam.dist = MU.clamp(cam.dist * (lastPinch/dd), 7, 62);
+    lastPinch = dd;
+  } else if(cam.mode === 'cab'){
+    // Turning your head in the seat. Limited travel — you are strapped in.
+    cam.pan  = MU.clamp(cam.pan  - dx*0.005, -1.45, 1.45);
+    cam.tilt = MU.clamp(cam.tilt - dy*0.004, -0.75, 0.55);
+  } else {
+    cam.az -= dx*0.006;
+    cam.el = MU.clamp(cam.el + dy*0.005, -0.18, 1.15);
+  }
+});
+canvas.addEventListener('wheel', function(e){ cam.dist = MU.clamp(cam.dist + e.deltaY*0.02, 7, 62); e.preventDefault(); }, {passive:false});
+
+// tools
+function tog(el,on){ el.classList.toggle('act', on); }
+var panelsOn = false, inkOn = true;
+document.getElementById('tSwap').onclick = function(){
+  var i = idx('PLT'), j = idx('NAV');
+  var t = RACK[i]; RACK[i] = RACK[j]; RACK[j] = t;
+  drawRack();
+  flashNote(idx('NAV') > idx('PLT')
+    ? 'NAV sits above PILOT. Your lever is suppressed.'
+    : 'PILOT sits above NAV. You can shove it off course.');
+};
+document.getElementById('tPanels').onclick = function(){
+  panelsOn = !panelsOn; tog(this, panelsOn);
+  document.getElementById('map').classList.toggle('off', !panelsOn);
+  document.getElementById('sys').classList.toggle('off', !panelsOn);
+  flashNote(panelsOn ? 'Instruments installed. Note what they cost you: the view.' : 'Panels stowed. You can see the site again.');
+};
+document.getElementById('tCam').onclick = function(){
+  cam.mode = cam.mode==='ext' ? 'cab' : 'ext';
+  cam.pan = cam.tilt = 0;                       // eyes front on entry
+  this.classList.toggle('act', cam.mode==='cab');
+  this.textContent = cam.mode==='cab' ? 'EXT VIEW' : 'CAB VIEW';
+  document.getElementById('cabframe').className = cam.mode==='cab' ? 'cab' : '';
+  if(cam.mode==='cab') flashNote('Drag to turn your head. Now install the panels and see what they cover.');
+};
+document.getElementById('tLine').onclick = function(){
+  inkOn = !inkOn; tog(this, inkOn); rimOn.value = inkOn ? 1 : 0;
+  for(var i=0;i<inkShells.length;i++) inkShells[i].visible = inkOn;
+};
+
+var noteEl = document.getElementById('note'), noteT = 0;
+function flashNote(s){ noteEl.textContent = s; noteEl.classList.remove('hide'); noteT = 4.5; }
+function hideNote(){ noteT = Math.min(noteT, 1.2); }
+
+/* ========================================================================
+   9.  NAV — a deliberately naive waypoint follower.
+       It steers to the pin. It does not know about slope, and it does not
+       look at the ground. That is the point.
+   ===================================================================== */
+var WPTS = [ {x:38,z:-14}, {x:6,z:44}, {x:-46,z:18}, {x:-14,z:-40} ];
+var wi = 0;
+
+/* ========================================================================
+   10.  MAIN LOOP
+   ===================================================================== */
+var clock = new T.Clock(), tHud = 0, elapsed = 0;
+var camPos = new T.Vector3(), camAim = new T.Vector3();
+
+function frame(){
+  requestAnimationFrame(frame);
+  var dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+
+  var stab = mod('STAB').on, gnd = mod('GND').on;
+  var own = owner();
+
+  /* --- command arbitration --------------------------------------- */
+  var wantV = 0, wantTurn = 0;
+  if(own && own.id === 'PLT'){ wantV = thrVal * 5.4; wantTurn = steerVal * 0.9; }
+  else if(own && own.id === 'NAV'){
+    var w = WPTS[wi];
+    var dx = w.x - body.x, dz = w.z - body.z;
+    if(Math.hypot(dx,dz) < 6){ wi = (wi+1) % WPTS.length; w = WPTS[wi]; dx = w.x-body.x; dz = w.z-body.z; }
+    var want = Math.atan2(dx,dz);
+    var err = Math.atan2(Math.sin(want-body.yaw), Math.cos(want-body.yaw));
+    wantTurn = MU.clamp(err*1.5, -1, 1);
+    wantV = 4.4 * (1 - Math.min(Math.abs(err)/1.4, 0.75));   // naive: ignores grade
+  }
+  body.v += (wantV - body.v) * Math.min(dt*1.6, 1);
+  body.yaw += wantTurn * dt;
+
+  /* --- integrate ------------------------------------------------- */
+  body.x += Math.sin(body.yaw) * body.v * dt;
+  body.z += Math.cos(body.yaw) * body.v * dt;
+  phase = (phase + dt/strideTime()) % 1;
+
+  /* --- feet ------------------------------------------------------- */
+  var stanceL = footTarget(legL, 0.0, dt, gnd);
+  var stanceR = footTarget(legR, 0.5, dt, gnd);
+
+  /* --- foot targets, resolved once and reused ----------------------- */
+  _upL.copy(gnd ? N(legL.sole.x, legL.sole.z) : _Y);
+  _upR.copy(gnd ? N(legR.sole.x, legR.sole.z) : _Y);
+  _tgtL.copy(legL.sole).addScaledVector(_upL, ANK);
+  _tgtR.copy(legR.sole).addScaledVector(_upR, ANK);
+
+  /* --- body pose --------------------------------------------------- */
+  // Support height is the GROUND under each foot. Using the soles themselves
+  // fed the swing leg's lift straight back into hull height — the machine
+  // hoisted itself on every step, which is what "floating" looked like.
+  var support = gnd ? (H(legL.sole.x,legL.sole.z) + H(legR.sole.x,legR.sole.z))*0.5 : 0;
+  var bob = 0.085 * Math.cos(4*Math.PI*phase) * Math.min(body.v/3,1);
+  var targetY = support + LEGLEN*0.930 + bob;
+  // Never ask for a hip height the legs cannot reach: crouch, don't tiptoe.
+  targetY = Math.min(targetY, hipCeil(legL,_tgtL), hipCeil(legR,_tgtR));
+  var nrm = N(body.x, body.z);
+  var tp, tr;
+  if(stab){
+    tp = 0.020*body.v;    // +X pitch leans the hull FORWARD. It was negative.
+    tr = 0;
+  } else {
+    // uncompensated: the hull follows the grade and sways with the gait
+    var f = new T.Vector3(Math.sin(body.yaw),0,Math.cos(body.yaw));
+    var r = new T.Vector3(Math.cos(body.yaw),0,-Math.sin(body.yaw));
+    tp =  Math.asin(MU.clamp(nrm.dot(f),-1,1)) + 0.10*Math.sin(2*Math.PI*phase);
+    tr = -Math.asin(MU.clamp(nrm.dot(r),-1,1)) + 0.16*Math.cos(2*Math.PI*phase)*Math.min(body.v/2,1);
+    targetY += 0.10*Math.sin(4*Math.PI*phase + 1.0);
+  }
+  var kSm = stab ? 6 : 12;
+  body.y     += (targetY - body.y) * Math.min(dt*kSm,1);
+  body.pitch += (tp - body.pitch) * Math.min(dt*kSm,1);
+  body.roll  += (tr - body.roll)  * Math.min(dt*kSm,1);
+
+  root.position.set(body.x, body.y - HIPY, body.z);
+  root.rotation.set(0, body.yaw, 0);
+  pelvis.rotation.set(body.pitch, 0, body.roll);
+  // The hull pitches about the HIP AXLE, not about the root origin — which
+  // now sits at the sole plane, 4.4 m below. Rotating there swings the hips
+  // a metre backward and the legs chase the feet out in front.
+  _pq.setFromEuler(pelvis.rotation);
+  _hp.set(0, HIPY, 0).applyQuaternion(_pq);
+  pelvis.position.set(-_hp.x, HIPY - _hp.y, -_hp.z);
+  root.updateMatrixWorld(true);          // feet read the root's world transform
+
+  /* --- IK + counter-motion ------------------------------------------ */
+  solveLeg(legL, _tgtL);
+  solveLeg(legR, _tgtR);
+  orientFoot(legL, stanceL, gnd);
+  orientFoot(legR, stanceR, gnd);
+
+  var sw = Math.sin(2*Math.PI*phase) * Math.min(body.v/3.4, 1);
+  torso.rotation.y = -0.10*sw - (stab?0:0.06*Math.sin(2*Math.PI*phase+0.8));
+  torso.rotation.z = stab ? -body.roll*0.35 : 0;          // stabiliser trims with the torso
+  armL.up.rotation.set(-0.42*sw - 0.10, 0, 0);  armL.el.rotation.set(0.24 + 0.22*Math.max(0,-sw), 0, 0);
+  armR.up.rotation.set( 0.42*sw - 0.10, 0, 0);  armR.el.rotation.set(0.24 + 0.22*Math.max(0, sw), 0, 0);
+  armL.sh.rotation.z = -0.10 - 0.06*Math.abs(sw);
+  armR.sh.rotation.z =  0.10 + 0.06*Math.abs(sw);
+  head.rotation.y = 0.12*sw*-1;
+  head.rotation.x = -body.pitch*0.6;
+
+  root.updateMatrixWorld(true);
+  solveRams();
+
+  /* --- camera --------------------------------------------------------- */
+  if(cam.mode === 'cab'){
+    torso.updateMatrixWorld(true);
+    // Eye point rides the torso, so the cab swims with the gait — as it should.
+    camPos.set(0, 0.95, 0.98).applyMatrix4(torso.matrixWorld);
+    // Head pan: aim point swung in torso space, so "look left" means left of
+    // the machine's own heading, not of the world.
+    var cp = Math.cos(cam.pan), sp = Math.sin(cam.pan);
+    var ct = Math.cos(cam.tilt), st = Math.sin(cam.tilt);
+    camAim.set(-sp*ct*16, 0.55 + st*16, cp*ct*16).applyMatrix4(torso.matrixWorld);
+    camera.position.lerp(camPos, 0.6);
+    camera.lookAt(camAim);
+  } else {
+    camPos.set(
+      body.x + Math.sin(cam.az)*Math.cos(cam.el)*cam.dist,
+      body.y + 1.9 + Math.sin(cam.el)*cam.dist,
+      body.z + Math.cos(cam.az)*Math.cos(cam.el)*cam.dist);
+    camPos.y = Math.max(camPos.y, H(camPos.x, camPos.z) + 1.6);
+    camera.position.lerp(camPos, Math.min(dt*5,1));
+    camAim.set(body.x, body.y + 0.6, body.z);   // chest height, not the hips
+    camera.lookAt(camAim);
+  }
+  key.position.set(body.x - 34, body.y + 46, body.z + 24);
+  key.target.position.set(body.x, body.y, body.z);
+
+  /* --- HUD ------------------------------------------------------------ */
+  if(noteT > 0){ noteT -= dt; if(noteT <= 0) noteEl.classList.add('hide'); }
+  tHud -= dt;
+  if(tHud <= 0){ tHud = 0.1; updateHud(stanceL, stanceR, stab, gnd); }
+
+  renderer.render(scene, camera);
+}
+
+/* ---- instruments ---- */
+var mapC = document.querySelector('#map canvas'), mapX = mapC.getContext('2d');
+var mapBase = document.createElement('canvas'); mapBase.width = mapBase.height = 264;
+(function bakeMap(){
+  var g = mapBase.getContext('2d'), R = 120, S = 44, px = 264/S;
+  for(var i=0;i<S;i++) for(var j=0;j<S;j++){
+    var x = (i/S-0.5)*2*R, z = (j/S-0.5)*2*R;
+    var h = H(x,z), t = MU.clamp((h+3)/7, 0, 1);
+    var band = Math.floor(t*5)/5;
+    g.fillStyle = 'rgb('+Math.round(18+band*26)+','+Math.round(26+band*46)+','+Math.round(24+band*36)+')';
+    g.fillRect(i*px, j*px, px+1, px+1);
+  }
+  g.strokeStyle = 'rgba(111,227,196,.16)'; g.lineWidth = 1;
+  for(var k=0;k<=6;k++){ var p = k*264/6;
+    g.beginPath(); g.moveTo(p,0); g.lineTo(p,264); g.moveTo(0,p); g.lineTo(264,p); g.stroke(); }
+})();
+var bars = [0,1,2,3,4].map(function(i){ return document.getElementById('b'+i); });
+
+function updateHud(sL, sR, stab, gnd){
+  var mm = Math.floor(elapsed/60), ss = Math.floor(elapsed%60);
+  document.getElementById('clock').textContent =
+    (mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+
+  var deg = function(r){ return (r*180/Math.PI).toFixed(1); };
+  document.getElementById('tele').textContent =
+    'PTCH '+deg(body.pitch)+'\u00b0  ROLL '+deg(body.roll)+'\u00b0  HIP '+body.y.toFixed(2)+
+    '\nRAKE L'+(legL.rake>=0?'+':'')+legL.rake.toFixed(2)+
+      '  R'+(legR.rake>=0?'+':'')+legR.rake.toFixed(2)+
+    '  V '+body.v.toFixed(1);
+
+  if(panelsOn){
+    mapX.drawImage(mapBase,0,0);
+    var toPx = function(v){ return (v/240 + 0.5)*264; };
+    mapX.fillStyle = '#f0a830';
+    WPTS.forEach(function(w,i){
+      mapX.fillRect(toPx(w.x)-3, toPx(w.z)-3, 6, 6);
+      if(i===wi && mod('NAV').on){ mapX.strokeStyle='#f0a830'; mapX.lineWidth=1;
+        mapX.strokeRect(toPx(w.x)-6, toPx(w.z)-6, 12, 12); }
+    });
+    mapX.save();
+    mapX.translate(toPx(body.x), toPx(body.z));
+    mapX.rotate(-body.yaw);
+    mapX.fillStyle = '#6fe3c4';
+    mapX.beginPath(); mapX.moveTo(0,-8); mapX.lineTo(5,6); mapX.lineTo(-5,6); mapX.closePath(); mapX.fill();
+    mapX.restore();
+
+    var com = stab ? 0.18 + 0.1*Math.abs(Math.sin(elapsed))
+                   : 0.55 + 0.42*Math.abs(Math.sin(elapsed*2.1));
+    var vals = [legL.load, legL.load*0.8+0.15, legR.load, legR.load*0.8+0.15, MU.clamp(com,0,1)];
+    for(var i=0;i<5;i++){
+      var v = MU.clamp(vals[i],0,1);
+      bars[i].style.right = ((1-v)*100)+'%';
+      bars[i].style.background = v>0.82 ? 'var(--alert)' : (v>0.6 ? 'var(--amber)' : 'var(--phos)');
+    }
+  }
+
+  // attribution: name the failure before the pilot has to ask
+  if(!gnd && !noteVisible() && (sL||sR) && Math.abs(H(legL.sole.x,legL.sole.z)) > 0.55)
+    flashNote('GND-ADPT offline: foot targets are on the pad plane. Contact lost on grade.');
+  else if(!stab && !noteVisible() && body.v > 2)
+    flashNote('STAB-2 offline: hull follows the grade. CoM margin is going red.');
+}
+function noteVisible(){ return noteT > 0; }
+
+/* ---- resize ---- */
+function resize(){
+  var w = innerWidth, h = innerHeight;
+  renderer.setSize(w,h);          // updateStyle:true — see the canvas CSS note
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  thrUI.place(thrVal);
+}
+addEventListener('resize', resize);
+resize();
+drawRack();
+frame();
+};
+</script>
+
+<script>
+/* three.js r128 — cdnjs publishes this era under the rNNN tag, not 0.128.0.
+   Try three hosts, then say so plainly rather than dying on `THREE is not defined`. */
+(function(){
+  var urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js'
+  ];
+  var i = 0;
+  function next(){
+    if(i >= urls.length){
+      var e = document.getElementById('err');
+      e.style.display = 'block';
+      e.textContent = 'THREE.JS DID NOT LOAD\n\nTried:\n  ' + urls.join('\n  ') +
+        '\n\nThe renderer needs one of these reachable. Check the network, then reload.';
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = urls[i++];
+    s.onerror = next;
+    s.onload = function(){ window.THREE ? window.__boot() : next(); };
+    document.head.appendChild(s);
+  }
+  next();
+})();
+</script>
+</body>
+</html>

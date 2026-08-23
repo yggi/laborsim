@@ -8,7 +8,14 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 
 ## Index — spill files
 
-*(none yet — everything still fits here)*
+| File | Holds |
+|---|---|
+| `docs/design/arbitration.md` | the rack, subsumption, components-as-loops, the attribution rule |
+| `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
+| `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
+| `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
+| `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
 
 ---
 
@@ -16,137 +23,179 @@ Status goes in `BOARD.md`, open questions in `NOTES.md`, history in `LOG.md`.
 
 **laborsim** — a 3D browser game. Patlabor-themed mecha and vehicle simulator
 sandbox, built on a multi-layer educational physics/kinematics engine.
-Gameplay loop partially KSP-inspired: **build mode** and **sim mode**, with
-**edit cockpit** as the bridge between them.
+Gameplay loop partially KSP-inspired: **build mode** and **sim mode**, with the
+control-software layer bridging them.
 
-"Labor" = the Patlabor sense: industrial/utility walkers and machines that are
-tools first, doing construction, salvage, disaster work. Not war machines.
+"Labor" = the Patlabor sense: industrial/utility machines that are tools first —
+construction, salvage, disaster work. Not war machines. You spec a Labor in a
+workshop, wire its control software, take it to a site, and discover which of
+your assumptions was wrong.
 
-## 2. Scope of v0
+**What is being simulated is not combat and not locomotion. It is the gap
+between what a machine is rated to do and what it does on the day.**
+
+## 2. The design thesis
+
+KSP does not work because of parts or physics. It works because of a
+**diagnosable failure loop**: you predict, it breaks, and the break is legible
+enough to blame on *one design decision*.
+
+Everything in this project either serves that loop or is decoration and should
+be cut. This is the sharpest available statement of the guiding principles in
+`CLAUDE.md`, and it is the test to apply first.
+
+Four load-bearing commitments follow from it:
+
+1. **The load chart is the Δv** → `docs/design/load-chart.md`
+2. **Arbitration is the game** → `docs/design/arbitration.md`
+3. **The rack** — position is priority → `docs/design/arbitration.md`
+4. **Panel budget and occlusion** — § 6 below
+
+## 3. Scope of v0
 
 v0 is **sandbox and exploration**: build a machine, take it out, see what it
-does and how it breaks. No missions, no progression, no economy, no scoring.
+does and how it breaks. Missions, progression and economy are **deferred, not
+dropped** — a v0 decision that forecloses them is a bad v0 decision.
 
-Gamification, missions and progression are **deferred, not dropped**. They are
-held in mind as guiding constraints: a v0 decision that would foreclose them is
-a bad v0 decision and must be flagged.
+The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 
-## 3. Core loop
+> Two components fighting over one actuator, reachable **within ten minutes of a
+> first session**, and attributable **from a replay**.
 
-1. **Build** — assemble a machine from modules on a chassis.
-2. **Wire** — set the control hierarchy; decide what commands what, and who
-   wins when two things want the same actuator.
-3. **Cockpit** — place UI controls and widgets into the viewport as the pilot's
-   instrument panel.
-4. **Sim** — drive it. Watch it succeed, or fail in a way you can explain.
+If that scenario cannot be constructed on rung one, the rack is decoration.
+
+## 4. Core loop
+
+1. **Build** — spec the machine; the load chart falls out of the geometry.
+2. **Wire** — order the rack. Decide who wins the actuator bus.
+3. **Site** — drive it. Find out where the chart lied.
+4. **Diagnose** — the failure is attributable to one decision, from a replay.
 5. **Back to build** — with a specific reason.
 
-## 4. Design pillars
+## 5. The machinery ladder
 
-Full statements live in `CLAUDE.md` § Guiding principles. Summary:
+Six rungs, one new invariant (really: one new *frame*) each. Rungs 1–4 need no
+balance controller — tipping is emergent from contacts alone.
 
-1. Fail stupidly, but predictably — failure must be reconstructable.
-2. Complexity is a trade, never a ladder — the dozer stays viable.
-3. More capability means more contention for control.
-4. The cockpit is the bridge between build and sim.
-5. Educational means inspectable — no closed layers.
+1. Tracked platform · 2. Excavator · 3. Forklift · 4. Seam-following welder ·
+5. Off-road hexapod · 6. Bipedal walker
 
-### 4.1 Predictable stupid failure — the canonical example
+**Sequence the ladder, not the biped.** The biped is the worst entry point for
+physics and the best one for concept art — which is exactly why the probe
+started there and production must not. Full table:
+`docs/design/machinery-ladder.md`.
 
-The `autonav` module pilots toward a waypoint. It ignores terrain, clearance and
-obstructions. It is not broken; it is *exactly as smart as it says it is*. The
-player learns its envelope by watching it drive a walker into a trench, and then
-learns to fence it with other modules — not by reading a tooltip.
+The ladder is non-monotonic by design: the Phantom Labor attacks the sensor
+surface that capability created, so the unscrambleable two-lever cage at rung
+one must stay a genuinely good machine, never a tutorial.
 
-Every automation module should be legible this way: a short, honest statement of
-what it considers, and visible blindness to everything else.
+## 6. Panel budget and occlusion
 
-### 4.2 Complexity as trade — the canonical pair
+Every instrument you install **obscures your direct view**. In the basic tracked
+cage you sit behind two levers with a clear windscreen; in a high-tech Labor you
+can barely see out — map, thermal, radar — powerful, and blind when they fail.
 
-| | Tracked dozer | Bipedal walker |
-|---|---|---|
-| Locomotion | tracks, always statically stable | dynamic gait stabilizer |
-| Control | manual levers, direct | autopilot, layered |
-| Sensing | eyeballs | radar, thermal |
-| Work | dump bed, loading arm | multi-use manipulators |
-| Fails by | getting stuck, tipping slowly | falling over, losing stabilizer |
-| Survives | radiation, EMF attack, blackout | nothing that kills its electronics |
+This is the rare case where the **UX constraint *is* the game constraint**.
+Fixed glass area; instruments declare their size. Adding autonav means giving up
+a gauge you wanted. Real cabs are cramped for the same reason.
 
-High-radiation events and Phantom-Labor-style EMF attacks are the equalizer that
-makes the dumb machine the *correct* machine. This asymmetry is load-bearing.
+**Panels must be installed, not toggled.** If they can be tapped away, players
+run naked-cage and peek at the map on demand, and the mechanic is gone.
 
-### 4.3 Control contention
+Occlusion only bites **if the pilot camera is the only camera** — see `NOTES.md`,
+this is unresolved and upstream of a lot of UI.
 
-Capability is bought with contention. A walker with gait stabilizer + autopilot +
-manipulator IK has three systems that all want the leg and torso actuators.
-Resolving that is the player's job, and it is the KSP-staging-analogue of this
-game: a structure the player authors, inspects, and gets wrong in visible ways.
+## 7. Mechanics that fall out of the above
 
-The control hierarchy is therefore a **player-facing artifact**, not engine
-internals. It must be viewable, editable, and diagnosable during sim.
+- **Phantom Labor.** The antagonist attacks the sensor surface that capability
+  created — scrambling instruments, not armour. Difficulty curve and antagonist
+  become the same object: no separate balance pass, no bolted-on villain.
+- **Hot-patching, anchored on LOTO.** Lockout–tagout is a real procedure with a
+  real cost. Locking outputs parks the actuator and holds state: safe, inert,
+  behind schedule. Rewiring live gambles on transient authority handoff — get
+  the order wrong on a stabiliser and the Labor goes limp and falls. Prices
+  field repair without arbitrary fragility dice. More dangerous the more
+  advanced the Labor.
+- **Component curriculum.** Every rung-one component needs a named rung-two
+  successor visible on the shelf from day one and unaffordable. Waypoint-drives-
+  into-a-ditch is funny once; it is a *game* when the ditch sends you back to
+  build for a slope-aware variant **and the load chart moves by a number you can
+  read.** Curriculum and economy in the same object.
 
-## 5. Modes
-
-### Build mode
-Assemble modules onto a chassis. Structural, mechanical and electrical
-attachment. No time; no physics beyond what assembly needs.
-
-### Edit cockpit — the bridge
-**Sim mode's view, build mode's tools.** Sits between the two and belongs to
-neither. Here the player:
-
-- sets the control hierarchy and arbitration between modules,
-- places and connects UI controls and widgets into the viewport,
-- binds inputs to the machine's actual signals.
-
-Widget layout uses a **DIN-rail-style component view**: instruments and controls
-snap onto rails, are wired to signals, and are grouped like real industrial
-control-cabinet hardware. The metaphor is deliberate — it makes the panel feel
-built rather than configured, and it makes wiring visible.
-
-### Sim mode
-Drive it. Full simulation, no editing. Instruments read live. Failures happen.
-
-## 6. Simulation — multi-layer
+## 8. Simulation — multi-layer
 
 The engine is **multi-layer** and **educational**: the player can open a layer
-and see the quantities it works with, not just their result.
+and see the quantities it works with, not just their result. **Every simulated
+quantity must be surfaceable.** A layer the player cannot open is not a teaching
+layer and does not belong.
 
-The layer axis is not yet pinned. Two readings are live and probably both true —
-a *domain stack* (structure / mechanics / power / thermal / signal) and a
-*fidelity ladder* (selectable simplification per subsystem). See `NOTES.md`.
+The engine of record is **Rapier (wasm)**, chosen for motorized joints, joint
+limits, and **determinism you can replay a failure with** — attribution is the
+design, so replay is not a nice-to-have.
 
-Fixed regardless of that: **every simulated quantity must be surfaceable.**
-A layer the player cannot open is not a teaching layer, and does not belong.
+Target tier is the **virtual crane**: full dynamics plus an external stabilising
+wrench on the hull with a finite authority budget. That wrench **is** STAB-2 —
+switching it off does not fake a fall, it removes the thing that was holding you
+up. Mechanic and physics from the same object. See
+`docs/design/physics-migration.md` for the tier costs and what inverts.
 
-## 7. Repo map
+## 9. Stack
+
+**Vite · Svelte 5 · Vitest · Three.js · Rapier (wasm).**
+
+**Mobile-first. Touch is the primary input, not a fallback.** This is not a
+polish note — it is why the rack is a DIN rail and not a node graph.
+
+Single-file HTML output is a proven pattern in this codebase family, but **not
+for the Rapier build** — Rapier wants a real bundler.
+
+## 10. The prototype
+
+`prototype/concept-3/` — single file, three.js r128 from CDN, no build step. It
+answered *can this look and feel right in a browser, on a phone?* — yes.
+
+It is **concept art with working mechanisms**, not an architecture sketch.
+**Do not port its structure.** Do port the named mechanisms — the footstep
+policy above all, then the analytic 2-bone IK, the analytic height field, the
+hydraulic rams, and the cel pipeline. What it fakes (no physics at all, cosmetic
+margin bar, scheduled rather than measured contact) and the six defects it cost
+are in `docs/design/prototype-findings.md`.
+
+**Method, learned the hard way: instrument early.** Rounds were lost diagnosing
+from screenshots; a telemetry line settled it immediately. The readout the
+player needs to diagnose a failure is the readout the developer needs.
+
+## 11. Repo map
 
 ```
 src/
   core/      kernel: entity/part model, sim clock, event bus, units
   sim/       simulation driver
     layers/  the individual simulation layers
-  modules/   installable parts: chassis, actuators, sensors, autonav, tools
-  control/   control hierarchy, arbitration, signal routing between modules
-  build/     build mode: assembly, attachment, constraints
-  cockpit/   edit cockpit: DIN-rail widgets, signal bindings, panel layout
-  render/    3D scene and view
-  world/     terrain, environment, hazards (radiation, EMF)
+  modules/   rack components: loops that hold one invariant in one frame
+  control/   the rack: ordering, arbitration, actuator-bus ownership
+  build/     build mode: assembly, load-chart computation
+  cockpit/   pilot viewport: instruments, panel budget, occlusion
+  render/    three.js scene, cel pipeline
+  world/     terrain, job sites, hazards (radiation, EMF)
   ui/        application shell, mode switching
-  platform/  input, persistence, config
+  platform/  input (touch-first), persistence, config
 assets/      models, textures, data
-docs/
-  design/    MEMORY.md spill files
-  log/       LOG.md yearly archives
+docs/design/ MEMORY.md spill files
+docs/log/    LOG.md yearly archives
+prototype/   frozen feasibility probes — evidence, never a starting point
 tests/
 ```
 
-The tree is a claim about seams, not a promise about files. Empty dirs are
-intentional placeholders; move a seam if it turns out to be wrong, and record
-the move here.
+The tree is a claim about seams, not a promise about files. Move a seam if it
+turns out to be wrong, and record the move here.
 
-## 8. Conventions
+## 12. Conventions
 
-*(to be filled as they are established — do not invent them here in advance)*
-
-- Language / stack / renderer: **not chosen yet.** See `BOARD.md`.
+- **One fact, one place.** Three of the four probe defects came from keeping one
+  fact in two places (heading in `body.yaw` *and* `root.rotation.y`; hull height
+  from soles *and* from ground). Delete the duplicate rather than syncing it.
+- **Write the full rotation triple** — `rotation.set(k,0,0)`, not
+  `rotation.x = k` — so a hinge's one-axis constraint is explicit in the code
+  rather than assumed. `Object3D.add()` returns the *parent*.
+- Nothing else is established yet. Do not invent conventions here in advance.

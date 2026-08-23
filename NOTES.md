@@ -11,56 +11,78 @@ or delete. Do not grow the file.
 
 ---
 
-## What does "multi-layer" cut along?
+## Is the cockpit authored or derived?
 
-Two readings, probably both true, not yet reconciled:
+**Direct conflict, unresolved, and it is upstream of a whole mode.**
 
-- **Domain stack** — structure / mechanics / power / thermal / signal, each a
-  layer that runs and can be opened and read.
-- **Fidelity ladder** — the same subsystem simulated at selectable depth, so a
-  player can start arcade and drop into the real model.
+The founding brief has the player *placing and connecting UI controls and
+widgets into the viewport* — an authored cockpit, a DIN-rail component view,
+the bridge between build and sim. `HANDOVER.md` § 9.4 argues the opposite:
+three modes is a stall risk, so components **ship their own instruments** and
+the cockpit is **derived**, with OS-mode living inside build while wearing the
+sim's pilot viewport. Two modes, not three.
 
-If both: are they orthogonal (a matrix), or does fidelity live inside each
-domain layer independently? That answer shapes `src/sim/layers/` directly.
+Both keep the DIN rail; they disagree on what the player drags onto it —
+*components* (derived instruments follow) or *instruments* (placed by hand).
+Derived is cheaper and dodges an empty-cockpit failure state; authored is the
+thing that was actually asked for. A middle reading exists — components ship
+instruments, the player places them within the panel budget — and may be the
+answer, but it has not been chosen. **Every chassis must ship stock wiring that
+works, and OS-mode must be tuning, never a gate**, under any of the three.
 
-## Where does the "educational" surface actually live?
+## Does an external chase camera exist in the shipped game?
 
-Inspectability is a pillar, but the *place* it happens is undecided. Candidates:
-a cockpit widget (in-fiction, readable while driving), a debug overlay (out of
-fiction, honest), or a post-run replay/telemetry view (best for reconstructing
-failure, worst for immediacy). Probably more than one, but which is primary
-changes what the sim layers must expose and when.
+Occlusion is a core mechanic and a chase view defeats it — the probe's external
+view is strictly better than the cab whenever panels are installed. Cab-only is
+coherent but harsh on mobile, which is the primary target. Unresolved, and
+upstream of a lot of UI.
 
-## Is the control hierarchy a tree, a graph, or a priority stack?
+Sub-question: **field stowing of panels** — allowed at a cost in hands or
+seconds, or not at all?
 
-"Hierarchy" implies a tree, but arbitration between a gait stabilizer and an
-autopilot both reaching for the same actuator smells like priority + veto, not
-parent/child. KSP's staging analogy is a *sequence*, which is a third shape
-again. Getting this wrong makes edit-cockpit unbuildable.
+## Does v0 need the ticket?
 
-## How does a machine fail *legibly* rather than just fail?
+The brief defers missions and progression from v0. `HANDOVER.md` § 3 argues job
+tickets are not gamification but **the third beat of the failure loop** — KSP
+always answers *did you make orbit*, and without a verdict the loop has no
+close. Refusing a contract costing less than failing it is what makes the
+sandbox real: you are not gated, you are quoting.
 
-The pillar demands the player can reconstruct the cause. Unclear whether that is
-achieved by simulation honesty alone (it just is reconstructable if you watched
-carefully), or needs explicit machinery — a causal chain the sim records and can
-play back. The second is much more work and might be the actual product.
+For now the acceptance test stands in as v0's verdict. Whether that is enough,
+or whether a minimal ticket has to land inside v0 to make failure mean anything,
+is open. Deciding it late is the risk.
 
-## Hazards as equalizer — how blunt?
+## Is Rapier in?
 
-Radiation / EMF making electronics fail is the mechanism that keeps the dozer
-viable. Open: is it binary (electronics dead), degrading (noise, dropouts,
-lying sensors), or attack-shaped (something is *doing* this to you)? Degrading
-teaches more; binary is far more readable. Phantom-Labor framing suggests the
-third eventually.
+The brief named Vite, Vitest, Svelte 5 and Three.js. `HANDOVER.md` names Rapier
+too. Recorded in MEMORY as the engine of record because the physics argument
+depends on it (determinism for replay, motorized joints), but it has not been
+confirmed by the same voice that named the rest, and it is the one choice that
+rules out the single-file build. Confirm before it is load-bearing.
 
-## What is the smallest machine that proves the loop?
+## What does "multi-layer" cut along, for the player?
 
-Needed to pick a v0 vertical slice: the least complex thing that still exercises
-build → wire → cockpit → sim → back. A dozer with one arm and two levers might
-be enough; it may be too simple to show contention, which is the point.
+The physics tiers in `physics-migration.md` are a *development* fidelity ladder,
+not a player-facing one. Still unanswered: whether the player sees a **domain
+stack** (structure / mechanics / power / thermal / signal) they can open
+individually, or a **fidelity ladder** they can descend, or both as a matrix.
+Shapes `src/sim/layers/` directly.
+
+## Gain tuning is a trap
+
+Tedious, and it lets players brute-force past the interesting choice. The
+working answer — make topology, priority and sensor selection the game, expose
+gains as **one slider with a visible margin readout** — is a directive, not yet
+a design. Watch for it creeping back in as per-component tuning.
+
+## What does the procedural generator generate?
+
+Landscape is scenery. **Job sites** — footing, clearances, load, an unsurveyed
+obstruction — are the puzzle, and the thing that makes a load chart
+insufficient. What that means as a generator is unwritten.
 
 ## Scale, and what "browser" costs us
 
-Unresolved: world size, machine part counts, whether sim runs off the main
-thread. This is deferred but it will constrain the sim layer design, so it must
-be answered before `src/sim/` gets real.
+World size, part counts, whether sim runs off the main thread. Now constrained
+by mobile-first and by Rapier's wasm budget. Must be answered before `src/sim/`
+gets real.
