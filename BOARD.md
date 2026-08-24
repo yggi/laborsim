@@ -121,6 +121,17 @@ built; what remains is more to break, replay, and the path to the conflict.
 - **done-when:** it is in the rack with a limit slider and its own instrument,
   and the ledger can tell you it was set too high.
 
+### [L-053] The second chassis — a TOWA tracked platform
+- **what:** the same machine in a new dress. Identical mechanics, tuned only
+  (lighter, smaller, faster, more agile, more brittle) — **no new rung and no new
+  mechanic**, because the point is to prove the dashboard's layout belongs to the
+  vehicle's manufacturer, and nothing has tested that claim against a second
+  vehicle. Rounded, backlit, smooth: Colani-truck retrofuturism inside and out.
+  Also needs: how the player switches chassis at all, which nothing answers yet.
+- **done-when:** two chassis exist, each brings its own dashboard *layout* rather
+  than its own palette, and NAV-1 looks at home in one and wrong in the other.
+- **needs:** L-049 (the panel language has to be settled before it is dialects)
+
 ### [L-038] The machine breaks too, and the reset
 - **what:** damage to the vehicle and destruction, and a **manual** diegetic
   reset — the rig re-racks the exercise, never yanks control. Ends on: machine
