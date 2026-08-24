@@ -25,7 +25,16 @@
  * multiplication and addition — see the note on the limits below.
  */
 
-import type { Module, Param, TrackCommand, Verb } from "../control/bus.ts";
+import {
+  ALARM,
+  type Condition,
+  type Module,
+  NOMINAL,
+  type Param,
+  type TrackCommand,
+  type Verb,
+  WARN,
+} from "../control/bus.ts";
 import { RIGHT_X } from "../core/spec.ts";
 import { clamp, type Quat, rotate, vec } from "../core/vec.ts";
 
@@ -103,6 +112,9 @@ export function createTiltGuard(
     considers: "hull pitch and roll. Not why, and not the way out.",
     verb: options.verb ?? "AMP",
     enabled: options.enabled ?? true,
+    // Safety kit. Its cell carries no toggle, bypassing it costs you the glass,
+    // and a bypassed guard stands at WARN until it is put back.
+    safety: true,
     get pitchLimit() {
       return pitchLimit;
     },
@@ -142,6 +154,18 @@ export function createTiltGuard(
         rollLimit: sineOf(rollLimit),
         gain: gainAt(pitch, roll),
       };
+    },
+    /**
+     * Winding you down is a caution; having taken the drivetrain to zero is an
+     * alarm, because at that point the machine will not move and gravity is
+     * about to have the argument. Note it never reports a *fault* — the module
+     * is working perfectly in both states, which is exactly the lesson.
+     */
+    condition(): Condition {
+      const { pitch, roll } = tilt();
+      const gain = gainAt(pitch, roll);
+      if (gain <= 0) return ALARM;
+      return gain < 1 ? WARN : NOMINAL;
     },
     intent(): TrackCommand | null {
       const { pitch, roll } = tilt();

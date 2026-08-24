@@ -25,8 +25,7 @@ build mode from sim, lazily load instruments.
 geometry — and no frame ever timed on a phone. L-034 gets the number.
 
 *World size and part counts* follow from those two numbers rather than preceding
-them — and 130 dynamic bodies now step every frame. Must be answered before
-`src/sim/` grows.
+them — and 130 dynamic bodies now step every frame. Answer before `src/sim/` grows.
 
 ## Missions, and what "operator interaction" means
 

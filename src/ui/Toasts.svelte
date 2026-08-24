@@ -14,10 +14,30 @@
  *
  * Architecture rule 3: snapshot in, nothing out but a dismiss.
  */
+import { styleOf } from "../cockpit/makers.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import type { DamageEvent } from "../sim/damage.ts";
 
-const { snapshot }: { snapshot: Snapshot | undefined } = $props();
+/**
+ * A notice from a **manufacturer**, not from the rig.
+ *
+ * Two institutions speak in this cockpit and they must not blur: L.A.B.O.R.
+ * certifies and bills, a manufacturer sells and warns
+ * (`docs/design/training-frame.md`). So a maker notice wears that maker's own
+ * plate colours and its wordmark, and it never carries a price — only the
+ * ledger does that.
+ */
+interface Notice {
+  readonly id: number;
+  readonly maker: string;
+  readonly head: string;
+  readonly body: string;
+}
+
+const {
+  snapshot,
+  notices = [],
+}: { snapshot: Snapshot | undefined; notices?: readonly Notice[] } = $props();
 
 /** How long a routine notice lingers before it fades, ms. */
 const LINGER = 5200;
@@ -80,6 +100,23 @@ function why(line: DamageEvent): string {
 </script>
 
 <div class="toasts">
+  <!-- The manufacturer's channel, above the ledger's and in its own livery. -->
+  {#each notices as notice (notice.id)}
+    {@const style = styleOf(notice.maker)}
+    <div
+      class="notice"
+      style="--mfg-plate: {style.plate}; --mfg-face: {style.face}; --mfg-accent: {style.accent}"
+    >
+      <div class="head">
+        <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
+          <path d={style.mark} />
+        </svg>
+        <span class="what">{notice.head}</span>
+      </div>
+      <div class="sub">{notice.body}</div>
+    </div>
+  {/each}
+
   {#each toasts as t (t.id)}
     <div class="toast" class:citizen={t.latched}>
       <div class="head">
@@ -104,11 +141,12 @@ function why(line: DamageEvent): string {
 </div>
 
 <style>
-  /* Rising off the top of the dash, newest at the bottom. */
+  /* Rising off the top of the dash, newest at the bottom. Clear of a panel
+     that grows a cell taller every time a component is fitted. */
   .toasts {
     position: fixed;
     left: 12px;
-    bottom: 128px;
+    bottom: calc(var(--dash-h, 128px) + 14px);
     z-index: 3;
     display: flex;
     flex-direction: column;
@@ -161,6 +199,43 @@ function why(line: DamageEvent): string {
     font-size: 8px;
     color: #78827f;
     margin-top: 1px;
+  }
+
+  /* A manufacturer, in its own colours. Squarer and heavier than a ledger line,
+     because it is a plate somebody screwed on rather than a line in an account.
+     No price on it, ever — pricing is L.A.B.O.R.'s and nobody else's. */
+  .notice {
+    background: var(--mfg-plate);
+    border: 1px solid #0a0d0e;
+    border-left: 3px solid var(--mfg-accent);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+    font: 9px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.05em;
+    color: var(--mfg-face);
+    padding: 5px 8px;
+    animation: slide 0.22s ease;
+  }
+  .notice .head {
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+  }
+  .notice .what {
+    color: var(--mfg-accent);
+    letter-spacing: 0.14em;
+    font-size: 8px;
+  }
+  .notice .sub {
+    color: color-mix(in srgb, var(--mfg-face) 78%, transparent);
+  }
+  .mark {
+    width: 11px;
+    height: 11px;
+    flex: none;
+    fill: none;
+    stroke: var(--mfg-accent);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
   }
   @keyframes slide {
     from {

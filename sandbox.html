@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314171a'/%3E%3Cpath d='M8 2 L13 14 L8 10 L3 14 Z' fill='%23e8b53a'/%3E%3C/svg%3E" />
+    <title>LABOR SIM — cockpit sandbox</title>
+    <style>
+      /* Deliberately unlike index.html: the sandbox *scrolls*, because it is a
+         bench you look along rather than a cockpit you sit in. */
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #101314;
+        color: #c6d0cb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sandbox"></div>
+    <script type="module" src="/src/sandbox/main.ts"></script>
+  </body>
+</html>

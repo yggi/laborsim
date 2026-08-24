@@ -10,7 +10,8 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
-import type { Module } from "./control/bus.ts";
+import { styleOf } from "./cockpit/makers.ts";
+import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
@@ -18,7 +19,6 @@ import { type Autonav, createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
-import Attitude from "./ui/Attitude.svelte";
 import DashPanel from "./ui/DashPanel.svelte";
 import Draggable from "./ui/Draggable.svelte";
 import Lever from "./ui/Lever.svelte";
@@ -35,7 +35,14 @@ let mode = $state<CameraMode>("cab");
 let leverL = $state(0);
 let leverR = $state(0);
 
-/** The pilot is a rack entry like any other, and can be reordered like one. */
+/**
+ * The pilot is a rack entry like any other, and can be reordered like one.
+ *
+ * It is also **the chassis component**: it brings the dashboard, the cage and
+ * the glass, and it costs nothing, which is why it has no cell on the dash. You
+ * do not need a lamp to tell you the levers are fitted
+ * (`docs/design/components.md`).
+ */
 const pilot: Module = {
   id: "PILOT",
   label: "PILOT",
@@ -47,6 +54,9 @@ const pilot: Module = {
     left: leverL * MAX_TRACK_SPEED,
     right: leverR * MAX_TRACK_SPEED,
   }),
+  // Hands on the levers is active; hands off is nominal. It never warns —
+  // KIBA does not believe the operator is a fault condition.
+  condition: (): Condition => (leverL !== 0 || leverR !== 0 ? ACTIVE : NOMINAL),
 };
 
 /**
@@ -71,7 +81,59 @@ let preEstop: Record<string, boolean> = {};
 /** So the report auto-opens once on a citizen, not every frame. */
 let citizenSeen = false;
 
+/** Measured off the dash, so levers and toasts sit clear of a panel whose
+ *  height changes as components are fitted and cells appear. */
+let dashHeight = $state(96);
+
 let setViewMode: (m: CameraMode) => void = () => {};
+
+/**
+ * A notice in a **manufacturer's** voice.
+ *
+ * L.A.B.O.R. certifies and bills, and the damage ledger speaks in its register.
+ * A manufacturer sells and warns, and this is the first channel where one speaks
+ * for itself. Keeping them visually distinct matters: a warranty notice is not
+ * a verdict, and the player has to be able to tell whose opinion they are
+ * reading (`docs/design/training-frame.md`).
+ */
+interface Notice {
+  readonly id: number;
+  readonly maker: string;
+  readonly head: string;
+  readonly body: string;
+}
+let notices = $state<Notice[]>([]);
+let noticeId = 0;
+/** How long a manufacturer gets to lecture you before it fades, ms. */
+const NOTICE_LINGER = 8000;
+
+function notify(maker: string, head: string, body: string) {
+  const id = noticeId++;
+  notices = [...notices, { id, maker, head, body }];
+  setTimeout(() => {
+    notices = notices.filter((n) => n.id !== id);
+  }, NOTICE_LINGER);
+}
+
+/**
+ * Toggle a component from its dashboard cell.
+ *
+ * Popping the hood: switching off **safety** kit is a deliberate act, so the
+ * maker says so and the run report will remember. The guard against firing this
+ * on an emergency stop is the `estop` check — an E-stop disables every module in
+ * the rack, and nobody's warranty is void because you hit the big red button.
+ */
+function toggleModule(id: string) {
+  const mod = rack.find((m) => m.id === id);
+  if (!mod) return;
+  const bypassing = mod.enabled && mod.safety === true && !estop;
+  mod.enabled = !mod.enabled;
+  if (bypassing) {
+    const [head, body] = styleOf(mod.maker).voice.warranty;
+    notify(mod.maker, head, body);
+  }
+  rackVersion++;
+}
 
 function setView(next: CameraMode) {
   mode = next;
@@ -115,12 +177,15 @@ function resetSim() {
 /** Is a module with this id in the rack? Its instrument is fitted if so. */
 const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
 
-/** Instrument placements on the glass — draggable, and remembered per session.
- *  They start down the right, clear of the camera control at the very top. */
+/** Pod placements on the glass — draggable, and remembered per session. They
+ *  start down the right, clear of the camera control at the very top.
+ *
+ *  ATT-0 is no longer among them: heading and attitude moved to the dash, so a
+ *  bare chassis now starts with **clear glass** and the first component you fit
+ *  is the first view you lose. */
 const rightX = typeof window === "undefined" ? 280 : innerWidth - 124;
-let attPos = $state({ x: rightX, y: 50 });
-let navPos = $state({ x: rightX, y: 224 });
-let tiltPos = $state({ x: rightX, y: 398 });
+let navPos = $state({ x: rightX, y: 50 });
+let tiltPos = $state({ x: rightX, y: 224 });
 
 // Auto-open the debrief the moment a citizen is involved: it is categorical
 // failure, and the rig does not let that scroll past.
@@ -240,92 +305,127 @@ $effect(() => {
 });
 </script>
 
-<!-- Looking down at the rack slides the whole viewport up: a strip of glass
-     stays visible at the top, and the machine keeps running while you read. -->
-<div class="viewport" class:down={rackOpen}>
-  <canvas bind:this={canvas}></canvas>
-  <div class="cabframe" class:cab={mode === "cab"}></div>
-</div>
+<!-- `display: contents`, so it lays nothing out — it exists to publish the
+     measured dash height to everything that has to sit clear of it. -->
+<div class="shell" style="--dash-h: {dashHeight}px">
+  <!-- Looking down at the rack slides the whole viewport up: a strip of glass
+       stays visible at the top, and the machine keeps running while you read. -->
+  <div class="viewport" class:down={rackOpen}>
+    <canvas bind:this={canvas}></canvas>
+    <div class="cabframe" class:cab={mode === "cab"}></div>
+  </div>
 
-{#if showDebug}
-  <Telemetry snapshot={latest} showChain={!rackOpen} />
-{/if}
-
-<!-- The live voice: the rig narrating as it happens, in the same register as
-     the end-of-run report. Stacks, then fades; a citizen latches. -->
-{#if !rackOpen}
-  <Toasts snapshot={latest} />
-{/if}
-
-{#if mode === "cab"}
-  <div class="levers left"><Lever label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} /></div>
-  <div class="levers right"><Lever label="R TRACK" value={leverR} onchange={(v) => (leverR = v)} /></div>
-{:else}
-  <div class="handsoff">HANDS OFF THE WHEEL &mdash; the machine is still running</div>
-{/if}
-
-<!-- The camera is a fixed control, top-right: choosing the view is a thing you
-     do with the equipment, and in chase it is the only equipment you keep. -->
-<div class="camera item">
-  {#each ["cab", "chase"] as const as option (option)}
-    <button class:on={mode === option} onclick={() => setView(option)}>
-      {option === "cab" ? "CAB" : "CHASE"}
-    </button>
-  {/each}
-</div>
-
-<!--
-  Fitted instruments, draggable on the glass by their titlebars (L-008). Each
-  one is a piece of view you gave up; the budget that prices that is L-025, and
-  this is the pile it will price. They must stay wholly on the glass and clear
-  of each other — the Draggable refuses a drop that breaks either rule.
--->
-{#if mode === "cab" && !rackOpen}
-  <Draggable title="ATT-0" bind:x={attPos.x} bind:y={attPos.y}>
-    <Attitude snapshot={latest} />
-  </Draggable>
-  <!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
-  {#if nav}
-    <Draggable title="NAV-1" bind:x={navPos.x} bind:y={navPos.y}>
-      <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
-    </Draggable>
+  {#if showDebug}
+    <Telemetry snapshot={latest} showChain={!rackOpen} />
   {/if}
-  {#if fitted("TILT")}
-    <Draggable title="TILT-GUARD" bind:x={tiltPos.x} bind:y={tiltPos.y}>
-      <TiltGauges snapshot={latest} />
-    </Draggable>
+
+  <!-- The live voice: the rig narrating as it happens, in the same register as
+       the end-of-run report. Stacks, then fades; a citizen latches. Manufacturer
+       notices ride the same channel in their own colours — a warranty notice is
+       not a verdict, and you must be able to tell whose opinion you are reading. -->
+  {#if !rackOpen}
+    <Toasts snapshot={latest} {notices} />
   {/if}
-{/if}
 
-<!-- The dash: the machine's live status panel and the closed face of the rack.
-     Its latch opens the rack; its E-stop kills the drive; its master alarm
-     opens the debrief. Present in the cab; in chase you are outside it. -->
-{#if mode === "cab"}
-  <DashPanel
-    snapshot={latest}
-    {rackOpen}
-    estopped={estop}
-    onOpenRack={() => (rackOpen = !rackOpen)}
-    onEstop={toggleEstop}
-    onReport={() => (report = true)}
-  />
-{/if}
+  <!-- The levers go with the glass. Looking down at the rack puts your hands in
+       the cabinet, not on the controls — the same bargain as the chase view,
+       made with a different part of the body. The bus keeps carrying whatever
+       they were last set to and the machine keeps doing it; you simply cannot
+       reach them while you are reading (docs/design/cockpit.md). -->
+  {#if mode === "cab" && !rackOpen}
+    <div class="levers left">
+      <Lever label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} />
+    </div>
+    <div class="levers right">
+      <Lever label="R TRACK" value={leverR} onchange={(v) => (leverR = v)} />
+    </div>
+  {:else if mode !== "cab"}
+    <div class="handsoff">HANDS OFF THE WHEEL &mdash; the machine is still running</div>
+  {/if}
 
-{#if rackOpen}
-  {#key rackVersion}
-    <Rack
-      modules={rack}
-      snapshot={latest}
-      onchange={() => rackVersion++}
-      onclose={() => (rackOpen = false)}
-      debug={showDebug}
-    />
-  {/key}
-{/if}
+  <!-- The camera is a fixed control, top-right: choosing the view is a thing you
+       do with the equipment, and in chase it is the only equipment you keep. -->
+  <div class="camera item">
+    {#each ["cab", "chase"] as const as option (option)}
+      <button class:on={mode === option} onclick={() => setView(option)}>
+        {option === "cab" ? "CAB" : "CHASE"}
+      </button>
+    {/each}
+  </div>
 
-{#if report}
-  <RunReport snapshot={latest} onReset={resetSim} onResume={() => (report = false)} />
-{/if}
+  <!--
+    Fitted pods, draggable on the glass by their titlebars (L-008). Each one is a
+    piece of view you gave up; the budget that prices that is L-025, and this is
+    the pile it will price. They must stay wholly on the glass and clear of each
+    other — the Draggable refuses a drop that breaks either rule.
+
+    A pod is optional and its maker decides whether one exists at all. NAV-1 is a
+    capability component and pays in glass; TILT-GUARD is a safety component and
+    pays in capability instead, so its gauges are here by choice rather than as
+    the price of fitting it.
+  -->
+  {#if mode === "cab" && !rackOpen}
+    {#if nav}
+      <Draggable
+        title="NAV-1"
+        bottomKeepOut={dashHeight + 12}
+        bind:x={navPos.x}
+        bind:y={navPos.y}
+      >
+        <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
+      </Draggable>
+    {/if}
+    {#if fitted("TILT")}
+      <Draggable
+        title="TILT-GUARD"
+        bottomKeepOut={dashHeight + 12}
+        bind:x={tiltPos.x}
+        bind:y={tiltPos.y}
+      >
+        <TiltGauges snapshot={latest} />
+      </Draggable>
+    {/if}
+  {/if}
+
+  <!--
+    The deck: the dash and the rack as one physical object, because they are one.
+    The dash is the seam — the only thing visible in both postures — so it does
+    not fade out and back in, it *travels*: the bottom of your view when you are
+    driving, the top of it when you have dropped your eyes to the cabinet.
+
+    Present in the cab; in chase you are outside the machine and there is nothing
+    to look down at.
+  -->
+  {#if mode === "cab"}
+    <div class="deck" class:up={rackOpen}>
+      <DashPanel
+        snapshot={latest}
+        {rackOpen}
+        estopped={estop}
+        bind:height={dashHeight}
+        onOpenRack={() => (rackOpen = !rackOpen)}
+        onEstop={toggleEstop}
+        onReport={() => (report = true)}
+        onToggleModule={toggleModule}
+      />
+      {#if rackOpen}
+        {#key rackVersion}
+          <Rack
+            modules={rack}
+            snapshot={latest}
+            onchange={() => rackVersion++}
+            onclose={() => (rackOpen = false)}
+            debug={showDebug}
+          />
+        {/key}
+      {/if}
+    </div>
+  {/if}
+
+  {#if report}
+    <RunReport snapshot={latest} onReset={resetSim} onResume={() => (report = false)} />
+  {/if}
+</div>
 
 <style>
   /* width/height must be explicit: an abs-positioned <canvas> with width:auto
@@ -359,11 +459,44 @@ $effect(() => {
     box-shadow: inset 0 0 0 6px #0d1012, inset 0 0 160px rgba(0, 0, 0, 0.72);
   }
 
+  /* Lays nothing out; it only publishes `--dash-h` to everything that has to
+     sit clear of a panel whose height changes as components are fitted. */
+  .shell {
+    display: contents;
+  }
+
+  /* The dash and the rack as one object, anchored to the top of the glass and
+     translated down out of the way. Closed, only the dash shows, at the bottom.
+     Open, the whole deck rides up: the dash lands under the strip of windscreen
+     and the rack fills what is left. The height changes with it so the rack
+     stops at the bottom of the screen rather than running off it. */
+  .deck {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(100vh - var(--dash-h)));
+    transition: transform 0.28s ease;
+  }
+  .deck.up {
+    height: 74vh;
+    transform: translateY(26vh);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .deck {
+      transition: none;
+    }
+  }
+
   /* Bottom corners, because that is where thumbs are — but above the dash,
      which owns the very bottom of the glass. */
   .levers {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom) + 124px);
+    bottom: calc(var(--dash-h) + 14px);
     z-index: 3;
   }
   .levers.left {

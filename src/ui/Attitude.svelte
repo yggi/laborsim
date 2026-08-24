@@ -1,12 +1,21 @@
 <script lang="ts">
 /**
- * ATT-0 — heading and attitude in one head, and the only instrument that
- * ships with the bare chassis.
+ * ATT-0 — heading and attitude in one head, and the centre of the chassis
+ * maker's instrument cluster.
  *
  * It is one instrument rather than two because the pilot reads it as one
- * question: *which way am I pointing, and how level am I?* A compass and an
- * inclinometer side by side would cost twice the glass to answer that, and
- * glass is the currency (docs/design/cockpit.md).
+ * question: *which way am I pointing, and how level am I?*
+ *
+ * **It lives on the dash, not on the glass** (decided 2026-08-24). It is not a
+ * component's pod — it is part of what the vehicle came with, like the speedo,
+ * and the chassis maker built it into the panel. The consequence is the point:
+ * the bare KIBA cage now starts with **completely clear glass**, so the first
+ * component you fit is the first view you lose. It also replaced the incline
+ * bubble, which was reading the same two quantities with less to say.
+ *
+ * Aircraft practice, because it is the tradition that solved this: the attitude
+ * indicator is the biggest instrument and it sits in the middle, with everything
+ * else arranged around it.
  *
  * Nothing here is a limit and nothing here is advice — the ring shows where
  * north is and the ball shows where the horizon is. TILT-GUARD is the module
@@ -18,9 +27,9 @@
  */
 import type { Snapshot } from "../core/snapshot.ts";
 
-const { snapshot }: { snapshot: Snapshot | undefined } = $props();
+const { snapshot, size = 62 }: { snapshot: Snapshot | undefined; size?: number } =
+  $props();
 
-const R = 52;
 const DEG = 180 / Math.PI;
 
 /** Heading in degrees, clockwise from +Z, which the pins call north. */
@@ -30,6 +39,7 @@ const heading = $derived.by(() => {
   const [x, y, z, w] = q;
   const fx = 2 * (x * z + w * y);
   const fz = 1 - 2 * (x * x + y * y);
+  // deterministic-exempt: display only, never read back into the sim.
   const a = Math.atan2(fx, fz) * DEG;
   return (a + 360) % 360;
 });
@@ -37,8 +47,8 @@ const heading = $derived.by(() => {
 const pitch = $derived((snapshot?.machine.pitch ?? 0) * DEG);
 const roll = $derived((snapshot?.machine.roll ?? 0) * DEG);
 
-/** Metres of horizon travel per degree of pitch. Enough to see, not to read. */
-const PITCH_SCALE = 1.15;
+/** Units of horizon travel per degree of pitch. Enough to see, not to read. */
+const PITCH_SCALE = 1.05;
 
 const CARDINALS = [
   { at: 0, text: "N" },
@@ -46,97 +56,94 @@ const CARDINALS = [
   { at: 180, text: "S" },
   { at: 270, text: "W" },
 ];
-
-const whole = (n: number) => (n < 0 ? "−" : "+") + Math.abs(n).toFixed(0);
 </script>
 
-<div class="head">
-  <div class="label">ATT-0 &middot; KIBA WORKS</div>
-  <svg viewBox="0 0 {R * 2} {R * 2}" role="img" aria-label="heading and attitude">
+<div class="att" style="width: {size}px">
+  <svg viewBox="0 0 100 100" role="img" aria-label="heading and attitude">
     <defs>
-      <clipPath id="att0-ball"><circle cx={R} cy={R} r={R * 0.62} /></clipPath>
+      <clipPath id="att0-ball"><circle cx="50" cy="50" r="27" /></clipPath>
     </defs>
+
+    <!-- Same white square bezel and corner screws as the needle gauges: it is
+         one instrument cluster, built by one manufacturer, in one decade. -->
+    <rect class="bezel" x="2" y="2" width="96" height="96" rx="7" />
+    {#each [[10, 10], [90, 10], [10, 90], [90, 90]] as const as [cx, cy] (cx + "," + cy)}
+      <circle class="screw" {cx} {cy} r="2.4" />
+    {/each}
+    <circle class="dial" cx="50" cy="50" r="40" />
 
     <!-- The attitude ball. The horizon stays level with the world and the
          machine tips around it, which is the way round that tells you what
          *you* are doing. -->
     <g clip-path="url(#att0-ball)">
-      <rect class="sky" x="0" y="0" width={R * 2} height={R * 2} />
-      <g transform="rotate({-roll} {R} {R}) translate(0 {pitch * PITCH_SCALE})">
-        <rect class="ground" x={-R} y={R} width={R * 4} height={R * 3} />
-        <line class="horizon" x1={-R} y1={R} x2={R * 3} y2={R} />
+      <rect class="sky" x="0" y="0" width="100" height="100" />
+      <g transform="rotate({-roll} 50 50) translate(0 {pitch * PITCH_SCALE})">
+        <rect class="ground" x="-50" y="50" width="200" height="150" />
+        <line class="horizon" x1="-50" y1="50" x2="150" y2="50" />
         {#each [-20, -10, 10, 20] as rung (rung)}
           <line
             class="rung"
-            x1={R - 9}
-            y1={R - rung * PITCH_SCALE}
-            x2={R + 9}
-            y2={R - rung * PITCH_SCALE}
+            x1="42"
+            y1={50 - rung * PITCH_SCALE}
+            x2="58"
+            y2={50 - rung * PITCH_SCALE}
           />
         {/each}
       </g>
-      <!-- Fixed aircraft mark: this is the machine, and it does not move. -->
-      <path class="mark" d="M{R - 13} {R} h8 M{R + 5} {R} h8 M{R} {R - 2} v4" />
+      <!-- Fixed machine mark: this is you, and it does not move. -->
+      <path class="mark" d="M39 50 h7 M54 50 h7 M50 48 v4" />
     </g>
-    <circle class="ring" cx={R} cy={R} r={R * 0.62} />
+    <circle class="ring" cx="50" cy="50" r="27" />
 
     <!-- The compass card turns; the lubber line at the top does not. -->
-    <g transform="rotate({-heading} {R} {R})">
+    <g transform="rotate({-heading} 50 50)">
       {#each CARDINALS as c (c.text)}
         <text
           class="card"
-          x={R}
-          y={R - R * 0.78}
-          transform="rotate({c.at} {R} {R})"
+          x="50"
+          y="16"
+          transform="rotate({c.at} 50 50)"
           text-anchor="middle"
           dominant-baseline="middle">{c.text}</text
         >
       {/each}
       {#each [45, 135, 225, 315] as tick (tick)}
-        <line
-          class="tick"
-          x1={R}
-          y1={R - R * 0.94}
-          x2={R}
-          y2={R - R * 0.84}
-          transform="rotate({tick} {R} {R})"
-        />
+        <line class="tick" x1="50" y1="11" x2="50" y2="16" transform="rotate({tick} 50 50)" />
       {/each}
     </g>
-    <path class="lubber" d="M{R - 4} 3 L{R + 4} 3 L{R} 10 Z" />
-    <circle class="ring outer" cx={R} cy={R} r={R - 1} />
+    <path class="lubber" d="M46 8 L54 8 L50 14 Z" />
   </svg>
-  <div class="foot">
-    <span>HDG {heading.toFixed(0).padStart(3, "0")}</span>
-    <span>P{whole(pitch)} R{whole(roll)}</span>
+  <!-- Wrap *after* rounding: 359.6° rounds to 360, and a compass never reads
+       360. It reads 000, the same as every real one. -->
+  <div class="read">
+    {(Math.round(heading) % 360).toFixed(0).padStart(3, "0")}&deg;
   </div>
+  <div class="label">ATT-0</div>
 </div>
 
 <style>
-  .head {
-    width: 116px;
-    background: rgba(16, 19, 21, 0.94);
-    border: 1px solid #333a3b;
-    box-shadow: 0 0 0 3px #0d1012;
-    font: 8px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.1em;
-    color: #6d7a76;
-  }
-  .label {
-    padding: 3px 6px;
-    background: #23282a;
-  }
-  .foot {
-    display: flex;
-    justify-content: space-between;
-    padding: 3px 6px;
-    background: #23282a;
-    color: #c6d0cb;
+  .att {
+    flex: none;
+    text-align: center;
+    font: 7px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.08em;
+    color: #2a2418;
   }
   svg {
     display: block;
-    width: 116px;
-    height: 116px;
+    width: 100%;
+    height: auto;
+  }
+  .bezel {
+    fill: #e9e4d6;
+    stroke: #b7b0a0;
+    stroke-width: 1;
+  }
+  .screw {
+    fill: #8f887a;
+  }
+  .dial {
+    fill: #16181a;
   }
   .sky {
     fill: #1d2b33;
@@ -159,22 +166,33 @@ const whole = (n: number) => (n < 0 ? "−" : "+") + Math.abs(n).toFixed(0);
   }
   .ring {
     fill: none;
-    stroke: #3c4a46;
-    stroke-width: 1;
-  }
-  .outer {
-    stroke: #2a3431;
+    stroke: #6c7a76;
+    stroke-width: 1.2;
   }
   .card {
-    fill: #c6d0cb;
+    fill: #c9c3b4;
     font-size: 9px;
     letter-spacing: 0;
   }
   .tick {
-    stroke: #3c4a46;
-    stroke-width: 1;
+    stroke: #8b8577;
+    stroke-width: 1.2;
   }
   .lubber {
-    fill: #6fe3c4;
+    fill: #e8b53a;
+  }
+  .read {
+    margin-top: 1px;
+    font-weight: 700;
+    font-size: 8px;
+    color: #efe6cf;
+    background: #2a2418;
+    border-radius: 2px;
+    padding: 1px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .label {
+    margin-top: 1px;
+    color: #4a4230;
   }
 </style>

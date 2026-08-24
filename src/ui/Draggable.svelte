@@ -21,17 +21,23 @@ let {
   title,
   x = $bindable(),
   y = $bindable(),
+  bottomKeepOut = 150,
   children,
 }: {
   title: string;
   x: number;
   y: number;
+  /**
+   * How much glass the dash is occupying along the bottom. Passed in rather
+   * than assumed, because the panel grows as components are fitted — each one
+   * bolts another cell onto the indicator row.
+   */
+  bottomKeepOut?: number;
   children: Snippet;
 } = $props();
 
-/** Keep-out margins: the frame, and the dash strip along the bottom. */
+/** Keep-out margin at the frame. The bottom is the dash, and it is a prop. */
 const EDGE = 8;
-const BOTTOM = 150;
 
 let el: HTMLDivElement;
 let dragging = $state(false);
@@ -64,7 +70,7 @@ function legal(): boolean {
     r.left < EDGE ||
     r.top < EDGE ||
     r.right > innerWidth - EDGE ||
-    r.bottom > innerHeight - BOTTOM
+    r.bottom > innerHeight - bottomKeepOut
   ) {
     return false;
   }

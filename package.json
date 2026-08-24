@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "shots": "node scripts/shots.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
@@ -20,6 +21,7 @@
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^26.2.0",
     "@types/three": "^0.185.4",
+    "playwright": "^1.62.1",
     "svelte": "^5.56.10",
     "svelte-check": "^4.7.6",
     "typescript": "^5.9.3",

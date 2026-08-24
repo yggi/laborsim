@@ -1,187 +1,251 @@
 <script lang="ts">
 /**
- * The machine's dash — the **closed face of the rack**, and a live instrument in
- * its own right. It sits as a strip of yellow sheet metal at the bottom of the
- * glass, in view while you drive (docs/design/cockpit.md, L-043).
+ * The machine's dash — and **the seam between the two postures.**
  *
- * The look is a plant control panel: white-bezel needle gauges, warning lamps,
- * a red mushroom E-STOP, an ignition key, hazard labels, screws, a service
- * sticker. Principle 7 in the letter: the world may look like a simulation, but
- * the cockpit is a real, worn, industrial thing you sit behind.
+ * It is the only thing visible whether you are looking out of the glass or down
+ * at the rack, and it *travels* between them: the bottom of your view when you
+ * are driving, the top of your view when you have dropped your eyes to the
+ * cabinet. That is honest cab geometry — the dash sits between the windscreen
+ * and the rack, so looking past it puts it overhead. It never fades and it never
+ * disappears; it slides, because it is a real object at a real height.
  *
- * Everything on it is a **real simulated quantity** — speed, grip, slip,
- * attitude, contact, the tilt-guard cutting in. A gauge that lied about the
+ * Its theme belongs to **the vehicle's manufacturer**, read off the chassis
+ * component's slot rather than hardcoded. A KIBA tracked platform has a KIBA
+ * dashboard; another chassis would bring a different panel with a different
+ * layout, and everyone else's kit is bolted onto whatever it came with
+ * (`docs/design/components.md`).
+ *
+ * Two rows:
+ *
+ *   1. **the machine instruments** — the chassis maker's own cluster, arranged
+ *      the way aircraft practice solved this: the attitude head is the biggest
+ *      thing and it sits in the middle, with everything else around it;
+ *   2. **the indicator row** — one cell per fitted component, in rack order,
+ *      floated and wrapping. No budget, nothing to configure. Cells just work.
+ *
+ * MASTER ALARM and MASTER WARNING are **derived** from every component's own
+ * published condition plus the chassis's. Nothing here knows what a TILT-GUARD
+ * is any more; before this it read that module's private readout to light a
+ * lamp, which meant every new component was an edit to this file.
+ *
+ * Every gauge reads a real simulated quantity. A gauge that lied about the
  * machine would break the inspectability pillar as surely as a hidden sim layer.
- *
- * The OPEN latch drops the panel and raises the rack. The E-STOP kills the
- * drive. Both are hands, not menus.
  *
  * Architecture rule 3: reads a snapshot, reports intent up. Never the sim.
  */
+import {
+  type Annunciation,
+  chassisConditions,
+  isAlarm,
+  isWarning,
+  masterLine,
+  worst,
+} from "../cockpit/annunciator.ts";
+import { styleOf } from "../cockpit/makers.ts";
+import { cellFor } from "../cockpit/parts.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import Attitude from "./Attitude.svelte";
 import Gauge from "./Gauge.svelte";
+import HourMeter from "./HourMeter.svelte";
+import SlipGauge from "./SlipGauge.svelte";
 
-const {
+let {
   snapshot,
   rackOpen,
   estopped,
+  height = $bindable(0),
   onOpenRack,
   onEstop,
   onReport,
+  onToggleModule,
 }: {
   snapshot: Snapshot | undefined;
   rackOpen: boolean;
   estopped: boolean;
+  /** Measured, so the levers and the toasts can sit clear of a panel that
+   *  changes height as components are fitted. */
+  height?: number;
   onOpenRack: () => void;
   onEstop: () => void;
   onReport: () => void;
+  onToggleModule: (id: string) => void;
 } = $props();
 
 const m = $derived(snapshot?.machine);
-const DEG = 180 / Math.PI;
+const stages = $derived(snapshot?.stages ?? []);
+
+/** The vehicle's manufacturer owns this panel. Read it off the chassis slot. */
+const chassis = $derived(stages.find((s) => s.id === "PILOT"));
+const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
 
 const speed = $derived(m?.speed ?? 0);
 const grip = $derived(Math.max(m?.left.traction ?? 0, m?.right.traction ?? 0));
-const slip = $derived(
-  Math.max(Math.abs(m?.left.slip ?? 0), Math.abs(m?.right.slip ?? 0)),
+
+/** The chassis's own conditions — the ones no module in the rack owns. */
+const chassisLamps = $derived<readonly Annunciation[]>(
+  chassisConditions(snapshot, estopped),
 );
-const pitch = $derived((m?.pitch ?? 0) * DEG);
-const roll = $derived((m?.roll ?? 0) * DEG);
 
-/** TILT-GUARD is cutting when its stage is live and its gain has dropped. */
-const tiltCutting = $derived.by(() => {
-  const s = snapshot?.stages.find((x) => x.id === "TILT");
-  return s?.enabled === true && s.idle === false && (s.readout?.gain ?? 1) < 0.999;
-});
-
-/** A track is commanded but has lost the ground — clawing air. */
-const lostContact = $derived.by(() => {
-  if (!m) return false;
-  const left = m.left.contacts === 0 && Math.abs(m.left.commanded) > 0.05;
-  const right = m.right.contacts === 0 && Math.abs(m.right.commanded) > 0.05;
-  return left || right;
-});
-
-const slipping = $derived(slip > 0.4);
-const citizen = $derived(
-  (snapshot?.damage ?? []).some((d) => d.category === "citizen asset"),
+/**
+ * The masters, over everything at once: the chassis and every fitted component.
+ * A component lights the dash by publishing a number, not by being known here.
+ */
+const overall = $derived(
+  worst([...chassisLamps.map((a) => a.condition), ...stages.map((s) => s.condition)]),
 );
-const bill = $derived(snapshot?.bill ?? 0);
+const line = $derived(masterLine(chassisLamps, stages, "SYSTEMS NOMINAL"));
 
-/** The master alarm gathers the conditions that mean *stop and look*. */
-const alarm = $derived(estopped || citizen || tiltCutting || lostContact);
-const alarmText = $derived(
-  citizen
-    ? "CITIZEN PROPERTY"
-    : estopped
-      ? "EMERGENCY STOP"
-      : lostContact
-        ? "TRACK — NO CONTACT"
-        : tiltCutting
-          ? "TILT LIMIT — DRIVE CUT"
-          : "SYSTEMS NOMINAL",
+/** Cells, in rack order. A component with no registered cell contributes none. */
+const cells = $derived(
+  stages
+    .map((stage) => ({ stage, cell: cellFor(stage.id) }))
+    .filter((entry) => entry.cell !== null),
 );
 </script>
 
-<div class="dash" class:down={rackOpen}>
+<div class="dash" class:up={rackOpen} bind:clientHeight={height}>
   <!-- Hazard trim along the top edge, the way a real panel is labelled. -->
-  <div class="hazard"></div>
+  <div class="hazard mfg-hazard"></div>
 
   <div class="lower">
-    <!-- The instrument strip scrolls if the panel is wider than the glass; the
-         critical controls do not (they live in `.actions`, pinned right). -->
+    <!-- Two rows, because one does not fit a phone. Alerts on top — the things
+         that are wrong — and the instruments below, where the full width is
+         theirs. The critical controls are pinned right across both and never
+         scroll off (`.actions`). -->
     <div class="body">
-      <!-- Identity: this is a KIBA chassis, and it says so. Themeable per
-           chassis later (bulldozer ↔ police Labor). -->
-      <div class="cluster ident">
-        <div class="mark">KIBA<span>WORKS</span></div>
-        <div class="model">TYPE 3A</div>
-      </div>
+      <div class="row alerts">
+        <!-- Identity: whoever built the vehicle, and it says so. -->
+        <div class="ident">
+          <div class="mark">{house.wordmark}</div>
+          <div class="model">{house.plateText.split(" · ")[0]}</div>
+        </div>
 
-      <!-- Master alarm and the annunciator lamps beneath it. -->
-      <div class="cluster lamps">
-        <button class="master" class:on={alarm} onclick={onReport} aria-label="alarm and report">
-          <span class="dot"></span>
-          <span class="mtext">MASTER<br />ALARM</span>
-        </button>
-        <div class="annun">
-          <span class="lamp" class:lit={slipping}>SLIP</span>
-          <span class="lamp warn" class:lit={tiltCutting}>TILT</span>
-          <span class="lamp warn" class:lit={lostContact}>GND</span>
-          <span class="lamp bill" class:lit={bill > 0}>¥</span>
+        <div class="masters">
+          <button
+            class="master alarm"
+            class:on={isAlarm(overall)}
+            onclick={onReport}
+            aria-label="master alarm and report"
+          >
+            <span class="dot"></span>
+            <span class="mtext">MASTER<br />ALARM</span>
+          </button>
+          <button
+            class="master warning"
+            class:on={isWarning(overall)}
+            onclick={onReport}
+            aria-label="master warning and report"
+          >
+            <span class="dot"></span>
+            <span class="mtext">MASTER<br />WARNING</span>
+          </button>
         </div>
       </div>
 
-      <!-- The gauges. Real quantities, industrial faces. -->
-      <div class="cluster gauges">
-        <Gauge label="km/h" frac={speed / MAX_TRACK_SPEED} display={(speed * 3.6).toFixed(0)} danger={0.92} size={50} />
-        <Gauge label="GRIP" frac={grip} display="{(grip * 100).toFixed(0)}%" danger={0.85} size={50} />
-        <div class="incline">
-          <div class="incline-h">INCLINE</div>
-          <div class="bubble-box">
-            <span class="bubble" style="left: {50 + Math.max(-1, Math.min(1, roll / 45)) * 42}%; top: {50 - Math.max(-1, Math.min(1, pitch / 45)) * 42}%"></span>
-            <span class="cross-h"></span>
-            <span class="cross-v"></span>
-          </div>
-          <div class="incline-r">P{pitch.toFixed(0)} R{roll.toFixed(0)}</div>
-        </div>
+      <div class="row annun">
+        {#each chassisLamps as lamp (lamp.id)}
+          <span class="lamp" data-cond={lamp.condition}>{lamp.word}</span>
+        {/each}
       </div>
 
-      <!-- Ignition. Identity, not a control: the sim always runs. -->
-      <div class="cluster key" aria-hidden="true">
-        <span class="key-face"><span class="key-slot"></span></span>
-        <span class="key-pos">OFF · RUN · START</span>
+      <!-- The cluster. Attitude in the middle and biggest, because that is the
+           question you ask most often and aircraft settled the arrangement:
+           the attitude indicator is the big one and everything else sits round
+           it. Scrolls only at the tail, where the hour meter is — the things
+           you actually drive by are visible at rest on a 390px phone. -->
+      <div class="row gauges">
+        <Gauge
+          label="km/h"
+          frac={speed / MAX_TRACK_SPEED}
+          display={(speed * 3.6).toFixed(0)}
+          danger={0.92}
+          size={42}
+        />
+        <Attitude {snapshot} size={54} />
+        <Gauge
+          label="GRIP"
+          frac={grip}
+          display="{(grip * 100).toFixed(0)}%"
+          danger={0.85}
+          size={42}
+        />
+        <SlipGauge {snapshot} size={44} />
+        <HourMeter {snapshot} />
       </div>
     </div>
 
     <!-- Always-visible controls: the stop that kills the drive, and the latch
          that raises the rack. These never scroll off the panel. -->
     <div class="actions">
-      <button class="estop" class:pressed={estopped} onclick={onEstop} aria-label="emergency stop">
+      <button
+        class="estop"
+        class:pressed={estopped}
+        onclick={onEstop}
+        aria-label="emergency stop"
+      >
         <span class="estop-label">STOP</span>
       </button>
-      <button class="latch" class:open={rackOpen} onclick={onOpenRack} aria-label="open the rack">
+      <button
+        class="latch"
+        class:open={rackOpen}
+        onclick={onOpenRack}
+        aria-label="open the rack"
+      >
         <span class="latch-grip"></span>
         <span class="latch-text">{rackOpen ? "CLOSE" : "RACK"}</span>
         <span class="chev">{rackOpen ? "▼" : "▲"}</span>
       </button>
     </div>
   </div>
-  <div class="alarm-strip" class:on={alarm}>{alarmText}</div>
+
+  <!-- The indicator row: everybody else's kit, bolted onto this panel. -->
+  {#if cells.length > 0}
+    <div class="cells">
+      {#each cells as entry (entry.stage.id)}
+        {@const Cell = entry.cell}
+        {#if Cell}
+          <Cell
+            stage={entry.stage}
+            style={styleOf(entry.stage.maker)}
+            onToggle={() => onToggleModule(entry.stage.id)}
+          />
+        {/if}
+      {/each}
+    </div>
+  {/if}
+
+  <div class="alarm-strip" data-cond={line.condition}>{line.text}</div>
 </div>
 
 <style>
   .dash {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 2;
+    /* In flow inside the travelling deck (App.svelte). Not fixed: the whole
+       point is that this object moves between the two postures. */
+    flex: none;
     /* CAT-yellow sheet steel, lit from above, with a beaten lower edge. */
-    background:
-      linear-gradient(180deg, #e6b52c 0%, #d8a521 42%, #b9871a 100%);
+    background: linear-gradient(180deg, #e6b52c 0%, #d8a521 42%, #b9871a 100%);
     border-top: 2px solid #7c5a10;
     box-shadow:
       inset 0 2px 0 rgba(255, 255, 255, 0.25),
       0 -8px 22px rgba(0, 0, 0, 0.5);
-    padding-bottom: env(safe-area-inset-bottom);
     color: #2a2418;
     font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    transition: transform 0.28s ease;
   }
-  /* When the rack is up, the panel has dropped out of the way. */
-  .dash.down {
-    transform: translateY(110%);
+  /* Driving, the dash is the bottom-most thing on the glass, so it owns the
+     home-indicator inset. Looking down, the rack does. */
+  .dash:not(.up) {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Looking down at the rack: the panel is overhead now, so its shadow falls
+     the other way and the hazard trim reads as the underside of a lip. */
+  .dash.up {
+    box-shadow:
+      inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+      0 8px 22px rgba(0, 0, 0, 0.5);
   }
   .hazard {
     height: 5px;
-    background: repeating-linear-gradient(
-      -45deg,
-      #1c1a12 0 8px,
-      #e6b52c 8px 16px
-    );
-    opacity: 0.85;
   }
   .lower {
     display: flex;
@@ -191,37 +255,42 @@ const alarmText = $derived(
     flex: 1;
     min-width: 0;
     display: flex;
-    align-items: stretch;
-    gap: 10px;
-    padding: 7px 9px;
-    overflow-x: auto;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px 8px;
   }
-  .cluster {
-    flex: none;
+  .row {
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+  }
+  /* Only the instrument row scrolls, and only at its tail. */
+  .row.gauges {
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .row.alerts {
+    justify-content: space-between;
   }
 
   /* -- identity ---------------------------------------------------------- */
   .ident {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 1px;
     justify-content: center;
+    max-width: 74px;
   }
   .mark {
     font-family: "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
     font-weight: 800;
-    font-size: 15px;
-    line-height: 0.82;
+    font-size: 13px;
+    line-height: 0.86;
     letter-spacing: 0.02em;
     color: #211d13;
-  }
-  .mark span {
-    display: block;
-    font-size: 8px;
-    letter-spacing: 0.3em;
   }
   .model {
     font-size: 7px;
@@ -229,11 +298,10 @@ const alarmText = $derived(
     color: #4a4230;
   }
 
-  /* -- lamps ------------------------------------------------------------- */
-  .lamps {
-    flex-direction: column;
+  /* -- masters and annunciators ------------------------------------------ */
+  .masters {
+    display: flex;
     gap: 4px;
-    justify-content: center;
   }
   .master {
     display: flex;
@@ -247,28 +315,42 @@ const alarmText = $derived(
     cursor: pointer;
   }
   .master .dot {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
+    flex: none;
     border-radius: 50%;
-    background: #5a1c14;
+    background: #4a3a24;
     box-shadow: inset 0 0 3px #000;
   }
-  .master.on .dot {
+  .master.alarm.on .dot {
     background: #ff3b24;
-    box-shadow: 0 0 10px #ff3b24, inset 0 0 3px #ffb0a4;
+    box-shadow:
+      0 0 10px #ff3b24,
+      inset 0 0 3px #ffb0a4;
   }
-  .master .mtext {
-    font-size: 7px;
-    line-height: 1;
-    letter-spacing: 0.1em;
-  }
-  .master.on .mtext {
+  .master.alarm.on .mtext {
     color: #ffd9d2;
   }
-  .annun {
-    display: flex;
-    gap: 3px;
+  .master.warning.on .dot {
+    background: #ffb43a;
+    box-shadow:
+      0 0 10px #ffb43a,
+      inset 0 0 3px #ffe1a4;
   }
+  .master.warning.on .mtext {
+    color: #ffeccb;
+  }
+  .master .mtext {
+    font-size: 6.5px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-align: left;
+  }
+  .row.annun {
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  /* Legend plates: visible when dark, so you know what *could* light. */
   .lamp {
     font-size: 7px;
     padding: 2px 3px;
@@ -277,70 +359,29 @@ const alarmText = $derived(
     color: #6a5416;
     border-radius: 1px;
   }
-  .lamp.lit {
+  .lamp[data-cond="2"] {
     background: #ffe27a;
     color: #2a2100;
     box-shadow: 0 0 7px #ffdf6b;
   }
-  .lamp.warn.lit {
-    background: #ff9b2e;
-    box-shadow: 0 0 7px #ff9b2e;
-  }
-  .lamp.bill.lit {
+  .lamp[data-cond="3"] {
     background: #ff6a4d;
     color: #2a0a00;
     box-shadow: 0 0 7px #ff6a4d;
   }
 
   /* -- gauges ------------------------------------------------------------ */
-  .gauges {
+  /* -- the indicator row ------------------------------------------------- */
+  .cells {
+    display: flex;
+    flex-wrap: wrap;
     gap: 5px;
-    padding: 0 2px;
-  }
-  .incline {
-    text-align: center;
-    color: #4a4230;
-  }
-  .incline-h,
-  .incline-r {
-    font-size: 6px;
-    letter-spacing: 0.1em;
-  }
-  .bubble-box {
-    position: relative;
-    width: 44px;
-    height: 44px;
-    margin: 1px auto;
-    background: #16181a;
-    border: 2px solid #e9e4d6;
-    border-radius: 50%;
-  }
-  .bubble {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    margin: -4px 0 0 -4px;
-    border-radius: 50%;
-    background: #6fe3c4;
-    box-shadow: 0 0 5px #6fe3c4;
-    transition: left 0.12s linear, top 0.12s linear;
-  }
-  .cross-h,
-  .cross-v {
-    position: absolute;
-    background: #3a4a46;
-  }
-  .cross-h {
-    left: 8%;
-    right: 8%;
-    top: 50%;
-    height: 1px;
-  }
-  .cross-v {
-    top: 8%;
-    bottom: 8%;
-    left: 50%;
-    width: 1px;
+    padding: 0 9px 7px;
+    /* A darker strip so the bolted-on kit reads as sitting *on* the panel
+       rather than being part of it. */
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.26));
+    border-top: 1px solid rgba(0, 0, 0, 0.28);
+    padding-top: 6px;
   }
 
   /* -- actions (pinned right, never scroll off) -------------------------- */
@@ -354,18 +395,15 @@ const alarmText = $derived(
     border-left: 2px solid #7c5a10;
     box-shadow: inset 2px 0 4px rgba(0, 0, 0, 0.2);
   }
-  .key {
-    flex-direction: column;
-    text-align: center;
-    color: #3a3226;
-  }
   .estop {
     width: 46px;
     height: 46px;
     border-radius: 50%;
     border: 3px solid #f2c94c;
     background: radial-gradient(circle at 42% 34%, #ff5a44, #b81c0c 70%);
-    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.45);
+    box-shadow:
+      0 3px 5px rgba(0, 0, 0, 0.5),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -382,35 +420,6 @@ const alarmText = $derived(
   .estop.pressed {
     background: radial-gradient(circle at 50% 50%, #8f1608, #6e1206 70%);
     box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.7);
-  }
-  .key {
-    text-align: center;
-    color: #3a3226;
-  }
-  .key-face {
-    display: block;
-    width: 26px;
-    height: 26px;
-    margin: 0 auto;
-    border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #4a4c4f, #1c1e20 72%);
-    border: 2px solid #cfc9b8;
-    position: relative;
-  }
-  .key-slot {
-    position: absolute;
-    left: 50%;
-    top: 22%;
-    width: 2px;
-    height: 12px;
-    margin-left: -1px;
-    background: #e8b53a;
-    transform: rotate(35deg);
-    transform-origin: 50% 90%;
-  }
-  .key-pos {
-    font-size: 5.5px;
-    letter-spacing: 0.06em;
   }
 
   /* -- latch ------------------------------------------------------------- */
@@ -442,6 +451,7 @@ const alarmText = $derived(
   .latch .chev {
     color: #e8b53a;
   }
+
   .alarm-strip {
     text-align: center;
     font-size: 8px;
@@ -450,7 +460,11 @@ const alarmText = $derived(
     background: #2a2418;
     color: #6a8f7a;
   }
-  .alarm-strip.on {
+  .alarm-strip[data-cond="2"] {
+    background: #a8760c;
+    color: #fff3d6;
+  }
+  .alarm-strip[data-cond="3"] {
     background: #b81c0c;
     color: #ffe6e0;
     animation: blink 0.9s steps(2, start) infinite;
@@ -458,6 +472,11 @@ const alarmText = $derived(
   @keyframes blink {
     50% {
       opacity: 0.55;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .alarm-strip[data-cond="3"] {
+      animation: none;
     }
   }
 </style>

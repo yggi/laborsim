@@ -19,3 +19,6 @@ npm-debug.log*
 # env
 .env
 .env.local
+
+# Sandbox screenshots. Evidence, not artifacts — regenerate with `npm run shots`.
+shots/

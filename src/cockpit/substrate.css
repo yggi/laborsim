@@ -1,0 +1,197 @@
+/*
+ * The substrate — the physics of a panel, shared by every manufacturer.
+ *
+ * Themes vary *character*; they never vary this. A maker chooses its colours,
+ * its arrangement, its mark and its words — but a screw is a screw, a plate
+ * sits proud of the cabinet the same way, and light comes from above for
+ * everyone. Without that shared floor, three independently authored themes read
+ * as three different games rather than three suppliers in one cab.
+ *
+ * Extracted from `Rack.svelte`, where all of it was inline (L-037).
+ *
+ * Loaded once, globally, from `main.ts`. It is in a cascade `@layer` so that a
+ * component's own scoped styles always win without a specificity fight — an
+ * unlayered rule beats a layered one, and every Svelte `<style>` is unlayered.
+ *
+ * Class and custom-property names are **prefixed `mfg-`**, always. A house-style
+ * class called `bar` once collided with a meter's `.bar` in the same scoped
+ * stylesheet and collapsed a whole faceplate to 7px with lint, types and 71
+ * tests green (docs/design/instrument-rendering.md). Independently authored
+ * themes make that failure mode much more likely, not less.
+ */
+
+@layer substrate {
+  :root {
+    /* Per-maker, set on the element that owns a component's parts. Defaults are
+       the unmarked/OEM fallback so nothing renders invisible if one is missed. */
+    --mfg-plate: #2b2a20;
+    --mfg-bezel: #0d1012;
+    --mfg-face: #efe2c0;
+    --mfg-accent: #e8b53a;
+
+    /* Shared across every maker, because a warning light is not a brand
+       decision. What a maker may change is the *word*, not the colour of the
+       lamp — see `Lexicon` in makers.ts. */
+    --mfg-nominal: #6a8f7a;
+    --mfg-active: #6fe3c4;
+    --mfg-warn: #f0a830;
+    --mfg-alarm: #ff3b24;
+    --mfg-dead: #3a4240;
+
+    /* The cabinet the plates are screwed into, and the ink around everything. */
+    --mfg-cabinet: #0f1214;
+    --mfg-ink: #05080a;
+    --mfg-steel: #2f3639;
+
+    /* A pinch of film grain, generated not sampled. The world is allowed to look
+       like a simulation (contour lines); the cockpit is not, so panels get the
+       wear a real cabinet has. feTurbulence laid over at soft-light, so it reads
+       as texture and never as dirt. */
+    --mfg-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* A thing that sits proud of what it is mounted on: lit top edge, shadowed
+     bottom edge, and a real drop. This is the single rule that makes a panel
+     read as an object rather than as paint. */
+  .mfg-proud {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+      0 2px 4px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Grain, over the surface and under anything you touch. Needs a positioned
+     host; the host owns its own border-radius. */
+  .mfg-grain {
+    position: relative;
+  }
+  .mfg-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: var(--mfg-noise);
+    background-size: 90px 90px;
+    mix-blend-mode: soft-light;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* A screw head. A thing you can unbolt is a thing somebody bolted in. */
+  .mfg-screw {
+    display: block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4a5254;
+    box-shadow: inset 0 1px 0 #7d8a8c;
+  }
+  /* The precise kind: a hex socket, machined rather than stamped. */
+  .mfg-screw-hex {
+    border-radius: 2px;
+    background:
+      radial-gradient(circle at 50% 50%, #1e2426 0 1.4px, transparent 1.5px),
+      linear-gradient(160deg, #7d8a8c, #3a4244);
+  }
+
+  /* A brushed-steel upright, lit from the left the way a real one would be. */
+  .mfg-rail {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 0 1px,
+        transparent 1px 3px
+      ),
+      linear-gradient(90deg, var(--mfg-steel) 0%, var(--mfg-bezel) 55%, #0a0d0e 100%);
+  }
+
+  /* An indicator lamp. Unlit is a dark lens with a highlight, not a grey box —
+     a real lamp is visible when it is off, which is how you know it is there. */
+  .mfg-lamp {
+    background:
+      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.35), transparent 60%),
+      #16191b;
+    box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--mfg-ink);
+  }
+  .mfg-lamp[data-lit="1"] {
+    background:
+      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
+      var(--mfg-active);
+    box-shadow:
+      0 0 8px var(--mfg-active),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+  }
+  .mfg-lamp[data-lit="2"] {
+    background:
+      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
+      var(--mfg-warn);
+    box-shadow:
+      0 0 8px var(--mfg-warn),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+  }
+  .mfg-lamp[data-lit="3"] {
+    background:
+      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.8), transparent 60%),
+      var(--mfg-alarm);
+    box-shadow:
+      0 0 10px var(--mfg-alarm),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+    animation: mfg-blink 0.9s steps(2, start) infinite;
+  }
+  @keyframes mfg-blink {
+    50% {
+      opacity: 0.5;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mfg-lamp[data-lit="3"] {
+      animation: none;
+    }
+  }
+
+  /* A signal meter: the reading you take at a glance while driving, because a
+     number is something you read and a bar is something you notice. */
+  .mfg-meter {
+    display: block;
+    position: relative;
+    height: 7px;
+    background: var(--mfg-bezel);
+    border: 1px solid #23282a;
+    overflow: hidden;
+  }
+  .mfg-meter-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--mfg-accent);
+    transition: width 0.08s linear;
+  }
+  .mfg-meter-fill[data-rev="true"] {
+    background: #e0503c;
+  }
+
+  /* Embossed label tape: the raised-letter stuff from a hand-squeezed gun,
+     stuck on by whoever fitted the part. Letters go pale where the plastic is
+     stretched, which is the whole look. */
+  .mfg-emboss {
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #2c3033, #191c1e);
+    color: #e8ece9;
+    font-size: 7px;
+    letter-spacing: 0.22em;
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35),
+      0 -1px 0 rgba(0, 0, 0, 0.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Hazard trim, the way a real panel is edged. */
+  .mfg-hazard {
+    background: repeating-linear-gradient(-45deg, #1c1a12 0 8px, #e6b52c 8px 16px);
+    opacity: 0.85;
+  }
+}

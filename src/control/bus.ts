@@ -39,6 +39,24 @@ export type Verb = "SET" | "CAP" | "ADD" | "AMP";
 export const VERBS: readonly Verb[] = ["SET", "CAP", "ADD", "AMP"];
 
 /**
+ * How worried the pilot should be about this module, right now.
+ *
+ * A **number**, not a word, because it crosses the one-directional snapshot
+ * boundary and everything that crosses stays a plain value (rule 3). The word on
+ * the annunciator is a *theme* decision — HANSA says `STÖRUNG` where KIBA says
+ * `STOP` — and a theme decision has no business in sim state.
+ *
+ * MASTER WARNING is derived from `>= WARN` and MASTER ALARM from `>= ALARM`,
+ * over every fitted component at once. Nothing is hand-wired to a named module,
+ * which is what lets a new component light the dash without editing the dash.
+ */
+export const NOMINAL = 0;
+export const ACTIVE = 1;
+export const WARN = 2;
+export const ALARM = 3;
+export type Condition = typeof NOMINAL | typeof ACTIVE | typeof WARN | typeof ALARM;
+
+/**
  * A number the pilot can turn on a fitted module.
  *
  * Deliberately thin: a bounded number with a name and a unit, nothing else. A
@@ -77,8 +95,23 @@ export interface Module {
    * a pass-through, not a hole. The signal still reaches the terminal.
    */
   enabled: boolean;
+  /**
+   * Safety kit: something whose whole job is to stop you doing what you were
+   * about to do. Bypassing one is a deliberate act with consequences, so its
+   * cell carries no toggle — you have to open the rack and pop the hood.
+   *
+   * It also means a *disabled* slot is not a quiet one: a bypassed guard stands
+   * at WARN until it is put back, which is HANSA behaving exactly as designed.
+   */
+  readonly safety?: boolean;
   /** What this module wants, on its own terms. Null means nothing to say. */
   intent(): TrackCommand | null;
+  /**
+   * How worried to be about this module right now. Optional: a module that does
+   * not answer is read from its own signal — idle is nominal, driving is active,
+   * which is right for anything without an opinion about its own health.
+   */
+  condition?(): Condition;
   /**
    * Numbers this module publishes for its own instrument.
    *
@@ -96,6 +129,13 @@ export interface Module {
 export interface Stage {
   readonly id: string;
   readonly label: string;
+  /**
+   * Carried through so the cockpit can style a slot off a *recording* rather
+   * than off the live rack. It is what lets a replay render in the right house
+   * style, and it is why the dash knows a KIBA machine has a KIBA dashboard
+   * without anything hardcoding that.
+   */
+  readonly maker: string;
   readonly verb: Verb;
   readonly enabled: boolean;
   /** True when the module had nothing to say and simply passed the signal on. */
@@ -103,6 +143,10 @@ export interface Stage {
   readonly output: TrackCommand;
   /** Whatever the module publishes for its instrument. */
   readonly readout?: Readonly<Record<string, number>>;
+  /** What the dash should make of this slot. See `Condition`. */
+  readonly condition: Condition;
+  /** Carried from the module so the cockpit can read it off a recording. */
+  readonly safety: boolean;
 }
 
 export interface BusResult {
@@ -156,13 +200,30 @@ export function runRack(modules: readonly Module[]): BusResult {
     stages.push({
       id: module.id,
       label: module.label,
+      maker: module.maker,
       verb: module.verb,
       enabled: module.enabled,
       idle: intent === null,
       output: signal,
       readout: module.readout?.(),
+      condition: conditionOf(module, intent),
+      safety: module.safety === true,
     });
   }
 
   return { command: signal, stages };
+}
+
+/**
+ * What the dash makes of one slot.
+ *
+ * The one case worth reading twice: a **disabled safety module is not nominal**.
+ * Switching a guard off does not make the machine quiet, it makes it a machine
+ * with a guard switched off — so the slot stands at WARN until you put it back,
+ * and the master warning stays lit while it does. That is the whole "pop the
+ * hood" bargain enforced in four lines, rather than as a rule someone remembers.
+ */
+function conditionOf(module: Module, intent: TrackCommand | null): Condition {
+  if (!module.enabled) return module.safety === true ? WARN : NOMINAL;
+  return module.condition?.() ?? (intent === null ? NOMINAL : ACTIVE);
 }

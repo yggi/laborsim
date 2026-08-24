@@ -19,11 +19,12 @@
  *
  * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
  */
+
+import { styleOf } from "../cockpit/makers.ts";
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
-import { styleOf } from "./makers.ts";
 
 const {
   modules,
@@ -97,16 +98,16 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
       {@const style = styleOf(module.maker)}
       {@const driving = module.enabled && stage && !stage.idle}
       <div
-        class="slot {style.layout}"
+        class="slot {style.layout} mfg-proud mfg-grain"
         class:off={!module.enabled}
         class:idle={stage?.idle}
-        style="--plate: {style.plate}; --bezel: {style.bezel}; --face: {style.face}; --accent: {style.accent}"
+        style="--mfg-plate: {style.plate}; --mfg-bezel: {style.bezel}; --mfg-face: {style.face}; --mfg-accent: {style.accent}; --mfg-active: {style.accent}"
       >
         <!-- Rack ears. Screws, because a thing you can unbolt is a thing
              somebody bolted in. -->
-        <div class="ear">
-          <span class="screw"></span>
-          <span class="screw"></span>
+        <div class="ear mfg-rail">
+          <span class="mfg-screw"></span>
+          <span class="mfg-screw"></span>
         </div>
 
         <div class="plate">
@@ -147,7 +148,17 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         </div>
 
         <div class="controls">
-          <button class="led" onclick={() => toggle(module)} aria-label="enable {module.label}"
+          <!-- The enable lamp, and the one place a bypassed guard can be put
+               back. A maker's accent *is* the active colour for its own kit
+               (`--mfg-active` above), so this lamp stays in house style until
+               something is actually wrong — and warn and alarm are shared,
+               because a caution is not a brand decision. -->
+          <button
+            class="led mfg-lamp"
+            data-lit={module.enabled ? Math.max(1, stage?.condition ?? 1) : 0}
+            onclick={() => toggle(module)}
+            aria-label="enable {module.label}"
+            aria-pressed={module.enabled}
           ></button>
           <button class="verb" onclick={() => cycleVerb(module)} disabled={!module.enabled}>
             {module.verb}
@@ -159,10 +170,10 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
             {#each [["L", stage?.output.left ?? 0], ["R", stage?.output.right ?? 0]] as const as [side, value] (side)}
               <div class="meter">
                 <span class="cap">{side}</span>
-                <span class="bar">
+                <span class="bar mfg-meter">
                   <span
-                    class="fill"
-                    class:rev={value < 0}
+                    class="mfg-meter-fill"
+                    data-rev={value < 0}
                     style="width: {driving ? strength(value) * 100 : 0}%"
                   ></span>
                 </span>
@@ -190,8 +201,11 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
       {#each [["L TRACK", terminal.left], ["R TRACK", terminal.right]] as const as [name, value] (name)}
         <div class="meter">
           <span class="cap">{name}</span>
-          <span class="bar">
-            <span class="fill out" class:rev={value < 0} style="width: {strength(value) * 100}%"
+          <span class="bar mfg-meter">
+            <span
+              class="mfg-meter-fill out"
+              data-rev={value < 0}
+              style="width: {strength(value) * 100}%"
             ></span>
           </span>
           {#if debug}<span class="val">{num(value)}</span>{/if}
@@ -202,12 +216,11 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 </div>
 
 <style>
+  /* In flow, below the dash, inside the travelling deck (App.svelte). The dash
+     is the seam: it is overhead while you are reading this. */
   .rack {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: 26vh;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     background: #14171a;
@@ -216,11 +229,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     color: #c6d0cb;
     padding-bottom: env(safe-area-inset-bottom);
-    /* A pinch of film grain, generated not sampled. The world is allowed to
-       look like a simulation (contour lines); the cockpit is not, so the panels
-       get the wear a real cabinet has. feTurbulence is the old 2D trick, laid
-       over everything at soft-light so it reads as texture, never as dirt. */
-    --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .head {
     display: flex;
@@ -255,56 +263,24 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
 
   /* -- one faceplate ----------------------------------------------------- */
+  /* Proud, grained and railed by the substrate — those are the physics of a
+     panel and they belong to every maker, not to this stylesheet. */
   .slot {
-    position: relative;
     display: flex;
     align-items: stretch;
     gap: 0;
     margin: 4px 5px;
-    background: var(--plate);
+    background: var(--mfg-plate);
     border-radius: 3px;
-    /* Physical: a lit top edge, a shadowed bottom edge, and a real drop so the
-       plate sits proud of the cabinet rather than being painted on it. */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.55),
-      0 2px 4px rgba(0, 0, 0, 0.55);
-  }
-  /* Grain, over the plate but under nothing you touch. */
-  .slot::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 3px;
-    background-image: var(--noise);
-    background-size: 90px 90px;
-    mix-blend-mode: soft-light;
-    opacity: 0.5;
-    pointer-events: none;
   }
   .ear {
     width: 16px;
     flex: none;
-    /* Brushed steel upright, lit from the left the way a real one would be. */
-    background:
-      repeating-linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.05) 0 1px,
-        transparent 1px 3px
-      ),
-      linear-gradient(90deg, #2f3639 0%, var(--bezel) 55%, #0a0d0e 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-evenly;
     padding: 5px 0;
-  }
-  .screw {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #4a5254;
-    box-shadow: inset 0 1px 0 #7d8a8c;
   }
   .order button {
     font: inherit;
@@ -312,7 +288,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     line-height: 1;
     padding: 3px 0;
     width: 14px;
-    color: var(--face);
+    color: var(--mfg-face);
     background: #23282a;
     border: 1px solid #05080a;
   }
@@ -324,7 +300,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     flex: 1;
     min-width: 0;
     padding: 5px 8px;
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--mfg-accent);
     /* Stamped sheet: a faint top highlight and a wash of vent slots. */
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 22%),
@@ -354,7 +330,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     height: 13px;
     flex: none;
     fill: none;
-    stroke: var(--accent);
+    stroke: var(--mfg-accent);
     stroke-width: 1.4;
     stroke-linejoin: round;
   }
@@ -362,12 +338,12 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     margin-top: 2px;
     font-size: 7px;
     letter-spacing: 0.14em;
-    color: color-mix(in srgb, var(--face) 34%, transparent);
+    color: color-mix(in srgb, var(--mfg-face) 34%, transparent);
   }
   .wordmark {
     font-size: 7px;
     letter-spacing: 0.2em;
-    color: var(--accent);
+    color: var(--mfg-accent);
     opacity: 0.85;
     white-space: nowrap;
   }
@@ -375,7 +351,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     white-space: nowrap;
     font-size: 13px;
     letter-spacing: 0.1em;
-    color: var(--face);
+    color: var(--mfg-face);
   }
   .considers {
     font-size: 9px;
@@ -409,12 +385,12 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   /* KIBA: stamped steel, the wordmark punched into the plate. */
   .strip .wordmark {
     padding: 1px 4px;
-    background: color-mix(in srgb, var(--accent) 22%, transparent);
-    border-left: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--mfg-accent) 22%, transparent);
+    border-left: 2px solid var(--mfg-accent);
   }
   /* HANSA: everything in a bordered field, because everything is a rating. */
   .boxed .ident {
-    border: 1px solid var(--accent);
+    border: 1px solid var(--mfg-accent);
     padding: 2px 6px;
     display: inline-flex;
     flex-direction: column;
@@ -453,7 +429,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     border-left-width: 6px;
     border-image: repeating-linear-gradient(
         45deg,
-        var(--accent) 0 4px,
+        var(--mfg-accent) 0 4px,
         #12100c 4px 8px
       )
       1;
@@ -481,13 +457,13 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .pval {
     width: 30px;
     text-align: right;
-    color: var(--face);
+    color: var(--mfg-face);
   }
   .param input {
     flex: 1;
     min-width: 0;
     height: 18px;
-    accent-color: var(--accent);
+    accent-color: var(--mfg-accent);
   }
 
   /* -- controls ---------------------------------------------------------- */
@@ -498,34 +474,22 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     gap: 6px;
     padding: 5px 7px 5px 0;
   }
+  /* Lit, unlit, warn and alarm come from the substrate. Only the size and the
+     maker's idea of a corner radius belong here. */
   .led {
     width: 18px;
     height: 18px;
     flex: none;
     padding: 0;
-    border: 1px solid #05080a;
     border-radius: 2px;
-    background:
-      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
-      var(--accent);
-    box-shadow:
-      0 0 8px var(--accent),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
-  }
-  .idle .led {
-    background: #f0a830;
-    box-shadow: 0 0 8px #f0a830;
-  }
-  .off .led {
-    background: #0d1012;
-    box-shadow: none;
+    cursor: pointer;
   }
   .verb {
     font: inherit;
     font-size: 11px;
     letter-spacing: 0.12em;
     color: #14171a;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, white), var(--accent));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--mfg-accent) 82%, white), var(--mfg-accent));
     border: 1px solid #05080a;
     border-radius: 2px;
     /* A real key: lit top, a seat of shadow under it. */
@@ -567,24 +531,11 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .bar {
     flex: 1;
-    height: 7px;
-    background: #0d1012;
-    border: 1px solid #23282a;
-    display: block;
-    position: relative;
-    overflow: hidden;
   }
-  .fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    background: var(--accent);
-    transition: width 0.08s linear;
-  }
-  .fill.out {
+  /* The terminal is the machine's, not any module's, so it wears machine
+     yellow rather than whoever drove it last. */
+  .out {
     background: #e8b53a;
-  }
-  .fill.rev {
-    background: #e0503c;
   }
   .val {
     width: 34px;

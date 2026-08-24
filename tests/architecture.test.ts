@@ -145,16 +145,31 @@ describe("rule 2 — no transcendental reaches sim state", () => {
 });
 
 describe("rule 3 — the snapshot boundary is one-directional", () => {
-  it("src/ui imports no renderer and no physics", () => {
-    for (const file of filesUnder(join(SRC, "ui"))) {
-      const imports = valueImports(stripComments(readFileSync(file, "utf8")));
-      expect(imports, `${file} reads snapshots, not the scene`).not.toContain("three");
-      expect(
-        imports.filter((s) => s.includes("rapier") || s.includes("/sim/")),
-        `${file} reads snapshots, not the sim`,
-      ).toHaveLength(0);
-    }
-  });
+  // `cockpit` and `sandbox` joined `ui` when the cockpit became a registry of
+  // components rather than a set of panels. They are further from the sim than
+  // `ui` is, not closer, so the same rule applies to all three.
+  it.each(["ui", "cockpit", "sandbox"])(
+    "src/%s imports no renderer and no physics",
+    (tree) => {
+      let dir: string;
+      try {
+        dir = join(SRC, tree);
+        statSync(dir);
+      } catch {
+        return; // tree not created yet
+      }
+      for (const file of filesUnder(dir)) {
+        const imports = valueImports(stripComments(readFileSync(file, "utf8")));
+        expect(imports, `${file} reads snapshots, not the scene`).not.toContain(
+          "three",
+        );
+        expect(
+          imports.filter((s) => s.includes("rapier") || s.includes("/sim/")),
+          `${file} reads snapshots, not the sim`,
+        ).toHaveLength(0);
+      }
+    },
+  );
 
   it("no reactive scene-graph wrapper is installed", () => {
     const manifest = JSON.parse(

@@ -8,7 +8,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import type { Stage } from "../src/control/bus.ts";
+import { ACTIVE, NOMINAL, type Stage } from "../src/control/bus.ts";
 import { CLEARANCE, MAX_TRACK_SPEED, TRACK } from "../src/core/spec.ts";
 import {
   createLedger,
@@ -37,10 +37,13 @@ const prop = (kind: Prop["kind"]): Prop => ({
 const stage = (label: string, enabled: boolean, idle = false): Stage => ({
   id: label,
   label,
+  maker: "KIBA WORKS",
   verb: "SET",
   enabled,
   idle,
   output: { left: 0, right: 0 },
+  condition: enabled && !idle ? ACTIVE : NOMINAL,
+  safety: false,
 });
 
 const blame = (stages: Stage[] = []) => ({ tick: 7, speed: 2.1, stages });
