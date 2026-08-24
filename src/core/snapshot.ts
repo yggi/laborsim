@@ -61,6 +61,17 @@ export interface PropPose {
 export interface Snapshot {
   readonly tick: number;
   readonly simSeconds: number;
+  /**
+   * The seed this world was generated from.
+   *
+   * It belongs here because a recording that cannot rebuild its own world is
+   * not a recording (rule 2 — the seed is part of the recorded scenario), and
+   * it arrived because of a much better reason than that: **the machine's
+   * serial number is the exercise number.** The rig generates the site and
+   * stamps the dataplate in the same breath, so the number riveted to the panel
+   * in front of the operator *is* the world they are about to be tested on.
+   */
+  readonly seed: number;
   readonly machine: MachineState;
   /**
    * The rack, stage by stage, from the top of the rail to the terminal.

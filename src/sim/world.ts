@@ -224,6 +224,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       return {
         tick,
         simSeconds: tick * STEP_SECONDS,
+        seed,
         machine: {
           pose,
           left: machine.left,

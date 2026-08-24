@@ -41,5 +41,32 @@ export function cellFor(id: string): Cell | null {
   return id in CELLS ? (CELLS[id] ?? null) : (BasicCell as Cell);
 }
 
+/**
+ * Rack units — how tall a component's faceplate is.
+ *
+ * A rack is a *standard*, and a standard has a pitch. Plates come in whole
+ * units so the rail reads as a rack of bought equipment rather than a list that
+ * happens to have rows; it also means a maker cannot make its plate taller to
+ * get more attention, which is the failure mode a free-height rail invites.
+ *
+ * Two sizes for now: **1U** for something with nothing to configure, **2U** for
+ * something with settings. A third needs an argument, the same way a fifth verb
+ * does. A component that will not fit its unit has too much on its faceplate —
+ * that is the constraint doing its job, not a layout problem.
+ *
+ * It lives here rather than on `Module` because panel geometry is a cockpit
+ * fact: nothing under `src/modules/` should know how tall it is drawn.
+ */
+export type Units = 1 | 2;
+
+const UNITS: Record<string, Units> = {
+  // Two levers and no settings. It does not need the room.
+  PILOT: 1,
+  NAV: 2,
+  TILT: 2,
+};
+
+export const unitsFor = (id: string): Units => UNITS[id] ?? 2;
+
 /** Ids with a deliberate registry entry, for the conformance tests. */
 export const REGISTERED: readonly string[] = Object.keys(CELLS);

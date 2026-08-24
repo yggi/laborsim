@@ -130,7 +130,7 @@ export function createTiltGuard(
     params: [
       param(
         "pitch",
-        "PITCH LIM",
+        "PITCH",
         () => pitchLimit,
         (v) => {
           pitchLimit = v;
@@ -138,7 +138,7 @@ export function createTiltGuard(
       ),
       param(
         "roll",
-        "ROLL LIM",
+        "ROLL",
         () => rollLimit,
         (v) => {
           rollLimit = v;

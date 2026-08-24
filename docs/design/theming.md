@@ -25,6 +25,15 @@ here. Three rules, in order of how often they are broken:
 3. **The lens is the state.** Colour and position, not words. Dark is not
    running, lit is running, amber and red mean what they always mean. You read a
    panel the way you read a room, not the way you read a page.
+4. **A number reads out in segments or in drums.** Those are the two ways a
+   panel shows a number. Set text on a coloured rectangle is a third way and it
+   belongs to websites. `Seg` draws real seven-segment digits — unlit bars and
+   all, because the ghost is what the eye reads as an LED — and the hour meter
+   turns mechanical wheels, which is what an hour meter does.
+5. **Every indicator carries its component's name.** No exceptions: a lens
+   without a name is a light you have to learn. A manufacturer may style the
+   plate however it likes — HANSA's is heavy-bordered with a warning mark cut
+   into it — but it may not omit it, and it may not make it say something else.
 
 Three registers, each doing exactly one job: **the plate names**, **the lens
 reports**, and **the strip** — the single line of words on the panel — says the
@@ -47,6 +56,13 @@ Each is roughly the footprint of a small instrument or less.
 | **lamp, no toggle** | safety kit: the lens reports, and there is no way to switch it off from here | HANSA |
 | **two-button** | a raise/lower pair with one plate between them — the commonest thing on a KIBA machine after a lamp, for a tool extension | *not built; add by need* |
 | **selector** | a multi-position pointer knob with an arc of positions | *not built* |
+
+A cell is roughly a small instrument's footprint, and it sits in the **same row
+and on the same baseline** as the chassis maker's own controls: plates aligned
+along one line, the controls ragged above it, because the labels were fitted in
+a row and the hardware was not. An indicator is a control like any other and has
+no strip of its own. `ALARM` and the stop sit at the head of that row, which is
+where the chassis stops speaking and the components start.
 
 ## The three layers, cheapest first
 

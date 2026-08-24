@@ -68,6 +68,13 @@ rack's HALT, and what it was actually detecting was furniture destroying itself
 on spawn. A bite check proves the code path ran, not that the scenario happened.
 Assert the scenario too — here, that the impact speed was non-zero.
 
+**A scripted edit that matches nothing fails silently.**
+Two `str.replace` edits in one round did nothing at all, because the formatter
+had reflowed the file since the string was written. One of them removed the
+dash's background and left the overlay that was meant to replace it, turning the
+whole panel black — and the tests, types and lint stayed green, because nothing
+about it was wrong, it just was not there. Any scripted edit asserts it matched.
+
 **Verify by exit code, not by grepping output.**
 A deploy failed on formatting because the local check grepped for `lint/` rule
 hits and a formatter diagnostic does not match that pattern.
@@ -84,19 +91,14 @@ the route changed — because the first pin can be *behind* the machine. It was
 testing an accident of layout. Assert the thing you mean: the range to the pin
 closes.
 
-**Screenshots catch what CI cannot.**
-Build green, tests green, and the cab view was a solid black wall — an ink shell
-seen from inside. Then a cyan wall: an opaque windscreen 0.47 m from the eye.
-Neither is expressible as an assertion. Look at the thing.
-
-**Build the bench before authoring against it, not after.**
-Corollary, and it has its own scar: a dash was written blind over an hour, read
-correctly in code, typechecked and passed 104 tests — and the first screenshot
-showed the whole instrument cluster scrolled off at 390 px, leaving a
-speedometer. Two more defects fell out of the same loop in minutes. Looking is
-only reliable when it is *cheap*: a fixture bench that boots without the physics
-engine turns "look at it" from a thing you intend to do into a thing you do
-every edit. Build it first when the work is visual.
+**Screenshots catch what CI cannot — so make looking cheap first.**
+Build green, tests green, and the cab view was a solid black wall: an ink shell
+seen from inside. Then a cyan wall — an opaque windscreen 0.47 m from the eye.
+Neither is expressible as an assertion. Re-earned on the dash, which was written
+blind for an hour, read correctly, typechecked, passed 104 tests, and put the
+whole instrument cluster off-screen at 390 px. Two more defects fell out of the
+same loop within minutes of a bench existing. Looking is only reliable when it
+costs nothing, so when the work is visual, build the fixture bench *first*.
 
 ## Design
 

@@ -108,6 +108,8 @@ export function snapshotOf(
   return {
     tick: 4200,
     simSeconds: over.seconds ?? 1147,
+    // The dataplate reads this as the machine's serial.
+    seed: 20260823,
     machine: {
       pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
       left: track({

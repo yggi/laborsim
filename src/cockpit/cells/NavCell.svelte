@@ -15,6 +15,7 @@
  * Architecture rule 3: reads a stage off a snapshot, reports intent up.
  */
 import type { CellProps } from "../cell.ts";
+import Seg from "../Seg.svelte";
 
 const { stage, style, onToggle }: CellProps = $props();
 
@@ -41,9 +42,7 @@ const pad = (n: number) => n.toFixed(0).padStart(2, "0");
       aria-label="enable {stage.label}"
       aria-pressed={stage.enabled}
     ></button>
-    <span class="counter" class:live={stage.enabled}>
-      {stage.enabled ? pad(target + 1) : "--"}
-    </span>
+    <Seg value={stage.enabled ? pad(target + 1) : ""} mask="88" />
   </div>
   <span class="mfg-legend">{stage.label}</span>
 </div>
@@ -68,23 +67,5 @@ const pad = (n: number) => n.toFixed(0).padStart(2, "0");
     padding: 0;
     border-radius: 50%;
     cursor: pointer;
-  }
-  /* A moulded window with two drums' worth of segments behind it. Rounder and
-     glossier than anything KIBA would have made. */
-  .counter {
-    padding: 2px 3px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, #0d1416, #131d1f);
-    border: 1px solid #05090a;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
-    color: color-mix(in srgb, var(--mfg-accent) 30%, transparent);
-    font-size: 10px;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-  }
-  .counter.live {
-    color: var(--mfg-accent);
-    text-shadow: 0 0 5px var(--mfg-accent);
   }
 </style>

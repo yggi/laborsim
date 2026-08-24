@@ -25,6 +25,7 @@
  * the ban in rule 2 is on transcendentals that close a loop back into the sim,
  * and nothing here ever reaches it.
  */
+import Seg from "../cockpit/Seg.svelte";
 import type { Snapshot } from "../core/snapshot.ts";
 
 const { snapshot, size = 62 }: { snapshot: Snapshot | undefined; size?: number } =
@@ -62,6 +63,13 @@ const CARDINALS = [
   <svg viewBox="0 0 100 100" role="img" aria-label="heading and attitude">
     <defs>
       <clipPath id="att0-ball"><circle cx="50" cy="50" r="27" /></clipPath>
+      <!-- Brushed metal: a diagonal sweep with the light coming from the same
+           corner it comes from everywhere else on this panel. -->
+      <linearGradient id="mfg-brushed-att" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#d6d9da" />
+        <stop offset="0.42" stop-color="#b4b9bb" />
+        <stop offset="1" stop-color="#8f9497" />
+      </linearGradient>
     </defs>
 
     <!-- Same white square bezel and corner screws as the needle gauges: it is
@@ -115,9 +123,7 @@ const CARDINALS = [
   </svg>
   <!-- Wrap *after* rounding: 359.6° rounds to 360, and a compass never reads
        360. It reads 000, the same as every real one. -->
-  <div class="read">
-    {(Math.round(heading) % 360).toFixed(0).padStart(3, "0")}&deg;
-  </div>
+  <Seg value={(Math.round(heading) % 360).toFixed(0).padStart(3, "0")} />
 </div>
 
 <style>
@@ -133,13 +139,15 @@ const CARDINALS = [
     width: 100%;
     height: auto;
   }
+  /* Brushed silver, lit from above-left. Instrument bezels are pressed metal;
+     the cream ones read as plastic, which is a different decade. */
   .bezel {
-    fill: #e9e4d6;
-    stroke: #b7b0a0;
+    fill: url(#mfg-brushed-att);
+    stroke: #6e7376;
     stroke-width: 1;
   }
   .screw {
-    fill: #8f887a;
+    fill: #767b7e;
   }
   .dial {
     fill: #16181a;
@@ -179,15 +187,5 @@ const CARDINALS = [
   }
   .lubber {
     fill: #e8b53a;
-  }
-  .read {
-    margin-top: 1px;
-    font-weight: 700;
-    font-size: 8px;
-    color: #efe6cf;
-    background: #2a2418;
-    border-radius: 2px;
-    padding: 1px 0;
-    font-variant-numeric: tabular-nums;
   }
 </style>

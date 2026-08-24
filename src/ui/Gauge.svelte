@@ -12,18 +12,23 @@
  *
  * Architecture rule 3: pure presentation, no snapshot, no sim.
  */
+import Seg from "../cockpit/Seg.svelte";
+
 const {
   label,
   frac,
   display,
+  mask = "888",
   danger = 0.85,
   size = 58,
 }: {
   label: string;
   /** 0..1; clamped. Where the needle points. */
   frac: number;
-  /** The number under the dial, already formatted with its unit. */
+  /** The number under the dial. Bare — its unit is engraved on the plate. */
   display: string;
+  /** The readout window, as every segment lit. See `Seg`. */
+  mask?: string;
   /** Fraction at which the red band begins. 1 = no red. */
   danger?: number;
   size?: number;
@@ -54,6 +59,15 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
 
 <div class="gauge" style="width: {size}px">
   <svg viewBox="0 0 100 100" role="img" aria-label="{label} {display}">
+    <defs>
+      <!-- Brushed metal: a diagonal sweep with the light coming from the same
+           corner it comes from everywhere else on this panel. -->
+      <linearGradient id="mfg-brushed-gauge" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#d6d9da" />
+        <stop offset="0.42" stop-color="#b4b9bb" />
+        <stop offset="1" stop-color="#8f9497" />
+      </linearGradient>
+    </defs>
     <!-- White square bezel with a screw in each corner. -->
     <rect class="bezel" x="2" y="2" width="96" height="96" rx="7" />
     {#each [[10, 10], [90, 10], [10, 90], [90, 90]] as const as [cx, cy] (cx + "," + cy)}
@@ -78,7 +92,7 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     </g>
     <circle class="hub" cx="50" cy="50" r="5" />
   </svg>
-  <div class="read">{display}</div>
+  <Seg value={display} {mask} />
 </div>
 
 <style>
@@ -94,13 +108,15 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     width: 100%;
     height: auto;
   }
+  /* Brushed silver, lit from above-left. Instrument bezels are pressed metal;
+     the cream ones read as plastic, which is a different decade. */
   .bezel {
-    fill: #e9e4d6;
-    stroke: #b7b0a0;
+    fill: url(#mfg-brushed-gauge);
+    stroke: #6e7376;
     stroke-width: 1;
   }
   .screw {
-    fill: #8f887a;
+    fill: #767b7e;
   }
   .dial {
     fill: #16181a;
@@ -136,14 +152,5 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     fill: #d8d2c2;
     stroke: #16181a;
     stroke-width: 1;
-  }
-  .read {
-    margin-top: 1px;
-    font-weight: 700;
-    font-size: 8px;
-    color: #efe6cf;
-    background: #2a2418;
-    border-radius: 2px;
-    padding: 1px 0;
   }
 </style>

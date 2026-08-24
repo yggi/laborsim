@@ -94,48 +94,64 @@ whatever panel the vehicle came with.
 
 ### Layout of the dash
 
-Two rows:
+One wrapping flow. No columns, no scrolling — things are bolted where they fit,
+and a panel that has run out of room grows another row.
 
-1. **The machine instruments** — the chassis maker's own cluster. Identity,
-   master alarm, master warning, the gauges, the key. Authored per chassis.
-2. **The indicator row** — every fitted component's cell, in **rack order**,
-   floated left and wrapping.
+1. **The dataplate and the instruments** — the chassis maker's own cluster,
+   arranged the way aircraft settled it: attitude biggest, in the middle.
+2. **`ALARM`, the stop, and then every fitted component's cell** in rack order,
+   on one baseline. That row *is* the seam: it starts with the two things the
+   chassis says about the whole machine and continues into what is bolted to it.
+3. **The strip** — the one line of words, and the way into the debrief.
+4. **The latch**, pinned along the bottom edge, which is the top of the cabinet.
 
-The indicator row has **no budget and nothing to configure.** Fighting for space
-on three fronts (glass, rack, dash) is one front too many. Cells just work.
+The cells have **no budget and nothing to configure.** Fighting for space on
+three fronts (glass, rack, dash) is one front too many. Cells just work.
 
-### Cell formats
+### Rack units
 
-A small closed set, so auto-placement stays trivial:
+Faceplates come in whole **units**: **1U** for a component with nothing to
+configure, **2U** for one with settings. A rack is a standard and a standard has
+a pitch — without one the rail reads as a list that happens to have rows, and a
+maker can make its plate taller to get more attention.
 
-- **1-cell** (the base case) — a round button/indicator combo with an old-school
-  stuck-on embossed label. Combined disable-toggle and activity light.
-- **small gauge** — a reading, not a control.
-- **two-button** — up/down.
-- **multi-position knob**.
-- **status screen** — a small digital readout. Advanced components only, and it
-  should feel like it cost extra.
+Height is fixed and content is clipped, so a plate that does not fit its unit has
+too much on it. That constraint has already paid: at 2U, TILT-GUARD's rating line
+gives way to its limit sliders, and its sentence goes to one line. A third size
+needs an argument, the same way a fifth verb does.
+
+Where it lives: `src/cockpit/parts.ts`, not on `Module` — panel geometry is a
+cockpit fact and nothing under `src/modules/` should know how tall it is drawn.
+
+## Cell formats
+
+A small closed set, so a component of a kind you have never seen still reads.
+The table and the panel-language rules behind it: `docs/design/theming.md`. The
+base case is **one illuminated pushbutton and one engraved plate**; everything
+else retrofits that.
 
 ## Severity is a number; the word is a theme decision
 
-Today `DashPanel.svelte` reaches into TILT-GUARD's internals to light its lamp.
-That does not scale past three modules and it means every new component edits the
-dash.
+`DashPanel` used to reach into TILT-GUARD's internals to light a lamp. That does
+not scale past three modules, and it meant every new component edited the dash.
 
-Instead: **every module publishes its own condition**, as a number, because
-`Stage.readout` crosses the one-directional snapshot boundary and stays plain
-values (architecture rule 3).
+Instead: **every module publishes its own condition**, as a number, because it
+crosses the one-directional snapshot boundary and everything that crosses stays a
+plain value (architecture rule 3).
 
 ```
 0 nominal · 1 active · 2 warn · 3 alarm
 ```
 
-- **MASTER WARNING** (yellow) lights when any stage is ≥ 2.
-- **MASTER ALARM** (red) lights when any stage is ≥ 3.
+**One** annunciator, not two: off, yellow at ≥ 2, red at ≥ 3, over the chassis
+and every fitted component at once. The *rhythm* carries what a second lamp
+would have — fast for an unacknowledged alarm, slow for an unacknowledged
+caution, steady once pressed. It is **push-to-acknowledge**, so you can tell the
+panel you have heard it but not make it stop: the lamp goes dark only when the
+condition clears.
 
-Both are derived, never hand-wired. The *word* on the annunciator is not in the
-snapshot — it is a theme decision, so HANSA says `STÖRUNG` where KIBA says `STOP`
-and TOWA says something backlit and reassuring.
+The *word* is never in the snapshot — it is a theme decision, so HANSA says
+`ÜBERBRÜCKT` where KIBA says `OFF`.
 
 ### A maker has a lexicon and a voice
 

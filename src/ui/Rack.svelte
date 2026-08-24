@@ -24,6 +24,7 @@
  */
 
 import { styleOf } from "../cockpit/makers.ts";
+import { unitsFor } from "../cockpit/parts.ts";
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
@@ -82,6 +83,15 @@ function setParam(module: Module, param: Param, value: number) {
   shown[keyOf(module, param)] = param.get();
 }
 
+/**
+ * The fuse carrier at the bottom of the cabinet. Fixed, not random: rule 2 bans
+ * `Math.random` anywhere sim-visible, and while a decorative fuse is not sim
+ * state, a cockpit that reshuffles itself between replays of the same run is
+ * exactly the kind of thing that makes a recording untrustworthy. One blown
+ * fuse, always the same one, because a machine this old has one.
+ */
+const FUSES = [1, 1, 0, 1, 1, 1, 1, 1];
+
 const stageOf = (id: string): Stage | undefined => stages.find((s) => s.id === id);
 const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 </script>
@@ -97,10 +107,12 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
       {@const stage = stageOf(module.id)}
       {@const style = styleOf(module.maker)}
       {@const driving = module.enabled && stage && !stage.idle}
+      {@const units = unitsFor(module.id)}
       <div
         class="slot {style.layout} mfg-proud mfg-grain"
         class:off={!module.enabled}
         class:idle={stage?.idle}
+        data-u={units}
         style="--mfg-plate: {style.plate}; --mfg-bezel: {style.bezel}; --mfg-face: {style.face}; --mfg-accent: {style.accent}; --mfg-active: {style.accent}"
       >
         <!-- Rack ears. Screws, because a thing you can unbolt is a thing
@@ -110,7 +122,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
           <span class="mfg-screw"></span>
         </div>
 
-        <div class="plate">
+        <div class="plate" class:tight={module.params?.length}>
           <div class="ident">
             <!-- The maker's mark. Graphic design belongs in SVG, not in more
                  CSS — see docs/design/instrument-rendering.md. -->
@@ -193,6 +205,43 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         </div>
       </div>
     {/each}
+
+    <!-- The bottom of the cabinet. Not decoration: it is the thing that says
+         you have your head *under the hood* rather than in a menu. Everything
+         above is kit somebody chose; this is what was already in there. -->
+    <div class="furniture" aria-hidden="true">
+      <svg class="loom" viewBox="0 0 300 120" preserveAspectRatio="none">
+        <defs>
+          <filter id="loom-blur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.6" />
+          </filter>
+        </defs>
+        <!-- A loom dropping out of the plates above and disappearing behind
+             the terminal. Out of focus, because your eyes are on the plates. -->
+        <g filter="url(#loom-blur)">
+          <path d="M42 -10 C46 30 22 52 30 92 C34 112 30 118 26 130" />
+          <path class="brown" d="M58 -10 C62 26 38 56 48 96 C52 116 50 122 46 132" />
+          <path class="blue" d="M74 -10 C80 34 58 60 70 100 C74 118 74 124 70 134" />
+          <path d="M262 -10 C256 28 274 54 266 94 C262 114 266 120 270 130" />
+          <path class="brown" d="M246 -10 C240 32 258 62 250 98 C246 118 248 124 252 132" />
+        </g>
+        <!-- The tie that holds it to the cabinet wall. -->
+        <rect class="tie" x="24" y="62" width="56" height="5" rx="2" />
+        <rect class="tie" x="238" y="66" width="40" height="5" rx="2" />
+      </svg>
+
+      <!-- A fuse carrier. The most boring object in any machine, and the one
+           that most says a machine is what you are looking into. -->
+      <div class="fusebox">
+        <span class="fusebox-lip"></span>
+        <div class="fuses">
+          {#each FUSES as fuse, i (i)}
+            <span class="fuse" class:blown={fuse === 0}></span>
+          {/each}
+        </div>
+        <span class="mfg-legend fuse-plate">FUSES 15A</span>
+      </div>
+    </div>
   </div>
 
   <div class="terminal">
@@ -254,14 +303,31 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 
   /* -- one faceplate ----------------------------------------------------- */
   /* Proud, grained and railed by the substrate — those are the physics of a
-     panel and they belong to every maker, not to this stylesheet. */
+     panel and they belong to every maker, not to this stylesheet.
+
+     A rack has a pitch, so plates are whole units tall (docs: parts.ts). The
+     height is fixed and the content is clipped: a faceplate that does not fit
+     its unit has too much on it, which is the standard doing its job. */
   .slot {
+    --u: 46px;
     display: flex;
     align-items: stretch;
     gap: 0;
     margin: 4px 5px;
     background: var(--mfg-plate);
     border-radius: 3px;
+    overflow: hidden;
+  }
+  .slot[data-u="1"] {
+    height: var(--u);
+  }
+  .slot[data-u="2"] {
+    height: calc(var(--u) * 2);
+  }
+  /* At one unit there is no room for the rating line, and it is the least
+     load-bearing thing on the plate. */
+  .slot[data-u="1"] .silkscreen {
+    display: none;
   }
   .ear {
     width: 16px;
@@ -326,6 +392,9 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .silkscreen {
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 7px;
     letter-spacing: 0.14em;
     color: color-mix(in srgb, var(--mfg-face) 34%, transparent);
@@ -347,6 +416,13 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font-size: 9px;
     color: #78827f;
     margin-top: 0;
+    /* Two lines at most. The sentence matters (it is the attribution rule on
+       the faceplate), but not enough to push a plate past its unit. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
   }
 
   /* House styles. Same parts, arranged the way each maker arranges them. */
@@ -426,11 +502,33 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
 
   /* -- settings ---------------------------------------------------------- */
+  /**
+   * A plate with settings loses its rating line.
+   *
+   * Two units is two units. Something has to give, and the silkscreen is the
+   * least load-bearing thing on a faceplate — it is a part number, and HANSA's
+   * standard is on its dashboard plate anyway. The settings are the reason the
+   * component has a second unit in the first place.
+   *
+   * The first attempt split the plate into identity-left / settings-right, the
+   * way a real faceplate with pots is arranged. It overlapped at 390px, because
+   * a bordered identity block will not shrink below its own text. Worth knowing
+   * before anyone tries it again on a wider chassis.
+   */
+  .plate.tight .silkscreen {
+    display: none;
+  }
+  /* And one line of prose rather than two. The sentence still lands; a
+     component with knobs has simply spent its second unit on the knobs. */
+  .plate.tight .considers {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
   .params {
-    margin-top: 5px;
+    margin-top: 4px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
   }
   .param {
     display: flex;
@@ -441,18 +539,21 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     color: #78827f;
   }
   .plabel {
-    width: 58px;
+    width: 32px;
     flex: none;
+    font-size: 7px;
+    white-space: nowrap;
   }
   .pval {
-    width: 30px;
+    width: 22px;
     text-align: right;
     color: var(--mfg-face);
+    font-size: 7px;
   }
   .param input {
     flex: 1;
     min-width: 0;
-    height: 18px;
+    height: 14px;
     accent-color: var(--mfg-accent);
   }
 
@@ -532,6 +633,87 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     text-align: right;
     color: #6d7a76;
   }
+  /* -- cabinet furniture ------------------------------------------------- */
+  .furniture {
+    position: relative;
+    height: 120px;
+    margin: 10px 5px 0;
+    pointer-events: none;
+  }
+  .loom {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .loom path {
+    fill: none;
+    stroke: #0a0c0d;
+    stroke-width: 3.5;
+    opacity: 0.85;
+  }
+  .loom .brown {
+    stroke: #241a12;
+    stroke-width: 2.8;
+  }
+  .loom .blue {
+    stroke: #101d2a;
+    stroke-width: 2.4;
+  }
+  .loom .tie {
+    fill: #171b1d;
+    stroke: #0a0c0d;
+    stroke-width: 1;
+  }
+  .fusebox {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 9px 6px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #23282a, #14181a);
+    border: 1px solid #0a0d0e;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 3px 6px rgba(0, 0, 0, 0.6);
+  }
+  .fusebox-lip {
+    width: 30px;
+    height: 3px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(90deg, #4a5254 0 2px, #23282a 2px 4px);
+  }
+  .fuses {
+    display: flex;
+    gap: 3px;
+  }
+  /* A glass cartridge with a metal cap at each end. */
+  .fuse {
+    width: 6px;
+    height: 17px;
+    border-radius: 1px;
+    background:
+      linear-gradient(180deg, #8d9698 0 4px, transparent 4px calc(100% - 4px), #8d9698 0),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent 55%),
+      #b98a2a;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.6);
+  }
+  /* The one that has gone. Every machine has one. */
+  .fuse.blown {
+    background:
+      linear-gradient(180deg, #8d9698 0 4px, transparent 4px calc(100% - 4px), #8d9698 0),
+      #33302a;
+  }
+  .fuse-plate {
+    font-size: 5px;
+    letter-spacing: 0.14em;
+  }
+
   .terminal {
     display: flex;
     align-items: center;

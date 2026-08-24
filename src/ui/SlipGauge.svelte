@@ -18,6 +18,7 @@
  *
  * Architecture rule 3: reads a snapshot.
  */
+import Seg from "../cockpit/Seg.svelte";
 import type { Snapshot } from "../core/snapshot.ts";
 
 const { snapshot, size = 54 }: { snapshot: Snapshot | undefined; size?: number } =
@@ -57,7 +58,7 @@ const worst = $derived(
       </div>
     {/each}
   </div>
-  <div class="read">{worst.toFixed(1)}</div>
+  <Seg value={worst.toFixed(1)} mask="8.8" />
 </div>
 
 <style>
@@ -69,9 +70,11 @@ const worst = $derived(
     color: #2a2418;
   }
   /* Same white bezel and dark face as the needle gauges beside it. */
+  /* Same brushed silver as the dials beside it, in CSS because this face is a
+     box rather than an SVG. */
   .face {
-    background: #e9e4d6;
-    border: 1px solid #b7b0a0;
+    background: linear-gradient(148deg, #d3d6d7 0%, #b3b8ba 46%, #969b9e 100%);
+    border: 1px solid #6e7376;
     border-radius: 4px;
     padding: 4px 4px 5px;
   }
@@ -85,14 +88,14 @@ const worst = $derived(
     width: 5px;
     flex: none;
     font-size: 6px;
-    color: #4a4230;
+    color: #2f3335;
   }
   .track {
     flex: 1;
     position: relative;
     height: 8px;
     background: #16181a;
-    border: 1px solid #8f887a;
+    border: 1px solid #70767a;
     overflow: hidden;
   }
   .centre {
@@ -117,15 +120,5 @@ const worst = $derived(
      than just getting longer — that is the reading you take peripherally. */
   .fill.hot {
     background: #e0503c;
-  }
-  .read {
-    margin-top: 1px;
-    font-weight: 700;
-    font-size: 8px;
-    color: #efe6cf;
-    background: #2a2418;
-    border-radius: 2px;
-    padding: 1px 0;
-    font-variant-numeric: tabular-nums;
   }
 </style>

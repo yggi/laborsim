@@ -47,8 +47,8 @@ const tenth = $derived(Math.floor((hours % 1) * 10).toFixed(0));
     display: flex;
     gap: 1px;
     padding: 2px;
-    background: #d8d2c2;
-    border: 1px solid #8f887a;
+    background: linear-gradient(148deg, #cdd0d1, #a6abad);
+    border: 1px solid #6e7376;
     border-radius: 2px;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
   }

@@ -110,8 +110,18 @@ $effect(() => {
 });
 const unacked = $derived(overall > acked);
 
-const alarmLit = $derived(isAlarm(overall));
-const warnLit = $derived(isWarning(overall));
+/**
+ * **One** annunciator, not two.
+ *
+ * Off, yellow, red — and the *rhythm* carries what a second lamp used to: fast
+ * for an unacknowledged alarm, slow for an unacknowledged caution, steady once
+ * you have pressed it. Two lamps meant two things could be lit at once saying
+ * the same thing, which is a dashboard talking to itself.
+ */
+const alarmLit = $derived(isAlarm(overall) ? ALARM : isWarning(overall) ? WARN : 0);
+const flash = $derived(
+  !unacked || alarmLit === 0 ? undefined : alarmLit === ALARM ? "fast" : "slow",
+);
 
 /** Cells, in rack order. A component with no registered cell contributes none. */
 const cells = $derived(
@@ -121,16 +131,30 @@ const cells = $derived(
 );
 </script>
 
-<div class="dash" class:up={rackOpen} bind:clientHeight={height}>
+<div class="dash mfg-sheet" class:up={rackOpen} bind:clientHeight={height}>
   <!-- Hazard trim along the top edge, the way a real panel is labelled. -->
   <div class="hazard mfg-hazard"></div>
 
   <!-- One flow. Groups are bolted where they fit and the panel wraps. -->
   <div class="panel">
+    <!-- The machine's dataplate. Riveted, not screwed: it names the machine
+         rather than a control, so it outlives everything bolted around it.
+
+         The serial **is the world seed**. The rig stamps the machine and
+         generates the site in the same breath, so the number riveted in front
+         of the operator is the exercise they are about to be tested on — and
+         two operators comparing serials are comparing worlds. -->
     <div class="group ident">
-      <span class="mfg-legend nameplate">
-        {house.wordmark}<br /><b>{house.plateText.split(" · ")[0]}</b>
-      </span>
+      <div class="mfg-dataplate plate">
+        <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
+          <path d={house.mark} />
+        </svg>
+        <div class="fields">
+          <b>{house.wordmark}</b>
+          <span>TYPE 3A</span>
+          <span class="sn">S/N 3A-{(snapshot?.seed ?? 0).toString(36).toUpperCase()}</span>
+        </div>
+      </div>
     </div>
 
     <!-- The cluster. Attitude biggest and in the middle, because that is the
@@ -154,11 +178,11 @@ const cells = $derived(
         <Gauge
           label="traction used"
           frac={grip}
-          display="{(grip * 100).toFixed(0)}%"
+          display={(grip * 100).toFixed(0)}
           danger={0.85}
           size={44}
         />
-        <span class="mfg-legend">GRIP</span>
+        <span class="mfg-legend">GRIP %</span>
       </div>
       <div class="inst">
         <SlipGauge {snapshot} size={46} />
@@ -170,31 +194,21 @@ const cells = $derived(
       </div>
     </div>
 
-    <!-- The bridge: the machine's own thresholds and every component's
-         condition, arriving at two lamps and the thing that stops everything. -->
+    <!-- The seam between the chassis and everything bolted to it: one lamp for
+         anything the machine or any component has to say, the thing that stops
+         it, and then the components themselves — all on one row, all on one
+         grid, plates aligned. -->
     <div class="group alarms">
       <div class="inst">
         <button
           class="master mfg-lamp"
-          data-lit={alarmLit ? ALARM : 0}
-          data-flash={alarmLit && unacked}
+          data-lit={alarmLit}
+          data-flash={flash}
           onclick={() => (acked = overall)}
-          aria-label="master alarm, acknowledge"
+          aria-label="alarm, acknowledge"
           aria-pressed={!unacked}
         ></button>
-        <span class="mfg-legend" data-danger="true">MASTER ALARM</span>
-      </div>
-
-      <div class="inst">
-        <button
-          class="master mfg-lamp"
-          data-lit={warnLit ? WARN : 0}
-          data-flash={warnLit && unacked}
-          onclick={() => (acked = overall)}
-          aria-label="master warning, acknowledge"
-          aria-pressed={!unacked}
-        ></button>
-        <span class="mfg-legend">MASTER WARNING</span>
+        <span class="mfg-legend" data-danger="true">ALARM</span>
       </div>
 
       <div class="inst">
@@ -210,21 +224,18 @@ const cells = $derived(
         </button>
         <span class="mfg-legend" data-danger="true">EMERGENCY STOP</span>
       </div>
-    </div>
 
-    <!-- Everybody else's kit, bolted onto this panel in rack order. -->
-    {#each cells as entry (entry.stage.id)}
-      {@const Cell = entry.cell}
-      {#if Cell}
-        <div class="group">
+      {#each cells as entry (entry.stage.id)}
+        {@const Cell = entry.cell}
+        {#if Cell}
           <Cell
             stage={entry.stage}
             style={styleOf(entry.stage.maker)}
             onToggle={() => onToggleModule(entry.stage.id)}
           />
-        </div>
-      {/if}
-    {/each}
+        {/if}
+      {/each}
+    </div>
   </div>
 
   <!-- The one line of words on the panel, and the way into the account. -->
@@ -244,8 +255,10 @@ const cells = $derived(
     /* In flow inside the travelling deck (App.svelte). Not fixed: the whole
        point is that this object moves between the two postures. */
     flex: none;
-    /* CAT-yellow sheet steel, lit from above, with a beaten lower edge. */
-    background: linear-gradient(180deg, #e6b52c 0%, #d8a521 42%, #b9871a 100%);
+    /* CAT-yellow sheet steel. `mfg-sheet` lays the light, the brush and the
+       shaded lower edge over this base — the substrate owns how pressed steel
+       behaves, this owns what colour it was painted. */
+    --mfg-sheet-base: linear-gradient(180deg, #e6b52c 0%, #d8a521 42%, #b9871a 100%);
     border-top: 2px solid #7c5a10;
     box-shadow:
       inset 0 2px 0 rgba(255, 255, 255, 0.25),
@@ -289,10 +302,13 @@ const cells = $derived(
     align-items: flex-end;
   }
   /* Plates on one line, controls ragged above it — so the stop stands taller
-     than the lamps, which is exactly what it does on a real panel. */
+     than the lamps and HANSA's beacon taller again, which is exactly what they
+     do on a real panel. Cells are in this row too: an indicator is a control
+     like any other and belongs on the same grid, not in a strip of its own. */
   .alarms {
-    gap: 8px;
+    gap: 10px;
     align-items: flex-end;
+    flex-wrap: wrap;
   }
   /* A mounted thing and the plate that names it. */
   .inst {
@@ -306,15 +322,36 @@ const cells = $derived(
   .ident {
     align-self: center;
   }
-  .nameplate {
-    font-size: 6px;
-    line-height: 1.8;
-    letter-spacing: 0.2em;
-    padding: 3px 6px;
+  /* The dataplate: the maker's mark stamped beside engraved fields. */
+  .plate {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 12px;
   }
-  .nameplate b {
+  .mark {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    fill: none;
+    stroke: #2b2822;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .fields {
+    display: flex;
+    flex-direction: column;
+    font-size: 6px;
+    line-height: 1.6;
+    letter-spacing: 0.18em;
+  }
+  .fields b {
     font-size: 7px;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.14em;
+  }
+  .sn {
+    color: #4c4840;
+    letter-spacing: 0.12em;
   }
 
   /* -- the masters -------------------------------------------------------- */
