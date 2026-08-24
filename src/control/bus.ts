@@ -87,7 +87,17 @@ export interface Module {
    * assembled rather than as a menu the game drew.
    */
   readonly maker: string;
-  /** One honest sentence about what this module considers. */
+  /**
+   * One honest sentence about what this module considers — and, by omission,
+   * what it is blind to. Every automation module gets one, because a player
+   * should be able to learn a component's envelope by watching rather than by
+   * reading a tooltip.
+   *
+   * **It is not on the faceplate.** A module carries a manufacturer's label, not
+   * a slogan, and a rack of plates each explaining itself in prose reads as a
+   * form rather than as equipment. This belongs in the debrief, which is the one
+   * place the machine is allowed to use words.
+   */
   readonly considers: string;
   verb: Verb;
   /**

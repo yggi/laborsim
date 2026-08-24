@@ -53,10 +53,12 @@ the fuse you power it through.*
 
 Now the slot supplies both rails, identically for everyone:
 
-- **Left — power.** A cartridge fuse in a holder, the same object as the carrier
-  at the bottom of the cabinet. Pulling it is how a component goes off, and it
-  sits proud of its holder when pulled. The ears are here too, because unbolting
-  them is how you move a plate up or down the rack.
+- **Left — power.** A **blade fuse**, colour-coded by rating to the standard
+  automotive table, so a component's current draw is legible across the cabinet
+  without printing a number anywhere: the drive controls take the big green
+  thirty, guidance sips five, a guard sits on ten. Beside it a circuit lamp and
+  a brass screw terminal, with the wire leaving into the dark. Pulling the fuse
+  is how a component goes off, and it lifts clear of its holder when pulled.
 - **Right — the bus.** How this component folds into the signal, and what comes
   out of it. The mode switch is **under a hinged cover**: what a fitted component
   does to the drive is not something a thumb should change in passing. The cover
@@ -67,6 +69,26 @@ A module owns its **style** and its **face** — an optional interface that is
 genuinely its own (`src/cockpit/face.ts`). Most have none; a plate with an
 identity and two limit sliders is a complete plate. NAV-1 has one, because TOWA
 cannot help itself.
+
+## Marks, not prose
+
+A faceplate carries its manufacturer's label. It does not carry a slogan, and it
+does not explain itself: a rack of plates each with a sentence on it reads as a
+form. What a real part carries instead is **marks** — a test-house roundel, a
+parts-bin barcode, an inspector's stamp — and those are most of what separates a
+photograph of a machine from a drawing of one, precisely because nobody
+*designed* them onto it. They arrive from three different places, in three
+typefaces, each stuck slightly crooked.
+
+`Decal` generates them, seeded off the component id so a part carries the same
+certification in every run and every replay. Kinds: `pruef`, `rating`, `qc`,
+`bar`. Which one a maker uses is characterisation — HANSA has been to a test
+house and will not let you forget it, TOWA came out of a parts bin, KIBA stamped
+it passed and moved on.
+
+The one honest sentence about what a component considers still exists on the
+module. It belongs in the **debrief**, which is where this machine is allowed to
+use words.
 
 ## Display primitives
 

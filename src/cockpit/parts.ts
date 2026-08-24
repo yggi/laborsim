@@ -86,5 +86,47 @@ const FACES: Record<string, Face> = {
 
 export const faceFor = (id: string): Face | undefined => FACES[id];
 
+/**
+ * What a slot is fused at, in amps.
+ *
+ * Blade fuses are **colour-coded by rating** — the same code on every vehicle
+ * built since about 1976 — so the rating is legible across the cabinet without
+ * reading anything, and a component's current draw becomes a visible fact about
+ * it. The drive controls take the big green thirty; guidance electronics sip
+ * five; a guard sits in the middle on ten.
+ *
+ * It is characterisation with a real referent, which is the cheapest kind: the
+ * numbers are not invented, they are what you would actually fit.
+ */
+export const AMPS: Record<string, number> = {
+  PILOT: 30,
+  NAV: 5,
+  TILT: 10,
+};
+
+export const ampsFor = (id: string): number => AMPS[id] ?? 15;
+
+/**
+ * The standard blade-fuse colour code. Not a palette decision — this is the
+ * table, and getting it wrong would be like drawing a resistor with the wrong
+ * bands.
+ */
+const FUSE_COLOURS: Record<number, string> = {
+  1: "#2b2b2b",
+  2: "#8a8f92",
+  3: "#7b5aa6",
+  4: "#e79ab5",
+  5: "#c8a06a",
+  7.5: "#7a4a34",
+  10: "#d0342c",
+  15: "#3f7fd0",
+  20: "#e8d13a",
+  25: "#e7e3d8",
+  30: "#3faa63",
+  40: "#e8802c",
+};
+
+export const fuseColour = (amps: number): string => FUSE_COLOURS[amps] ?? "#8a8f92";
+
 /** Ids with a deliberate registry entry, for the conformance tests. */
 export const REGISTERED: readonly string[] = Object.keys(CELLS);

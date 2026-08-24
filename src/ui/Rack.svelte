@@ -23,8 +23,9 @@
  * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
  */
 
+import Decal from "../cockpit/Decal.svelte";
 import { styleOf } from "../cockpit/makers.ts";
-import { faceFor, unitsFor } from "../cockpit/parts.ts";
+import { ampsFor, faceFor, fuseColour, unitsFor } from "../cockpit/parts.ts";
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
@@ -83,15 +84,6 @@ function setParam(module: Module, param: Param, value: number) {
   shown[keyOf(module, param)] = param.get();
 }
 
-/**
- * The fuse carrier at the bottom of the cabinet. Fixed, not random: rule 2 bans
- * `Math.random` anywhere sim-visible, and while a decorative fuse is not sim
- * state, a cockpit that reshuffles itself between replays of the same run is
- * exactly the kind of thing that makes a recording untrustworthy. One blown
- * fuse, always the same one, because a machine this old has one.
- */
-const FUSES = [1, 1, 0, 1, 1, 1, 1, 1];
-
 /** What a face is handed before the first snapshot arrives. */
 const EMPTY_STAGE: Stage = {
   id: "",
@@ -117,6 +109,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
       {@const driving = module.enabled && stage && !stage.idle}
       {@const units = unitsFor(module.id)}
       {@const Face = faceFor(module.id)}
+      {@const amps = ampsFor(module.id)}
       <div
         class="slot {style.layout} mfg-proud mfg-grain"
         class:off={!module.enabled}
@@ -125,29 +118,32 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         style="--mfg-plate: {style.plate}; --mfg-bezel: {style.bezel}; --mfg-face: {style.face}; --mfg-accent: {style.accent}; --mfg-active: {style.accent}"
       >
         <!-- POWER. The slot's, not the module's: nobody ships the fuse you
-             power them through. Pulling it is how a component goes off. -->
+             power them through. Pulling it is how a component goes off, and the
+             colour is the standard blade-fuse code, so the rating reads across
+             the cabinet without anybody printing a number anywhere. -->
         <div class="rail power mfg-rail">
           <button
             class="fuse"
             class:pulled={!module.enabled}
+            style="--fuse: {fuseColour(amps)}"
             onclick={() => toggle(module)}
             aria-label="enable {module.label}"
             aria-pressed={module.enabled}
           >
-            <span class="cap"></span>
-            <span class="glass" data-lit={module.enabled ? Math.max(1, stage?.condition ?? 1) : 0}></span>
-            <span class="cap"></span>
+            <span class="blade"></span>
+            <span class="body">{amps}</span>
+            <span class="blade"></span>
           </button>
 
-          <!-- Where the plate is bolted, and therefore where you move it. -->
-          <div class="order">
-            <button onclick={() => move(i, -1)} disabled={i === 0} aria-label="move up">▲</button>
-            <button
-              onclick={() => move(i, 1)}
-              disabled={i === modules.length - 1}
-              aria-label="move down">▼</button
-            >
-          </div>
+          <!-- The circuit lamp, beside its fuse the way a fused distribution
+               block has one per way. -->
+          <span
+            class="circuit mfg-lamp"
+            data-lit={module.enabled ? Math.max(1, stage?.condition ?? 1) : 0}
+          ></span>
+
+          <!-- The terminal, and the wire going off into the cabinet. -->
+          <span class="terminal-screw"></span>
         </div>
 
         <div class="plate" class:tight={module.params?.length}>
@@ -160,7 +156,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
             <span class="wordmark">{style.wordmark}</span>
             <span class="name">{module.label}</span>
           </div>
-          <div class="considers">{module.considers}</div>
           <div class="silkscreen">{style.plateText}</div>
 
           {#if module.params?.length}
@@ -184,6 +179,20 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
                 </label>
               {/each}
             </div>
+          {/if}
+        </div>
+
+        <!-- What the plate carries instead of a sentence: the marks a real part
+             accumulates. HANSA has been to a test house and will not let you
+             forget it; TOWA came out of a parts bin with a barcode on it; KIBA
+             stamped it as passed and moved on. -->
+        <div class="marks">
+          {#if module.maker === "HANSA REGELTECHNIK"}
+            <Decal kind="pruef" seed={module.id} tint={style.accent} width={24} />
+          {:else if module.maker === "TOWA DENKI"}
+            <Decal kind="bar" seed={module.id} width={30} />
+          {:else}
+            <Decal kind="qc" seed={module.id} tint={style.accent} width={28} />
           {/if}
         </div>
 
@@ -224,6 +233,15 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
             {/each}
           </div>
 
+          <div class="order">
+            <button onclick={() => move(i, -1)} disabled={i === 0} aria-label="move up">▲</button>
+            <button
+              onclick={() => move(i, 1)}
+              disabled={i === modules.length - 1}
+              aria-label="move down">▼</button
+            >
+          </div>
+
         </div>
       </div>
     {/each}
@@ -252,17 +270,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         <rect class="tie" x="238" y="66" width="40" height="5" rx="2" />
       </svg>
 
-      <!-- A fuse carrier. The most boring object in any machine, and the one
-           that most says a machine is what you are looking into. -->
-      <div class="fusebox">
-        <span class="fusebox-lip"></span>
-        <div class="fuses">
-          {#each FUSES as fuse, i (i)}
-            <span class="fuse" class:blown={fuse === 0}></span>
-          {/each}
-        </div>
-        <span class="mfg-legend fuse-plate">FUSES 15A</span>
-      </div>
     </div>
   </div>
 
@@ -399,18 +406,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     letter-spacing: 0.1em;
     color: var(--mfg-face);
   }
-  .considers {
-    font-size: 9px;
-    color: #78827f;
-    margin-top: 0;
-    /* Two lines at most. The sentence matters (it is the attribution rule on
-       the faceplate), but not enough to push a plate past its unit. */
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-  }
 
   /* House styles. Same parts, arranged the way each maker arranges them. */
   /* TOWA: centred, glassy, consumer-electronics. */
@@ -419,7 +414,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     align-items: center;
     gap: 0;
   }
-  .stack .considers,
   .stack .silkscreen {
     text-align: center;
   }
@@ -493,10 +487,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   /* And one line of prose rather than two. The sentence still lands; a
      component with knobs has simply spent its second unit on the knobs. */
-  .plate.tight .considers {
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-  }
   .params {
     margin-top: 4px;
     display: flex;
@@ -543,9 +533,21 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     justify-content: center;
     padding: 4px 3px;
   }
+  /* A fuseway: one blade fuse, one circuit lamp, one terminal with the wire
+     running off into the dark. The same object as the distribution block it
+     would actually be wired through. */
   .rail.power {
-    width: 22px;
-    gap: 4px;
+    width: 30px;
+    gap: 3px;
+    /* The wire, leaving the terminal and disappearing into the cabinet. */
+    background-image:
+      radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.55), transparent 62%),
+      linear-gradient(
+        180deg,
+        transparent 62%,
+        rgba(20, 14, 10, 0.9) 66% 70%,
+        transparent 74%
+      );
   }
   .rail.bus {
     width: 70px;
@@ -561,57 +563,80 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     border-left: 1px solid #05080a;
   }
 
-  /* POWER — a cartridge fuse in a holder. Pulling it is how a component goes
-     off, which is the same gesture as the carrier at the bottom of the
-     cabinet, because it is the same object. */
+  /* A blade fuse. Translucent coloured plastic, the rating moulded into the
+     top, two tinned blades going down into the holder. */
   .fuse {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1px;
-    padding: 2px 1px;
+    padding: 0;
     border: none;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #23282a, #14181a);
-    box-shadow: inset 0 0 0 1px #05080a;
+    background: none;
     cursor: pointer;
     transition: transform 0.1s ease;
   }
-  .fuse .cap {
-    width: 10px;
-    height: 3px;
-    border-radius: 1px;
-    background: linear-gradient(180deg, #9aa3a5, #5c6466);
-  }
-  .fuse .glass {
-    width: 10px;
-    height: 15px;
-    border-radius: 1px;
+  .fuse .body {
+    order: 1;
+    width: 18px;
+    padding: 3px 0 4px;
+    border-radius: 2px 2px 1px 1px;
+    /* Moulded plastic: bright where the light catches the shoulder, darker
+       through the body, and translucent enough to see it is plastic. */
     background:
-      linear-gradient(90deg, rgba(255, 255, 255, 0.3), transparent 55%),
-      #16191b;
-    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.8);
-  }
-  .fuse .glass[data-lit="1"] {
-    background:
-      linear-gradient(90deg, rgba(255, 255, 255, 0.4), transparent 55%),
-      var(--mfg-active);
-    box-shadow: 0 0 7px var(--mfg-active);
-  }
-  .fuse .glass[data-lit="2"] {
-    background: var(--mfg-warn);
-    box-shadow: 0 0 7px var(--mfg-warn);
-  }
-  .fuse .glass[data-lit="3"] {
-    background: var(--mfg-alarm);
-    box-shadow: 0 0 8px var(--mfg-alarm);
-  }
-  /* Pulled halfway out of the holder, the way you actually isolate something. */
-  .fuse.pulled {
-    transform: translateY(-3px);
+      linear-gradient(100deg, rgba(255, 255, 255, 0.5), transparent 42%),
+      linear-gradient(180deg, var(--fuse), color-mix(in srgb, var(--fuse) 62%, #101314));
     box-shadow:
-      inset 0 0 0 1px #05080a,
-      0 3px 4px rgba(0, 0, 0, 0.6);
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+    font-size: 7px;
+    line-height: 1;
+    letter-spacing: 0;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  }
+  /* The blades. One shows above the body as the grip tab, one below in the
+     holder — which is what makes it read as a thing you pull. */
+  .fuse .blade {
+    width: 12px;
+    height: 4px;
+    background: linear-gradient(90deg, #b9c0c2, #7f8789 55%, #5c6466);
+  }
+  .fuse .blade:first-child {
+    order: 0;
+    border-radius: 1px 1px 0 0;
+  }
+  .fuse .blade:last-child {
+    order: 2;
+    height: 5px;
+    background: linear-gradient(90deg, #6f7679, #4a5254);
+  }
+  /* Pulled: lifted out of the holder, blades clear, and no longer conducting. */
+  .fuse.pulled {
+    transform: translateY(-4px);
+    filter: saturate(0.35) brightness(0.72);
+  }
+  .fuse.pulled .blade:last-child {
+    opacity: 0.35;
+  }
+
+  /* One lamp per way, beside its fuse. */
+  .circuit {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-width: 1px;
+    border-radius: 50%;
+  }
+  /* A brass screw terminal. The wire leaves from here (see `.rail.power`). */
+  .terminal-screw {
+    width: 11px;
+    height: 7px;
+    flex: none;
+    border-radius: 1px;
+    background:
+      radial-gradient(circle at 50% 40%, #2a2622 0 1.3px, transparent 1.6px),
+      linear-gradient(180deg, #b9a15e, #7d6a34);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
   }
 
   /* BUS — mode, output, order. */
@@ -691,6 +716,17 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .order button:disabled {
     opacity: 0.25;
   }
+  /* Stickers and stamps, bottom-right of the plate, applied by somebody in a
+     hurry and never quite square to anything. */
+  .marks {
+    flex: none;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 5px 5px 0;
+    opacity: 0.85;
+    transform: rotate(-2.5deg);
+  }
+
   /* The module's own interface, when it has one. It gets the room it needs and
      the identity plate gives way, because the face is the part the maker built
      and the plate is the part everybody has. */
@@ -702,10 +738,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .slot:has(.face) .plate {
     min-width: 0;
-  }
-  .slot:has(.face) .considers {
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
   }
   /* The terminal is the machine's, not any module's, so it wears machine
      yellow rather than whoever drove it last. */
@@ -743,54 +775,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     fill: #171b1d;
     stroke: #0a0c0d;
     stroke-width: 1;
-  }
-  .fusebox {
-    position: absolute;
-    left: 50%;
-    top: 16px;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 7px 9px 6px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #23282a, #14181a);
-    border: 1px solid #0a0d0e;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 3px 6px rgba(0, 0, 0, 0.6);
-  }
-  .fusebox-lip {
-    width: 30px;
-    height: 3px;
-    border-radius: 2px;
-    background: repeating-linear-gradient(90deg, #4a5254 0 2px, #23282a 2px 4px);
-  }
-  .fuses {
-    display: flex;
-    gap: 3px;
-  }
-  /* A glass cartridge with a metal cap at each end. */
-  .fuse {
-    width: 6px;
-    height: 17px;
-    border-radius: 1px;
-    background:
-      linear-gradient(180deg, #8d9698 0 4px, transparent 4px calc(100% - 4px), #8d9698 0),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent 55%),
-      #b98a2a;
-    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.6);
-  }
-  /* The one that has gone. Every machine has one. */
-  .fuse.blown {
-    background:
-      linear-gradient(180deg, #8d9698 0 4px, transparent 4px calc(100% - 4px), #8d9698 0),
-      #33302a;
-  }
-  .fuse-plate {
-    font-size: 5px;
-    letter-spacing: 0.14em;
   }
 
   /* The actuator terminal: what actually reaches the tracks. Its own layout —

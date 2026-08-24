@@ -18,6 +18,46 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — marks instead of prose, and real fuses
+
+Cards: [L-052] extended.
+
+**The plates stopped talking.** Every faceplate carried a sentence about what its
+module considers, and a rack of plates each explaining itself in prose reads as a
+form rather than as equipment. A module has a manufacturer's label; it does not
+have a slogan. The sentence still exists on the module and belongs in the
+debrief, which is the one place this machine is allowed to use words.
+
+**`Decal` replaces it** — a seeded generator for the small stickers and stamps a
+real part accumulates: a test-house roundel, a parts-bin barcode, an inspector's
+pass stamp, a rating label. Individually meaningless; together they are most of
+what separates a photograph of a machine from a drawing of one, precisely
+because nobody *designed* them onto it. They arrive from three different places,
+in three typefaces, each stuck slightly crooked. Which kind a maker uses is
+characterisation: HANSA has been to a test house and will not let you forget it,
+TOWA came out of a parts bin, KIBA stamped it passed and moved on.
+
+Seeded off the component id and never random, for the same reason the cabinet's
+blown fuse was: kit that reprints its own certification between replays of one
+recording makes the recording feel untrustworthy.
+
+**Real fuses.** The slot's power rail is now a fuseway: a **blade fuse
+colour-coded to the standard automotive table**, a circuit lamp beside it, and a
+brass screw terminal with the wire leaving into the dark. The colour code is not
+a palette decision — it is the table, and it means a component's current draw is
+legible across the cabinet without printing a number anywhere: the drive controls
+take the big green thirty, guidance sips five, a guard sits on ten.
+Characterisation with a real referent, which is the cheapest kind.
+
+The decorative fuse carrier at the bottom of the cabinet went with it: every slot
+has a real fuse now, so a second one was saying the same thing twice. The wire
+loom stays — it is the thing that anchors "under the hood", and it is where all
+those terminal wires are going.
+
+Also caught: a `:global` I had just written into `Rack.svelte` to size the decal
+SVGs — against the invariant in the very contract this round is building. The
+decal takes a `width` prop instead.
+
 ## 2026-08-24 — cleanup, and the slot takes back power and mode
 
 Cards: [L-052] extended again, from a real-device screenshot.

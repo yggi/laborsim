@@ -114,7 +114,7 @@ const MAKERS: Record<string, MakerStyle> = {
     layout: "stack",
     // A swept bearing line. Navigation kit, and it wants you to know.
     mark: "M2 12 a6 6 0 0 1 12 0 M8 12 L12 5",
-    plateText: "TD-NAV1 · 12–30 VDC · CLASS II",
+    plateText: "TD-NAV1 · CLASS II",
     // Consumer electronics, so it is friendly and slightly overpromising.
     lexicon: { on: "ACTIVE", off: "STANDBY", fault: "CHECK", bypassed: "STANDBY" },
     voice: {
