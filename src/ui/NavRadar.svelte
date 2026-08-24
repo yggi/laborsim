@@ -14,7 +14,11 @@
  * Architecture rule 3: reads a snapshot and a static route, reports taps
  * upward. It never touches the sim.
  */
+import { styleOf } from "../cockpit/makers.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+
+/** TOWA built this, so it looks like TOWA built it. */
+const house = styleOf("TOWA DENKI");
 
 const {
   snapshot,
@@ -56,8 +60,11 @@ function plot(x: number, z: number) {
 }
 </script>
 
-<div class="scope" class:live>
-  <div class="label">NAV-1 &middot; ROUTE</div>
+<div
+  class="scope"
+  class:live
+  style="--mfg-plate: {house.plate}; --mfg-bezel: {house.bezel}; --mfg-face: {house.face}; --mfg-accent: {house.accent}"
+>
   <svg viewBox="0 0 {R * 2} {R * 2}" role="img" aria-label="navigation route">
     <circle class="ring" cx={R} cy={R} r={R - 1} />
     <circle class="ring faint" cx={R} cy={R} r={(R - 1) * 0.62} />
@@ -110,16 +117,29 @@ function plot(x: number, z: number) {
 <style>
   /* Positioned by the instrument column, not by itself — an instrument is
      fitted into the glass it was given (docs/design/cockpit.md). */
+  /* TOWA's pod: injection-moulded, rounded, faintly backlit, and with no
+     visible fixings anywhere. It does not want you thinking about how it is
+     attached — which is the opposite of everything else in this cab. */
   .scope {
     width: 116px;
-    background: rgba(16, 19, 21, 0.94);
-    border: 1px solid #333a3b;
-    box-shadow: 0 0 0 3px #0d1012;
+    border-radius: 7px;
+    overflow: hidden;
+    background:
+      radial-gradient(
+        120% 80% at 50% 0%,
+        color-mix(in srgb, var(--mfg-accent) 10%, transparent),
+        transparent 70%
+      ),
+      var(--mfg-plate);
+    border: 1px solid var(--mfg-ink);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 0 2px #0b1114,
+      0 3px 7px rgba(0, 0, 0, 0.55);
     font: 8px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.1em;
-    color: #6d7a76;
+    color: color-mix(in srgb, var(--mfg-face) 60%, transparent);
   }
-  .label,
   .foot {
     padding: 3px 6px;
     background: #23282a;

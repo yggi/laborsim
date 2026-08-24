@@ -93,15 +93,20 @@ somebody bolted in, which is what it is meant to be. It also makes the rack
 *legible at a glance while driving* — you find the orange plate, not the third
 row down.
 
-## The masters are the bridge, and you acknowledge them (built, L-052)
+## ALARM is the bridge, and you acknowledge it (built, L-052)
 
-MASTER ALARM and MASTER WARNING are where the machine's own thresholds and every
-fitted component's condition arrive together. They are the prototypical labelled
-indicator — a lens and a plate, in the chassis maker's house style — and they are
-the only thing on the dash that speaks for parts it does not own.
+**One** annunciator, where the machine's own thresholds and every fitted
+component's condition arrive together. It is the prototypical labelled indicator
+— a lens and a plate, in the chassis maker's house style — and it is the only
+thing on the dash that speaks for parts it does not own.
 
-They are **push-to-acknowledge**, the way an annunciator panel works: a new
-condition flashes, pressing it makes it steady, and it goes dark only when the
+Off, yellow, red, and the **rhythm** carries what a second lamp would have: fast
+for an unacknowledged alarm, slow for an unacknowledged caution, steady once
+pressed. Two lamps meant two things could be lit at once saying the same thing,
+which is a dashboard talking to itself.
+
+It is **push-to-acknowledge**, the way an annunciator panel works: a new
+condition flashes, pressing makes it steady, and it goes dark only when the
 condition actually clears. **Acknowledging is not dismissing.** You cannot make
 the panel stop telling you; you can only tell it you have heard.
 
@@ -114,6 +119,19 @@ HALT and the pilot's SET overwrites the result — no authority at the terminal 
 while its condition still lights the masters. Guard, bypass, or advise, chosen by
 *ordering alone*, with no new verb, setting or mechanism. Nobody designed it; it
 fell out of the rack being a pipeline, and it is under test.
+
+## The cage, and the eyes that come back to the road (built, L-052)
+
+You are not looking through a windscreen, you are sitting inside a **cage**: a
+welded frame with pillars at the corners of your vision, a header beam overhead
+and gussets where they meet. It is the cheapest way to make the glass read as an
+*opening* rather than as the edge of a screen, and it is chassis-maker structure,
+so it belongs to KIBA the way the dash does.
+
+And the view **returns to forward on its own**. A swipe is a glance, not a new
+heading: hold still for a moment and the neck eases back. Without it, every look
+costs a second deliberate swipe to undo — and the cheapest way to avoid that cost
+is to never look, which is the opposite of what a glance is for.
 
 ## The dash is the seam, and it travels (built, L-048)
 

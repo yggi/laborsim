@@ -16,7 +16,12 @@
  * Architecture rule 3: reads a snapshot, and only the readout its module
  * published into it.
  */
+import { styleOf } from "../cockpit/makers.ts";
+import Seg from "../cockpit/Seg.svelte";
 import type { Snapshot } from "../core/snapshot.ts";
+
+/** HANSA built this, so it looks like HANSA built it. */
+const house = styleOf("HANSA REGELTECHNIK");
 
 const { snapshot }: { snapshot: Snapshot | undefined } = $props();
 
@@ -58,11 +63,15 @@ const gain = $derived(readout?.gain ?? 1);
 const pct = (u: number) => ((u + SPAN) / (2 * SPAN)) * 100;
 </script>
 
-<div class="gauges" class:live>
-  <div class="label">
-    <span>TILT-GUARD</span>
-    <span class="gain" class:cut={gain < 1}>&times;{gain.toFixed(2)}</span>
-  </div>
+<div
+  class="gauges"
+  class:live
+  style="--mfg-plate: {house.plate}; --mfg-face: {house.face}; --mfg-accent: {house.accent}; --mfg-seg: {house.accent}"
+>
+  <span class="fix tl mfg-screw mfg-screw-hex"></span>
+  <span class="fix tr mfg-screw mfg-screw-hex"></span>
+  <span class="fix bl mfg-screw mfg-screw-hex"></span>
+  <span class="fix br mfg-screw mfg-screw-hex"></span>
 
   {#each axes as axis (axis.id)}
     {@const u = at(axis.value, axis.limit)}
@@ -82,31 +91,56 @@ const pct = (u: number) => ((u + SPAN) / (2 * SPAN)) * 100;
       <span class="read">{deg(axis.value).toFixed(0)}/{deg(axis.limit).toFixed(0)}&deg;</span>
     </div>
   {/each}
+
+  <!-- How much drive the guard is currently taking. In HANSA's orange, because
+       a readout is house-styled like everything else it sells. -->
+  <div class="readout"><Seg value={gain.toFixed(2)} mask="8.88" /></div>
 </div>
 
 <style>
+  /* HANSA's pod, from the firm that ships the beacon on the dash: a machined
+     housing with a seated gasket line and hex sockets in the corners. Squarer
+     and heavier than anything the machine came with. */
   .gauges {
+    position: relative;
     width: 116px;
-    background: rgba(16, 19, 21, 0.94);
-    border: 1px solid #333a3b;
-    box-shadow: 0 0 0 3px #0d1012;
+    background: var(--mfg-plate);
+    border: 1px solid var(--mfg-ink);
+    outline: 1px solid color-mix(in srgb, var(--mfg-accent) 40%, transparent);
+    outline-offset: -3px;
+    box-shadow:
+      0 0 0 2px #0d1012,
+      0 3px 6px rgba(0, 0, 0, 0.6);
     font: 8px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.1em;
-    color: #6d7a76;
-    padding-bottom: 4px;
+    color: color-mix(in srgb, var(--mfg-face) 55%, transparent);
+    padding: 7px 3px 5px;
   }
-  .label {
+  .fix {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+  }
+  .fix.tl {
+    left: 3px;
+    top: 3px;
+  }
+  .fix.tr {
+    right: 3px;
+    top: 3px;
+  }
+  .fix.bl {
+    left: 3px;
+    bottom: 3px;
+  }
+  .fix.br {
+    right: 3px;
+    bottom: 3px;
+  }
+  .readout {
     display: flex;
-    justify-content: space-between;
-    padding: 3px 6px;
-    background: #23282a;
-    color: #f07b2a;
-  }
-  .gain {
-    color: #6d7a76;
-  }
-  .gain.cut {
-    color: #e0503c;
+    justify-content: center;
+    padding-top: 4px;
   }
   .gauge {
     display: flex;

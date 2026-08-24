@@ -24,7 +24,7 @@
  */
 
 import { styleOf } from "../cockpit/makers.ts";
-import { unitsFor } from "../cockpit/parts.ts";
+import { faceFor, unitsFor } from "../cockpit/parts.ts";
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
@@ -92,22 +92,31 @@ function setParam(module: Module, param: Param, value: number) {
  */
 const FUSES = [1, 1, 0, 1, 1, 1, 1, 1];
 
+/** What a face is handed before the first snapshot arrives. */
+const EMPTY_STAGE: Stage = {
+  id: "",
+  label: "",
+  maker: "",
+  verb: "SET",
+  enabled: false,
+  idle: true,
+  output: { left: 0, right: 0 },
+  condition: 0,
+  safety: false,
+};
+
 const stageOf = (id: string): Stage | undefined => stages.find((s) => s.id === id);
 const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 </script>
 
 <div class="rack">
-  <div class="head">
-    <span>RACK &mdash; SIGNAL FLOWS DOWN</span>
-    <span class="warn">EYES OFF THE GLASS</span>
-  </div>
-
   <div class="slots">
     {#each modules as module, i (module.id)}
       {@const stage = stageOf(module.id)}
       {@const style = styleOf(module.maker)}
       {@const driving = module.enabled && stage && !stage.idle}
       {@const units = unitsFor(module.id)}
+      {@const Face = faceFor(module.id)}
       <div
         class="slot {style.layout} mfg-proud mfg-grain"
         class:off={!module.enabled}
@@ -115,11 +124,30 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         data-u={units}
         style="--mfg-plate: {style.plate}; --mfg-bezel: {style.bezel}; --mfg-face: {style.face}; --mfg-accent: {style.accent}; --mfg-active: {style.accent}"
       >
-        <!-- Rack ears. Screws, because a thing you can unbolt is a thing
-             somebody bolted in. -->
-        <div class="ear mfg-rail">
-          <span class="mfg-screw"></span>
-          <span class="mfg-screw"></span>
+        <!-- POWER. The slot's, not the module's: nobody ships the fuse you
+             power them through. Pulling it is how a component goes off. -->
+        <div class="rail power mfg-rail">
+          <button
+            class="fuse"
+            class:pulled={!module.enabled}
+            onclick={() => toggle(module)}
+            aria-label="enable {module.label}"
+            aria-pressed={module.enabled}
+          >
+            <span class="cap"></span>
+            <span class="glass" data-lit={module.enabled ? Math.max(1, stage?.condition ?? 1) : 0}></span>
+            <span class="cap"></span>
+          </button>
+
+          <!-- Where the plate is bolted, and therefore where you move it. -->
+          <div class="order">
+            <button onclick={() => move(i, -1)} disabled={i === 0} aria-label="move up">▲</button>
+            <button
+              onclick={() => move(i, 1)}
+              disabled={i === modules.length - 1}
+              aria-label="move down">▼</button
+            >
+          </div>
         </div>
 
         <div class="plate" class:tight={module.params?.length}>
@@ -159,49 +187,43 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
           {/if}
         </div>
 
-        <div class="controls">
-          <!-- The enable lamp, and the one place a bypassed guard can be put
-               back. A maker's accent *is* the active colour for its own kit
-               (`--mfg-active` above), so this lamp stays in house style until
-               something is actually wrong — and warn and alarm are shared,
-               because a caution is not a brand decision. -->
-          <button
-            class="led mfg-lamp"
-            data-lit={module.enabled ? Math.max(1, stage?.condition ?? 1) : 0}
-            onclick={() => toggle(module)}
-            aria-label="enable {module.label}"
-            aria-pressed={module.enabled}
-          ></button>
-          <button class="verb" onclick={() => cycleVerb(module)} disabled={!module.enabled}>
-            {module.verb}
-          </button>
+        <!-- The module's own interface, if it has one. Everything else on
+             this slot belongs to the rack. -->
+        {#if Face}
+          <div class="face">
+            <Face stage={stage ?? EMPTY_STAGE} {style} />
+          </div>
+        {/if}
 
-          <!-- Output strength, as a pair of meters. This is the part you read
-               at a glance; the numbers are for diagnosing, not driving. -->
+        <!-- BUS. The slot's too: how this component folds into the signal, and
+             what comes out. The mode switch lives under a cover, because
+             changing what a fitted component *does* to the drive is not
+             something you should be able to do by brushing it with a thumb. -->
+        <div class="rail bus">
+          <div class="mode">
+            <button
+              class="modeswitch"
+              onclick={() => cycleVerb(module)}
+              disabled={!module.enabled}
+              aria-label="mode for {module.label}"
+            >
+              {module.verb}
+            </button>
+            <span class="cover" class:open={module.enabled}></span>
+          </div>
+
           <div class="meters">
             {#each [["L", stage?.output.left ?? 0], ["R", stage?.output.right ?? 0]] as const as [side, value] (side)}
-              <div class="meter">
-                <span class="cap">{side}</span>
-                <span class="bar mfg-meter">
-                  <span
-                    class="mfg-meter-fill"
-                    data-rev={value < 0}
-                    style="width: {driving ? strength(value) * 100 : 0}%"
-                  ></span>
-                </span>
-                {#if debug}<span class="val">{num(value)}</span>{/if}
-              </div>
+              <span class="bar mfg-meter" title={debug ? `${side} ${num(value)}` : undefined}>
+                <span
+                  class="mfg-meter-fill"
+                  data-rev={value < 0}
+                  style="width: {driving ? strength(value) * 100 : 0}%"
+                ></span>
+              </span>
             {/each}
           </div>
-        </div>
 
-        <div class="ear order">
-          <button onclick={() => move(i, -1)} disabled={i === 0} aria-label="move up">▲</button>
-          <button
-            onclick={() => move(i, 1)}
-            disabled={i === modules.length - 1}
-            aria-label="move down">▼</button
-          >
         </div>
       </div>
     {/each}
@@ -244,23 +266,22 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     </div>
   </div>
 
+  <!-- The terminal. It is the bottom of the stack and it is wired to the
+       tracks; nothing needs to say so. -->
   <div class="terminal">
-    <span>ACTUATOR TERMINAL</span>
-    <div class="meters wide">
-      {#each [["L TRACK", terminal.left], ["R TRACK", terminal.right]] as const as [name, value] (name)}
-        <div class="meter">
-          <span class="cap">{name}</span>
-          <span class="bar mfg-meter">
-            <span
-              class="mfg-meter-fill out"
-              data-rev={value < 0}
-              style="width: {strength(value) * 100}%"
-            ></span>
-          </span>
-          {#if debug}<span class="val">{num(value)}</span>{/if}
-        </div>
-      {/each}
-    </div>
+    {#each [["L", terminal.left], ["R", terminal.right]] as const as [side, value] (side)}
+      <div class="out">
+        <span class="side">{side}</span>
+        <span class="bar mfg-meter">
+          <span
+            class="mfg-meter-fill out-fill"
+            data-rev={value < 0}
+            style="width: {strength(value) * 100}%"
+          ></span>
+        </span>
+        {#if debug}<span class="val">{num(value)}</span>{/if}
+      </div>
+    {/each}
   </div>
 </div>
 
@@ -278,18 +299,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     color: #c6d0cb;
     padding-bottom: env(safe-area-inset-bottom);
-  }
-  .head {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 10px;
-    font-size: 9px;
-    letter-spacing: 0.16em;
-    color: #6d7a76;
-    background: #23282a;
-  }
-  .head .warn {
-    color: #f0a830;
   }
   /* The cabinet interior the faceplates are screwed into. */
   .slots {
@@ -328,28 +337,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
      load-bearing thing on the plate. */
   .slot[data-u="1"] .silkscreen {
     display: none;
-  }
-  .ear {
-    width: 16px;
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 5px 0;
-  }
-  .order button {
-    font: inherit;
-    font-size: 8px;
-    line-height: 1;
-    padding: 3px 0;
-    width: 14px;
-    color: var(--mfg-face);
-    background: #23282a;
-    border: 1px solid #05080a;
-  }
-  .order button:disabled {
-    opacity: 0.25;
   }
 
   .plate {
@@ -477,20 +464,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .boxed .silkscreen {
     letter-spacing: 0.18em;
   }
-  .boxed .verb {
-    border-radius: 0;
-    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.4);
-  }
-  .boxed .led {
-    border-radius: 0;
-    border-width: 2px;
-  }
-  .stack .led {
-    border-radius: 50%;
-  }
-  .stack .verb {
-    border-radius: 9px;
-  }
   .boxed .plate {
     border-left-width: 6px;
     border-image: repeating-linear-gradient(
@@ -558,80 +531,186 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
 
   /* -- controls ---------------------------------------------------------- */
-  .controls {
+  /* -- the two rails ----------------------------------------------------- */
+  /* Both belong to the *slot*, identically for every component, because that is
+     what a rack is: a standard you plug things into. A module owns its style
+     and its own face and nothing else (docs: src/cockpit/face.ts). */
+  .rail {
     flex: none;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 5px 7px 5px 0;
+    justify-content: center;
+    padding: 4px 3px;
   }
-  /* Lit, unlit, warn and alarm come from the substrate. Only the size and the
-     maker's idea of a corner radius belong here. */
-  .led {
-    width: 18px;
-    height: 18px;
-    flex: none;
-    padding: 0;
+  .rail.power {
+    width: 22px;
+    gap: 4px;
+  }
+  .rail.bus {
+    width: 70px;
+    gap: 4px;
+    justify-content: space-between;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 0 1px,
+        transparent 1px 3px
+      ),
+      linear-gradient(90deg, #0a0d0e, #1b2022 60%, #12171a);
+    border-left: 1px solid #05080a;
+  }
+
+  /* POWER — a cartridge fuse in a holder. Pulling it is how a component goes
+     off, which is the same gesture as the carrier at the bottom of the
+     cabinet, because it is the same object. */
+  .fuse {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 1px;
+    border: none;
     border-radius: 2px;
+    background: linear-gradient(180deg, #23282a, #14181a);
+    box-shadow: inset 0 0 0 1px #05080a;
     cursor: pointer;
+    transition: transform 0.1s ease;
   }
-  .verb {
+  .fuse .cap {
+    width: 10px;
+    height: 3px;
+    border-radius: 1px;
+    background: linear-gradient(180deg, #9aa3a5, #5c6466);
+  }
+  .fuse .glass {
+    width: 10px;
+    height: 15px;
+    border-radius: 1px;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.3), transparent 55%),
+      #16191b;
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.8);
+  }
+  .fuse .glass[data-lit="1"] {
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.4), transparent 55%),
+      var(--mfg-active);
+    box-shadow: 0 0 7px var(--mfg-active);
+  }
+  .fuse .glass[data-lit="2"] {
+    background: var(--mfg-warn);
+    box-shadow: 0 0 7px var(--mfg-warn);
+  }
+  .fuse .glass[data-lit="3"] {
+    background: var(--mfg-alarm);
+    box-shadow: 0 0 8px var(--mfg-alarm);
+  }
+  /* Pulled halfway out of the holder, the way you actually isolate something. */
+  .fuse.pulled {
+    transform: translateY(-3px);
+    box-shadow:
+      inset 0 0 0 1px #05080a,
+      0 3px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  /* BUS — mode, output, order. */
+  .mode {
+    position: relative;
+    width: 100%;
+  }
+  .modeswitch {
+    display: block;
+    width: 100%;
     font: inherit;
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.12em;
     color: #14171a;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--mfg-accent) 82%, white), var(--mfg-accent));
+    background: linear-gradient(180deg, #9aa3a5, #6d7678);
     border: 1px solid #05080a;
-    border-radius: 2px;
-    /* A real key: lit top, a seat of shadow under it. */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.4),
-      0 1px 2px rgba(0, 0, 0, 0.5);
-    padding: 6px 7px;
-    flex: none;
+    border-radius: 1px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    padding: 3px 0;
+    cursor: pointer;
   }
-  .verb:active:not(:disabled) {
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
-  }
-  .verb:disabled {
-    color: #6d7a76;
+  .modeswitch:disabled {
+    color: #4a5254;
     background: #23282a;
+    box-shadow: none;
   }
+  /* A hinged cover over the mode switch. What a fitted component *does* to the
+     drive is not something a thumb should change in passing, so it is behind a
+     flap — and the flap is only up while the component is powered, because
+     there is nothing to set on a slot with the fuse pulled. */
+  .cover {
+    position: absolute;
+    inset: -1px;
+    border-radius: 1px;
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        rgba(232, 181, 58, 0.5) 0 4px,
+        rgba(20, 23, 26, 0.55) 4px 8px
+      );
+    border: 1px solid #05080a;
+    transform-origin: top center;
+    transition: transform 0.18s ease;
+    pointer-events: none;
+  }
+  /* Hinged up and out of the way. Still visible, so you can see it is a cover. */
+  .cover.open {
+    transform: perspective(60px) rotateX(-72deg);
+  }
+
   .meters {
-    width: 78px;
+    width: 100%;
     flex: none;
     display: flex;
     flex-direction: column;
     gap: 3px;
   }
-  .meters.wide {
-    width: 190px;
+  .bar {
+    display: block;
+    width: 100%;
   }
-  .meter {
+  .order {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .order button {
+    font: inherit;
+    font-size: 7px;
+    line-height: 1;
+    padding: 1px 0;
+    width: 14px;
+    color: #8b968f;
+    background: #23282a;
+    border: 1px solid #05080a;
+  }
+  .order button:disabled {
+    opacity: 0.25;
+  }
+  /* The module's own interface, when it has one. It gets the room it needs and
+     the identity plate gives way, because the face is the part the maker built
+     and the plate is the part everybody has. */
+  .face {
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 8px;
-    color: #6d7a76;
+    padding: 0 6px 0 0;
   }
-  .cap {
-    width: 10px;
+  .slot:has(.face) .plate {
+    min-width: 0;
   }
-  .meters.wide .cap {
-    width: 44px;
-  }
-  .bar {
-    flex: 1;
+  .slot:has(.face) .considers {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
   /* The terminal is the machine's, not any module's, so it wears machine
      yellow rather than whoever drove it last. */
   .out {
     background: #e8b53a;
-  }
-  .val {
-    width: 34px;
-    text-align: right;
-    color: #6d7a76;
   }
   /* -- cabinet furniture ------------------------------------------------- */
   .furniture {
@@ -714,16 +793,44 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     letter-spacing: 0.14em;
   }
 
+  /* The actuator terminal: what actually reaches the tracks. Its own layout —
+     it shares nothing with the per-slot meters, which are a column inside a
+     74px rail and were making this three hundred pixels tall. */
   .terminal {
+    flex: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: 14px;
+    padding: 7px 12px;
+    background: #23282a;
+    border-top: 3px solid #6fe3c4;
+  }
+  .out {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .side {
+    flex: none;
     font-size: 9px;
     letter-spacing: 0.14em;
     color: #6d7a76;
-    background: #23282a;
-    border-top: 3px solid #6fe3c4;
+  }
+  .terminal .bar {
+    flex: 1;
+    min-width: 0;
+  }
+  /* Machine yellow: the terminal is the machine's, not any module's. */
+  .out-fill {
+    background: #e8b53a;
+  }
+  .val {
+    flex: none;
+    width: 34px;
+    text-align: right;
+    font-size: 8px;
+    color: #6d7a76;
   }
 </style>

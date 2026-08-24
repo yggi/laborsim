@@ -50,6 +50,11 @@ const SKY_HIGH = 0x5f8fb0;
  */
 const LAYER_INTERIOR = 1;
 
+/** How long a look is left alone before the view starts easing forward, ms. */
+const LOOK_HOLD_MS = 1200;
+/** Per-frame fraction of the remaining angle. Slow enough to feel like a neck. */
+const LOOK_RETURN = 0.045;
+
 export function createViewport(
   canvas: HTMLCanvasElement,
   terrain: Terrain,
@@ -284,6 +289,8 @@ export function createViewport(
   let mode: CameraMode = "cab";
   let pan = 0;
   let tilt = 0;
+  /** When the pilot last moved the view. Wall clock: camera feel, not sim. */
+  let lastLook = 0;
   let orbit = 2.4;
   let elevation = 0.35;
   const eye = new THREE.Vector3();
@@ -372,6 +379,26 @@ export function createViewport(
       }
 
       if (mode === "cab") {
+        // **Eyes back on the road.**
+        //
+        // A swipe is a glance, not a new heading: once you stop moving, the view
+        // eases back to straight ahead on its own. Without it every look costs
+        // a second deliberate swipe to undo, and the cheapest way to avoid that
+        // cost is to never look — which is the opposite of what a glance is for.
+        //
+        // Cab only. In chase you are outside the machine and free look is the
+        // entire point of being there.
+        //
+        // Renderer-side and frame-rate-coupled on purpose: this is camera feel,
+        // never sim state, so it can use the wall clock that rule 2 keeps out of
+        // the simulation.
+        if (performance.now() - lastLook > LOOK_HOLD_MS) {
+          pan += (0 - pan) * LOOK_RETURN;
+          tilt += (0 - tilt) * LOOK_RETURN;
+          if (Math.abs(pan) < 1e-3) pan = 0;
+          if (Math.abs(tilt) < 1e-3) tilt = 0;
+        }
+
         // The eye rides the hull, so the cab pitches and rolls with the machine.
         eye.set(EYE.x, EYE.y, EYE.z).applyMatrix4(machine.matrixWorld);
         // Aim swings in machine space: "look left" means left of the machine's
@@ -417,6 +444,7 @@ export function createViewport(
       else camera.layers.enable(LAYER_INTERIOR);
     },
     look(dx, dy) {
+      lastLook = performance.now();
       if (mode === "cab") {
         // Limited travel: you are strapped into a seat, not floating.
         pan = clampNumber(pan - dx * 0.005, -1.5, 1.5);

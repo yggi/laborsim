@@ -31,15 +31,12 @@ function tractionClass(track: TrackState): string {
 {#if snapshot}
   {@const m = snapshot.machine}
   <div class="telemetry">
-    <div class="plate">
-      <b>TYPE 3A / KIBA</b>
-      <span>tracked platform &middot; 6.2 t</span>
-    </div>
-    <div class="row">SPD {m.speed.toFixed(2)} m/s</div>
+    <!-- Identity, speed, slip and grip are all on the panel now, in the
+         chassis maker's own instruments. What is left here is the one thing
+         the panel cannot show: the signal at every stage of the rack. -->
     {#each [["L", m.left], ["R", m.right]] as const as [side, track] (side)}
       <div class="row {tractionClass(track)}">
-        {side} {num(track.commanded)} &middot; SLIP {num(track.slip)} &middot; GRIP
-        {(track.traction * 100).toFixed(0)}% &middot; {track.contacts}/6
+        {side} {num(track.commanded)} &middot; {track.contacts}/6
         {#if track.contacts === 0}&middot; NO CONTACT{/if}
       </div>
     {/each}
@@ -81,16 +78,6 @@ function tractionClass(track: TrackState): string {
     color: #c6d0cb;
     pointer-events: none;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  }
-  .plate b {
-    display: block;
-    font-family: "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: 0.14em;
-  }
-  .plate span {
-    color: #6d7a76;
   }
   .row {
     margin-top: 3px;

@@ -24,8 +24,11 @@ import type { CellProps } from "./cell.ts";
 import BasicCell from "./cells/BasicCell.svelte";
 import NavCell from "./cells/NavCell.svelte";
 import TiltCell from "./cells/TiltCell.svelte";
+import type { FaceProps } from "./face.ts";
+import NavFace from "./faces/NavFace.svelte";
 
 export type Cell = Component<CellProps>;
+export type Face = Component<FaceProps>;
 
 /** `null` means *deliberately no cell*, which is different from unregistered. */
 const CELLS: Record<string, Cell | null> = {
@@ -67,6 +70,21 @@ const UNITS: Record<string, Units> = {
 };
 
 export const unitsFor = (id: string): Units => UNITS[id] ?? 2;
+
+/**
+ * A module's **face** — the interface that belongs to the component rather than
+ * to the slot it is plugged into. See `face.ts` for why power and mode are not
+ * in here.
+ *
+ * Most components have none: a plate with an identity and a couple of limit
+ * sliders is a complete plate. A face is for kit with something of its own to
+ * show, and so far that is TOWA, because TOWA cannot help itself.
+ */
+const FACES: Record<string, Face> = {
+  NAV: NavFace as Face,
+};
+
+export const faceFor = (id: string): Face | undefined => FACES[id];
 
 /** Ids with a deliberate registry entry, for the conformance tests. */
 export const REGISTERED: readonly string[] = Object.keys(CELLS);

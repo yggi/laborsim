@@ -18,6 +18,52 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — cleanup, and the slot takes back power and mode
+
+Cards: [L-052] extended again, from a real-device screenshot.
+
+**The bug only a phone could show.** The deck was sized in `vh`, which is the
+*large* viewport — the height the page would have with the browser chrome
+hidden — so on a device it translated a URL bar too far down and put the alarm
+row, the strip and the latch below the glass. `dvh` tracks what is actually
+visible. No desktop viewport reproduces it, which is the whole lesson.
+
+**Reversing an earlier decision: power and mode belong to the slot.** Every
+plate used to carry its own enable lamp and verb button, drawn by the rack but
+sitting inside the plate as if the maker had chosen them — which reads as a
+form, not as equipment. *No manufacturer ships the fuse you power it through.*
+Now: a cartridge fuse and the mounting ears on the left rail, the bus tap on the
+right with the mode switch **under a hinged cover** (what a fitted component
+does to the drive should not change by brushing it with a thumb; the cover is
+only up while the slot is powered). A module owns its style and an optional
+**face** — its own interface — and nothing else. The ears took the reorder
+arrows, which is where they belong: unbolting them is how you move a plate.
+
+**A second display primitive.** `Matrix` — a 5×7 dot-matrix LCD, blue backlight,
+white characters, hand-cut glyphs. Deliberately a different *technology* from
+`Seg` rather than a different colour: seven segments show a number and nothing
+else, so a component with something to *say* needs a matrix, and dot-matrix
+character modules are the part that dates a machine. NAV-1's face is one, which
+makes TOWA read a generation newer than the cab it is bolted into.
+
+Also: the pods lost their duplicate title bars (the Draggable already carries
+the name — that was the doubled bar on the device) and gained their makers'
+housings, so HANSA's is machined and hex-screwed with an orange readout and
+TOWA's is moulded, rounded and backlit with no visible fixings at all. A real
+**cage** replaced the vignette: pillars, a header beam, welded gussets, bolts.
+The view **returns to forward** after a glance, so looking costs one swipe
+rather than two — otherwise the cheapest way to avoid the cost is never to look.
+
+**Meta-labels gone**: the rack header, the actuator terminal's name, the
+hands-off-the-wheel banner, and the telemetry's identity and speed lines, which
+the dataplate and the gauges now carry. Show, do not tell — a rack is obviously
+a rack, and signal obviously flows down it to the terminal.
+
+One thing broke on the way: the terminal shared the per-slot `.meters` class,
+so restyling those into a 74px column made it three hundred pixels tall and
+pushed the cabinet furniture off the bottom. Shared class, two very different
+jobs.
+
 ## 2026-08-24 — the panel, in detail
 
 Cards: [L-052] extended. A refinement pass on the same round, from a punch list.

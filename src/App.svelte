@@ -312,6 +312,20 @@ $effect(() => {
        stays visible at the top, and the machine keeps running while you read. -->
   <div class="viewport" class:down={rackOpen}>
     <canvas bind:this={canvas}></canvas>
+    <!-- The cage. Not a vignette and not a windscreen: a welded frame you are
+         sitting inside, with pillars at the corners of your vision and a header
+         beam overhead. It is the cheapest way to make the glass read as an
+         *opening* rather than as the edge of a screen — and it is the chassis
+         maker's structure, so it belongs to KIBA the way the dash does. -->
+    {#if mode === "cab"}
+      <div class="cage" aria-hidden="true">
+        <div class="beam"></div>
+        <div class="pillar left"></div>
+        <div class="pillar right"></div>
+        <div class="gusset left"></div>
+        <div class="gusset right"></div>
+      </div>
+    {/if}
     <div class="cabframe" class:cab={mode === "cab"}></div>
   </div>
 
@@ -339,8 +353,6 @@ $effect(() => {
     <div class="levers right">
       <Lever label="R TRACK" value={leverR} onchange={(v) => (leverR = v)} />
     </div>
-  {:else if mode !== "cab"}
-    <div class="handsoff">HANDS OFF THE WHEEL &mdash; the machine is still running</div>
   {/if}
 
   <!-- The camera is a fixed control, top-right: choosing the view is a thing you
@@ -437,7 +449,7 @@ $effect(() => {
     transition: transform 0.28s ease;
   }
   .viewport.down {
-    transform: translateY(-74vh);
+    transform: translateY(-74dvh);
   }
   canvas {
     position: absolute;
@@ -447,15 +459,96 @@ $effect(() => {
     display: block;
   }
 
+  /* -- the cage --------------------------------------------------------- */
+  .cage {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Above the canvas, below everything bolted to the cab. */
+    z-index: 1;
+  }
+  /* Painted steel, lit from above-left like every other surface in here. */
+  .cage .beam,
+  .cage .pillar {
+    position: absolute;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.2), transparent 38%),
+      linear-gradient(180deg, #4c5356 0%, #333a3d 55%, #1e2427 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 4px 14px rgba(0, 0, 0, 0.7);
+  }
+  /* Bolt heads along the pillars, at a spacing you would actually weld to. */
+  .cage .pillar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 50% 50%, #6a7375 0 1.6px, transparent 2px);
+    background-repeat: repeat-y;
+    background-position: 50% 34px;
+    background-size: 100% 58px;
+    opacity: 0.75;
+  }
+  /* The header beam. Low enough to be present, not so low it is a letterbox. */
+  .cage .beam {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 26px;
+    border-bottom: 1px solid #0a0d0e;
+  }
+  /* The pillars lean in toward the roof, the way a cab's actually do. */
+  .cage .pillar {
+    top: 0;
+    bottom: 0;
+    width: 22px;
+    border-right: 1px solid #0a0d0e;
+  }
+  .cage .pillar.left {
+    left: 0;
+    transform-origin: bottom left;
+    transform: skewX(3deg);
+  }
+  .cage .pillar.right {
+    right: 0;
+    border-right: none;
+    border-left: 1px solid #0a0d0e;
+    transform-origin: bottom right;
+    transform: skewX(-3deg);
+  }
+  /* Welded gussets where the pillar meets the beam. */
+  .cage .gusset {
+    position: absolute;
+    top: 26px;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(160deg, #262b2e, #151a1d);
+  }
+  .cage .gusset.left {
+    left: 15px;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .cage .gusset.right {
+    right: 15px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
   /* The viewport is a window, not a screen. */
   .cabframe {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    box-shadow: inset 0 0 0 6px #0d1012, inset 0 0 120px rgba(0, 0, 0, 0.5);
+    box-shadow:
+      inset 0 0 0 6px #0d1012,
+      inset 0 0 120px rgba(0, 0, 0, 0.5);
   }
+  /* Inside the cab it is darker at the edges, because you are inside a box. */
+  /* Lighter than it was: the cage does the framing now, and two things
+     darkening the same edges read as fog rather than as structure. */
   .cabframe.cab {
-    box-shadow: inset 0 0 0 6px #0d1012, inset 0 0 160px rgba(0, 0, 0, 0.72);
+    box-shadow:
+      inset 0 0 0 6px #0d1012,
+      inset 0 0 120px rgba(0, 0, 0, 0.55);
   }
 
   /* Lays nothing out; it only publishes `--dash-h` to everything that has to
@@ -474,16 +567,21 @@ $effect(() => {
     left: 0;
     right: 0;
     top: 0;
-    height: 100vh;
+    /* **dvh, never vh.** `100vh` is the *large* viewport — the height the page
+       would have with the browser chrome hidden — so on a real phone this
+       translated the deck a URL bar too far down and put the alarm row, the
+       strip and the latch below the glass. `dvh` tracks what is actually
+       visible. Caught on a device; no desktop viewport reproduces it. */
+    height: 100dvh;
     z-index: 2;
     display: flex;
     flex-direction: column;
-    transform: translateY(calc(100vh - var(--dash-h)));
+    transform: translateY(calc(100dvh - var(--dash-h)));
     transition: transform 0.28s ease;
   }
   .deck.up {
-    height: 74vh;
-    transform: translateY(26vh);
+    height: 74dvh;
+    transform: translateY(26dvh);
   }
   @media (prefers-reduced-motion: reduce) {
     .deck {
@@ -505,21 +603,6 @@ $effect(() => {
     right: 14px;
   }
 
-  .handsoff {
-    position: fixed;
-    left: 50%;
-    /* Clear of the panel cover, which is where your hands would be. */
-    bottom: calc(env(safe-area-inset-bottom) + 62px);
-    transform: translateX(-50%);
-    font: 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.14em;
-    color: #f0a830;
-    border: 1px solid #f0a830;
-    background: rgba(20, 23, 26, 0.85);
-    padding: 7px 13px;
-    white-space: nowrap;
-    pointer-events: none;
-  }
 
   .item {
     background: rgba(16, 19, 21, 0.94);

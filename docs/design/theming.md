@@ -44,6 +44,44 @@ no scrolling (a panel that has run out of room grows another row); no horizontal
 splits (things are bolted where they fit and the panel wraps); and a digital
 readout is a *character choice for one manufacturer*, not a default.
 
+## The slot owns power and mode; the module owns its face
+
+**Reversed 2026-08-24.** Every plate used to carry its own enable lamp and its
+own verb button, drawn by the rack but sitting inside the plate as if the maker
+had chosen them. That reads as a form, not as equipment: *no manufacturer ships
+the fuse you power it through.*
+
+Now the slot supplies both rails, identically for everyone:
+
+- **Left — power.** A cartridge fuse in a holder, the same object as the carrier
+  at the bottom of the cabinet. Pulling it is how a component goes off, and it
+  sits proud of its holder when pulled. The ears are here too, because unbolting
+  them is how you move a plate up or down the rack.
+- **Right — the bus.** How this component folds into the signal, and what comes
+  out of it. The mode switch is **under a hinged cover**: what a fitted component
+  does to the drive is not something a thumb should change in passing. The cover
+  is only up while the slot is powered, since there is nothing to set on a slot
+  with the fuse pulled.
+
+A module owns its **style** and its **face** — an optional interface that is
+genuinely its own (`src/cockpit/face.ts`). Most have none; a plate with an
+identity and two limit sliders is a complete plate. NAV-1 has one, because TOWA
+cannot help itself.
+
+## Display primitives
+
+Two, and they are different *technologies* rather than different colours,
+because that distinction is real on a real panel and it dates the equipment:
+
+| | what | who |
+|---|---|---|
+| `Seg` | seven-segment LED, red. Shows a number and nothing else. | the machine |
+| `Matrix` | 5×7 dot-matrix LCD, blue backlight, white characters. Shows *words*. | TOWA |
+
+Both are **drawn, not typeset**: the unlit segments and the unlit dot grid stay
+visible, and that ghost is what the eye reads as a display. Text on a coloured
+rectangle is neither, and it is what a website does. Neither costs a font file.
+
 ## Cell formats
 
 A small closed set, so a component of a kind you have never seen still reads.
