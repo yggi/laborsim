@@ -36,9 +36,9 @@ sandbox on a multi-layer educational physics/kinematics engine. Loop partially
 KSP-inspired: **build mode** and **sim mode**, bridged by the control layer.
 
 "Labor" = the Patlabor sense: industrial/utility machines that are tools first —
-construction, salvage, disaster work. Not war machines. You spec a Labor in a
-workshop, wire its control software, take it to a site, and discover which of
-your assumptions was wrong.
+construction, salvage, disaster work. Not war machines. World-building — the
+manufacturers, the L.A.B.O.R. institution, and how each maker's culture predicts
+how its kit fails — is in `LORE.md`.
 
 **What is being simulated is not combat and not locomotion. It is the gap
 between what a machine is rated to do and what it does on the day.**

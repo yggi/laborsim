@@ -18,6 +18,46 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — the dash, the voice, the debrief, and a world
+
+Cards: [L-043] [L-044] [L-029] [L-008] closed · LORE.md written
+
+Four UI pieces the user asked to see, plus world-building.
+
+**L-043 — the industrial dash.** The rack's closed face is now a live control
+panel styled on a Caterpillar generator dash (the reference the user sent):
+yellow sheet steel, hazard trim, white-bezel needle gauges built from a new
+reusable `Gauge.svelte`, an incline bubble, annunciator lamps, a master alarm,
+an ignition key, and a red E-STOP. The layout lesson: at 412 px the full panel
+is wider than the glass, so the **critical controls are pinned to a fixed right
+column** (E-STOP, rack latch) while the instrument strip scrolls — a real
+industrial pattern, and it means OPEN RACK is never off-screen.
+
+**L-044 — the live voice.** Damage lines arrive as stacking toasts that fade;
+citizens latch. Replaces the always-on ledger corner. Survives a reset by
+watching the damage list shrink.
+
+**L-029 — the debrief + RESET.** Itemised scrollable modal in the L.A.B.O.R.
+register with a closing verdict ("you also accomplished nothing"). RESET rebuilds
+the world by **re-keying the sim `$effect`** on a `runId` — the cleanest reset
+available — and resets the rack *in place* so the pushed modules do not
+duplicate. Verified the canvas is reused for the new renderer without a black
+frame.
+
+**L-008 — draggable instruments.** Titlebar drag, with the cockpit's rules
+enforced: wholly on the glass, never overlapping, snap back otherwise. All three
+verified in the browser. One good bug: the first drag test failed silently
+because the instruments' default positions sat *under* the camera control (z
+above them), which ate the pointerdown. Moving the defaults clear fixed it — and
+it is a preview of what the panel budget (L-025) will formalise.
+
+**LORE.md** — the world: the L.A.B.O.R. certification board (the ledger's
+voice), and the three manufacturers as *temperaments that predict how their kit
+fails* — KIBA (stubborn, manual, unkillable, no opinions), TOWA (clever sensors
+a Phantom Labor can lie to), HANSA (safety gear that is right and insufferable).
+The canon rule: a component without a failure mode that belongs to its maker is
+not finished.
+
 ## 2026-08-24 — feel fixes, and a face for the cockpit
 
 Cards: [L-043] [L-046] [L-047] [L-044] opened · [L-029] [L-038] reshaped ·

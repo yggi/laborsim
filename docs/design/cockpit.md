@@ -64,6 +64,17 @@ it means *reconfiguring on the move costs you exactly what it should*.
 Consequence worth noting: this makes hot-patching (L-026) a posture rather than
 a menu. Rewiring live already costs you the view; LOTO will price the rest.
 
+## Instruments are placed on the glass, and the glass has rules (built, L-008)
+
+Edit mode for the instruments is **inline, in the cab, while it runs**: each
+instrument has a titlebar you drag it by. But the placement is not free-for-all,
+because occlusion is a budget spent on purpose — an instrument must sit **wholly
+within the viewport** and must **not overlap** another. A drop that breaks
+either rule is refused and the instrument **snaps back** to where it last legally
+sat. You arrange the glass; you never lose one off the edge or bury one under
+another. This is the mechanism the panel budget (L-025) will price: today it
+enforces *don't overlap*; tomorrow it enforces *there isn't room for that*.
+
 ## A server rack, not a DIN rail
 
 The rail turned out to be vertical, so it is a **server rack**: faceplates
@@ -82,19 +93,25 @@ somebody bolted in, which is what it is meant to be. It also makes the rack
 *legible at a glance while driving* — you find the orange plate, not the third
 row down.
 
-## The cover is the machine's status panel (planned, L-043)
+## The cover is the machine's status panel (built, L-043)
 
 The cover over the rack is not a button — it is **the closed face of the rack,
-and it is a live instrument in its own right.** It sits as a strip at the bottom
-of the glass, in view while you drive, and it shows the machine's vital state:
-fuel and oil pressure, an engine key, and the warning lights and MASTER-ALARM
-that the rig raises. `MASTER-ALARM · MAIN-BUS-B UNDERVOLT`. Then a **latch**
-opens it — the viewport slides up, the cover swings down, and the rack is behind
-it. Same bargain as the chase camera, made with your hands instead of your eyes.
+and a live instrument in its own right.** It is a strip of yellow industrial
+sheet metal at the bottom of the glass, in view while you drive: white-bezel
+needle gauges (speed, grip), an incline bubble, annunciator lamps
+(slip / tilt / ground / yen), a master-alarm that opens the debrief, an
+ignition key for identity, and a red mushroom **E-STOP** that kills the drive by
+disabling every module. A **latch** opens the rack — the panel drops, the rack
+comes up. Same bargain as the chase camera, made with your hands not your eyes.
 
-This gives the live half of the ledger somewhere to live (the rig's voice
-stacks here, L-044) and it means the thing you glance at constantly is the
-machine's health, not a menu.
+Two rules that survived contact with a phone: the critical controls (E-STOP and
+the latch) are **pinned** to a fixed right column so they never scroll off a
+narrow screen, while the instrument strip may scroll; and **every gauge reads a
+real simulated quantity**, because a gauge that lied about the machine would
+break the inspectability pillar as surely as a hidden sim layer.
+
+The live half of the ledger stacks above it (L-044), and the thing you glance
+at constantly is the machine's health, not a menu.
 
 ## Cockpit identity — the interior is not exchangeable
 

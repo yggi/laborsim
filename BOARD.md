@@ -25,8 +25,9 @@ Card format:
 
 ## ready
 
-Order and reasoning: `docs/design/roadmap.md`. The first five cards close the
-core loop once, at rung 1, over the rack as the build surface.
+Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
+1 over the rack as the build surface. The verdict, its voice and the dash are
+built; what remains is more to break, replay, and the path to the conflict.
 
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
@@ -48,25 +49,6 @@ core loop once, at rung 1, over the rack as the build surface.
   ledger has to say what was driving. Splits off the cross-browser half (L-019).
 - **done-when:** replaying a recorded run yields the same damage events in the
   same order, asserted in a test.
-
-### [L-029] The damage ledger — the end-of-run report
-- **what:** the *final* face of the ledger: an itemised, scrollable modal in the
-  condescending register, with a manual **RESET SIMULATOR** button — and the
-  natural first screen of the game. Never aggregated; citizens categorical. The
-  live running account already exists (Ledger.svelte); L-044 turns it into the
-  in-game voice.
-- **done-when:** a run ends with a scrollable line-by-line account, each line
-  traceable to what you did and what was driving, and a button to re-rack.
-- **needs:** L-032
-
-### [L-043] The status panel — the closed face of the rack
-- **what:** the CONTROL PANEL cover becomes a live status strip at the bottom of
-  the glass — fuel/oil pressure, engine key, warning lights, MASTER-ALARM — with
-  a latch that opens it into the rack. It is also where the live voice (L-044)
-  stacks. Themeable per chassis (bulldozer ↔ police Labor), so the interior has
-  identity. See docs/design/cockpit.md.
-- **done-when:** the cover shows live machine state and a raised alarm, and a
-  latch reveals the rack behind it.
 
 ### [L-018] The acceptance scenario, made legible
 - **what:** levers and NAV-1 under `CAP` already are two components fighting
@@ -112,14 +94,6 @@ core loop once, at rung 1, over the rack as the build surface.
 - **done-when:** an unrecoverable machine ends the exercise and offers RESET, and
   nothing is lost but the run.
 - **needs:** L-031
-
-### [L-044] The live voice — stacking, auto-dismissing notifications
-- **what:** the rig speaks as it happens: lines slide in, wait, fade; severe
-  ones (citizen, master-alarm) latch until acknowledged. Same voice as L-029, at
-  a different tempo. Reworks the current always-on Ledger list.
-- **done-when:** breaking three things in a row produces three stacked notices
-  that clear themselves, and a citizen hit stays until dismissed.
-- **needs:** L-043
 
 ### [L-046] External lights and beacons
 - **what:** headlights/spotlight, a red brake light, rotating warning beacons on
@@ -205,18 +179,11 @@ core loop once, at rung 1, over the rack as the build surface.
 - **done-when:** two generated sites demand different machines.
 - **needs:** NOTES thread "What does the procedural generator generate?"
 
-### [L-008] Inline edit — move the instruments on the glass
-- **what:** v0's edit mode is **inline, in the cab, while it runs**: drag a
-  fitted instrument to where you want it. No separate screen. The rack half of
-  edit mode already works; this is the other half.
-- **done-when:** an instrument can be dragged to a new place with a thumb and
-  stays there.
-- **needs:** L-025
-
 ### [L-012] Persistence
-- **what:** save and load a machine — geometry, rack order, cockpit layout.
+- **what:** save and load a machine — geometry, rack order, cockpit layout
+  (instrument placements are already tracked; this makes them survive a reload).
 - **done-when:** a built machine survives a page reload intact.
-- **needs:** L-006, L-008
+- **needs:** L-006
 
 ### [L-028] Footstep policy port
 - **what:** the probe's most valuable mechanism — world-planted stance feet,
@@ -226,6 +193,30 @@ core loop once, at rung 1, over the rack as the build surface.
 ---
 
 ## history
+
+### [L-043] The dash — status panel and closed face of the rack — **closed**
+A live industrial control panel: yellow sheet steel, white-bezel needle gauges
+(speed, grip), incline bubble, annunciator lamps, a master alarm that opens the
+debrief, an ignition key for identity, a red E-STOP that kills the drive by
+disabling every module. Critical controls pinned right so they never scroll off
+a phone; the instrument strip scrolls. Every gauge reads a real quantity.
+
+### [L-044] The live voice — stacking notifications — **closed**
+Damage lines arrive as toasts that slide in and fade; a citizen latches until
+acknowledged. Same register as the debrief, faster tempo. Survives a reset by
+noticing the damage list shrank. Replaced the always-on ledger list.
+
+### [L-029] The end-of-run report + RESET — **closed**
+Itemised, scrollable debrief in the condescending register with a closing
+verdict, RESUME and RESET SIMULATOR; auto-opens on a citizen. RESET rebuilds the
+world by re-keying the sim effect, resetting the rack in place so modules do not
+duplicate — the canvas is reused for the new renderer.
+
+### [L-008] Inline edit — draggable instruments — **closed**
+Instruments move by a titlebar, free to place but refused if they leave the
+glass or overlap another; they snap back to the last legal spot. All three rules
+(free move, no-overlap, in-bounds) verified in the browser. The scope for L-025
+(a real glass budget) is now visible.
 
 ### [L-031] Damage model — the world can be broken — **closed**
 Breakable furniture is dynamic and scatters; damage is **joules absorbed**, not
@@ -269,16 +260,5 @@ work areas — world data, not decoration, because the ledger must price it.
 Public URL, deployed on every green push to the default branch. CI gates the
 deploy on lint, typecheck and tests, so a broken machine cannot reach the site.
 Base path comes from the Pages config, not hardcoded.
-
-### [L-016] Telemetry line from frame one — **closed**
-Speed, attitude, per-track command/slip/grip/contacts, and the bus owner with
-its suppressed layers. Colour-coded on grip. Shipped with rung 1, not after it.
-
-### [L-014] Rung 1 — tracked platform, drivable — **closed**
-Custom track friction model (Rapier has no anisotropic friction), six ray
-samples per track, one tuned constant. Climb limit `atan(MU)` ≈ 43.5°; past it
-the machine rears and flips, emergently. Cab view primary, two non-centring
-levers, actuator bus in from the first commit. Absorbs L-022 (Rapier on rung 1):
-it tips when pushed past the limit, and nothing was hand-tuned to make it.
 
 
