@@ -20,11 +20,19 @@
 const {
   lines,
   cols = 8,
+  lit = true,
 }: {
   /** One string per row. Longer strings are cut, not wrapped: it is a window. */
   lines: readonly string[];
   /** Characters per row. Fixed, so the reading never reflows. */
   cols?: number;
+  /**
+   * Whether the backlight is on. An unpowered LCD is not a blue screen showing
+   * nothing — it is a **dark grey rectangle**, because the backlight is what
+   * makes it blue and the segments only show against it. Getting this wrong is
+   * the single tell that a screen is a `<div>`.
+   */
+  lit?: boolean;
 } = $props();
 
 /**
@@ -109,7 +117,7 @@ const width = $derived(cols * CW * P);
 const height = $derived(lines.length * CH * P);
 </script>
 
-<span class="matrix" role="img" aria-label={lines.join(", ")}>
+<span class="matrix" class:dark={!lit} role="img" aria-label={lines.join(", ")}>
   <svg
     viewBox="0 0 {width} {height}"
     style="width: {width * 0.62}px"
@@ -148,5 +156,18 @@ const height = $derived(lines.length * CH * P);
   }
   .on {
     fill: #f2f6ff;
+  }
+  /* No power: the backlight is off, so the panel is the colour of the polariser
+     and the characters are only very faintly darker than the grid. */
+  .matrix.dark {
+    background: linear-gradient(180deg, #2b3033, #1c2124);
+    border-color: #101416;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+  }
+  .matrix.dark .off {
+    fill: rgba(255, 255, 255, 0.05);
+  }
+  .matrix.dark .on {
+    fill: rgba(200, 210, 220, 0.16);
   }
 </style>

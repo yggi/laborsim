@@ -367,8 +367,15 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .off .plate {
     border-left-color: #3a4240;
   }
+  /* Pull the fuse and the slot is dead — not dimmed, dead. Colour drains out of
+     it, the plate goes grey, and the only thing still lit anywhere on it is
+     nothing at all. A component running and a component switched off should not
+     be a difference in *opacity*; that is a form disabling a field. */
   .off {
-    opacity: 0.62;
+    filter: grayscale(0.85) brightness(0.52);
+  }
+  .off .plate {
+    background-image: none;
   }
   .ident {
     display: flex;

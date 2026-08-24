@@ -47,8 +47,9 @@ import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import Attitude from "./Attitude.svelte";
 import Gauge from "./Gauge.svelte";
-import HourMeter from "./HourMeter.svelte";
 import SlipGauge from "./SlipGauge.svelte";
+import TimeMeter from "./TimeMeter.svelte";
+import TripMeter from "./TripMeter.svelte";
 
 let {
   snapshot,
@@ -189,8 +190,12 @@ const cells = $derived(
         <span class="mfg-legend">SLIP M/S</span>
       </div>
       <div class="inst">
-        <HourMeter {snapshot} />
-        <span class="mfg-legend">HOURS</span>
+        <TimeMeter {snapshot} />
+        <span class="mfg-legend">TIME</span>
+      </div>
+      <div class="inst">
+        <TripMeter {snapshot} />
+        <span class="mfg-legend">KM</span>
       </div>
     </div>
 
@@ -244,8 +249,12 @@ const cells = $derived(
   <!-- The latch. It *is* the way into the rack, so it lives on the seam: the
        bottom edge of the dash, which is the top edge of the cabinet below. -->
   <button class="latch" class:open={rackOpen} onclick={onOpenRack} aria-label="open the rack">
+    <!-- No word on it. It is a handle across the bottom edge of the panel, and
+         finding out what a handle does is the whole of what a handle is. The
+         accessible name still says, because a screen reader cannot pull it and
+         see. -->
     <span class="grip"></span>
-    <span class="word">{rackOpen ? "CLOSE PANEL" : "OPEN RACK"}</span>
+    <span class="latchmark" class:open={rackOpen}></span>
     <span class="grip"></span>
   </button>
 </div>
@@ -494,8 +503,19 @@ const cells = $derived(
     background: repeating-linear-gradient(90deg, #6a6252 0 2px, #2a2620 2px 4px);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
-  .word {
+  /* A machined recess for a thumb, in the middle of the knurling. */
+  .latchmark {
     flex: none;
-    color: #e8b53a;
+    width: 34px;
+    height: 9px;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #0d0c09, #26241e);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.8),
+      0 1px 0 rgba(255, 255, 255, 0.12);
+    transition: transform 0.2s ease;
+  }
+  .latchmark.open {
+    transform: rotate(180deg) translateY(1px);
   }
 </style>

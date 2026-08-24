@@ -95,14 +95,27 @@ use words.
 Two, and they are different *technologies* rather than different colours,
 because that distinction is real on a real panel and it dates the equipment:
 
-| | what | who |
+| | what | for |
 |---|---|---|
-| `Seg` | seven-segment LED, red. Shows a number and nothing else. | the machine |
-| `Matrix` | 5×7 dot-matrix LCD, blue backlight, white characters. Shows *words*. | TOWA |
+| `Seg` | seven-segment LED, red | a **reading** — a number that can go down again |
+| `Matrix` | 5×7 dot-matrix LCD, blue backlight | a **message** — words, which segments cannot make |
+| `Odometer` | mechanical drums | a **total** — a number that only ever goes up |
 
-Both are **drawn, not typeset**: the unlit segments and the unlit dot grid stay
-visible, and that ghost is what the eye reads as a display. Text on a coloured
-rectangle is neither, and it is what a website does. Neither costs a font file.
+That is a real distinction on a real machine, not three skins on one widget.
+Hours run and ground covered have never been shown any way but drums, because
+the number outlives the electronics and a wheel keeps its count with the power
+off. A speedometer has never been drums, because a speed falls.
+
+`Seg` and `Matrix` are **drawn, not typeset**: the unlit segments and the unlit
+dot grid stay visible, and that ghost is what the eye reads as a display. Text on
+a coloured rectangle is neither, and it is what a website does.
+
+**Unpowered is not blank.** A dark LCD is a grey rectangle, because the backlight
+is what makes it blue; a dark LED is its own unlit segments. Getting that wrong is
+the single clearest tell that a screen is a `<div>` — and it is why a slot with
+its fuse pulled goes *grey and dead* rather than merely dim. A component running
+and a component switched off should not differ by opacity; that is a form
+disabling a field.
 
 ## Cell formats
 

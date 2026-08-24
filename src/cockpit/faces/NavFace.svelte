@@ -27,6 +27,7 @@ const pad = (n: number) => n.toFixed(0).padStart(2, "0");
 
 <div class="face">
   <Matrix
+    lit={stage.enabled}
     cols={9}
     lines={
       stage.enabled

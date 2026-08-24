@@ -158,6 +158,8 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const waypoints = generateWaypoints(terrain);
 
   let tick = 0;
+  /** Ground covered this run, metres. */
+  let distance = 0;
   let stages: readonly Stage[] = [];
 
   /**
@@ -212,6 +214,12 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       machine.drive(bus.command.left, bus.command.right, STEP_SECONDS);
       world.step();
       tick++;
+      // Ground covered, integrated at the fixed step. Multiply and add only, so
+      // it stays bit-portable and two engines agree on the odometer reading —
+      // which matters, because it is on the machine's dataplate cluster and a
+      // replay that disagreed about the mileage would be a replay of a
+      // different machine.
+      distance += Math.abs(machine.speed()) * STEP_SECONDS;
       assessDamage();
     },
     snapshot(): Snapshot {
@@ -225,6 +233,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         tick,
         simSeconds: tick * STEP_SECONDS,
         seed,
+        distance,
         machine: {
           pose,
           left: machine.left,

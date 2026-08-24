@@ -18,6 +18,37 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — drums, and a dead slot is dead
+
+Cards: [L-052] extended.
+
+**A third display primitive**, adapted from an `Odometer` component handed over
+for the purpose: mechanical rolling digits. The three are now a real taxonomy
+rather than three skins — `Seg` shows a **reading** (a number that can fall),
+`Matrix` shows a **message** (words, which segments cannot make), `Odometer`
+shows a **total** (a number that only ever goes up). Hours run and ground
+covered have never been displayed any other way on a piece of plant, because the
+number outlives the electronics and a wheel keeps its count with the power off.
+
+The hour meter became **TIME** (HH:MM:SS on drums — a training exercise is
+measured in minutes and four digits and a tenths wheel cannot show a minute) and
+gained a real **odometer** beside it. Distance is integrated in the sim at the
+fixed step, multiply-and-add only, so it stays bit-portable and a recording
+carries its own mileage; an odometer that reset on reload would be lying about
+the machine.
+
+**A slot with its fuse pulled is now dead, not dimmed.** Colour drains out of it,
+the plate goes grey, the circuit lamp is out and NAV's LCD is a **grey**
+rectangle rather than a blue one showing nothing — the backlight is what makes an
+LCD blue, and getting that wrong is the clearest tell that a screen is a `<div>`.
+A component running and a component switched off should not differ by *opacity*;
+that is a form disabling a field.
+
+**The latch lost its word.** It is a knurled bar across the bottom edge of the
+panel with a machined thumb recess in it, and finding out what a handle does is
+the whole of what a handle is. The accessible name stays, because a screen reader
+cannot pull it and see.
+
 ## 2026-08-24 — marks instead of prose, and real fuses
 
 Cards: [L-052] extended.

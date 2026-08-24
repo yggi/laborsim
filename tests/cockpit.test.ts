@@ -135,6 +135,7 @@ describe("the masters are derived, never hand-wired", () => {
         tick: 0,
         simSeconds: 0,
         seed: 1,
+        distance: 0,
         machine: {
           pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
           left: { commanded: 0, surface: 0, slip: 0, contacts: 6, traction: 0 },

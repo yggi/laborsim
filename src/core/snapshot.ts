@@ -72,6 +72,8 @@ export interface Snapshot {
    * in front of the operator *is* the world they are about to be tested on.
    */
   readonly seed: number;
+  /** Ground covered this run, metres. Integrated at the fixed step. */
+  readonly distance: number;
   readonly machine: MachineState;
   /**
    * The rack, stage by stage, from the top of the rail to the terminal.
