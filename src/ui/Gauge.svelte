@@ -5,7 +5,9 @@
  *
  * It is dumb on purpose: it takes a fraction 0..1 and points at it. What the
  * fraction *means* is the caller's problem, which keeps this reusable across
- * speed, grip, pressure, whatever the dash decides to show. A `danger` band
+ * speed, grip, pressure, whatever the dash decides to show. `label` is the
+ * accessible name only — what the dial *measures* is engraved on a plate the
+ * dash mounts under it, because on a panel a label is a separate object. A `danger` band
  * paints the top of the sweep red so a gauge in the red reads at a glance.
  *
  * Architecture rule 3: pure presentation, no snapshot, no sim.
@@ -77,7 +79,6 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     <circle class="hub" cx="50" cy="50" r="5" />
   </svg>
   <div class="read">{display}</div>
-  <div class="label">{label}</div>
 </div>
 
 <style>
@@ -144,9 +145,5 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     background: #2a2418;
     border-radius: 2px;
     padding: 1px 0;
-  }
-  .label {
-    margin-top: 1px;
-    color: #4a4230;
   }
 </style>

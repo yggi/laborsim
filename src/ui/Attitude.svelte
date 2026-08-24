@@ -118,7 +118,6 @@ const CARDINALS = [
   <div class="read">
     {(Math.round(heading) % 360).toFixed(0).padStart(3, "0")}&deg;
   </div>
-  <div class="label">ATT-0</div>
 </div>
 
 <style>
@@ -190,9 +189,5 @@ const CARDINALS = [
     border-radius: 2px;
     padding: 1px 0;
     font-variant-numeric: tabular-nums;
-  }
-  .label {
-    margin-top: 1px;
-    color: #4a4230;
   }
 </style>

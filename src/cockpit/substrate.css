@@ -105,47 +105,105 @@
       linear-gradient(90deg, var(--mfg-steel) 0%, var(--mfg-bezel) 55%, #0a0d0e 100%);
   }
 
-  /* An indicator lamp. Unlit is a dark lens with a highlight, not a grey box —
-     a real lamp is visible when it is off, which is how you know it is there. */
+  /**
+   * An engraved legend plate.
+   *
+   * The defining detail of an industrial panel, and the one that most separates
+   * it from a screen: **the label is a separate physical object.** A little
+   * laminate rectangle, engraved through the white face to the dark core,
+   * screwed or stuck to the panel near the control it names — never printed
+   * beside it, never inside the button, never a tooltip.
+   *
+   * Text set in a control is a *website*. Text on a plate is a *machine*: it
+   * was made by a different process, at a different time, by whoever fitted the
+   * thing, and it can be wrong about what it is bolted next to.
+   */
+  .mfg-legend {
+    display: block;
+    padding: 1px 4px;
+    background: linear-gradient(180deg, #f4f1e8 0%, #ded9cc 62%, #cdc7b8 100%);
+    color: #16161a;
+    border: 1px solid #a9a294;
+    border-radius: 1px;
+    font-size: 6px;
+    line-height: 1.5;
+    letter-spacing: 0.16em;
+    text-align: center;
+    white-space: nowrap;
+    /* Engraved, so the cut catches light on its lower lip. */
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  /* The rarer red-core plate, cut for the things that stop the machine. */
+  .mfg-legend[data-danger="true"] {
+    background: linear-gradient(180deg, #f4f1e8 0%, #ded9cc 62%, #cdc7b8 100%);
+    color: #9c1d0c;
+    border-color: #9c8f84;
+  }
+
+  /**
+   * A panel-mount indicator lamp — a domed lens in a chromed collar.
+   *
+   * Unlit is a dark lens with a highlight, never a grey box: a real lamp is
+   * visible when it is off, which is how you know it is there and what could
+   * light. That is why a panel at rest still reads as a panel.
+   *
+   * The collar is lit from above and shadowed below, so the lens sits *in* the
+   * sheet rather than on it.
+   */
   .mfg-lamp {
+    position: relative;
+    border: 2px solid;
+    border-color: #a2abad #656d6f #414849 #8b9496;
     background:
-      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.35), transparent 60%),
-      #16191b;
-    box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--mfg-ink);
+      radial-gradient(56% 46% at 34% 26%, rgba(255, 255, 255, 0.38), transparent 62%),
+      #14181a;
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.16),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.65),
+      0 1px 2px rgba(0, 0, 0, 0.55);
   }
   .mfg-lamp[data-lit="1"] {
     background:
-      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
+      radial-gradient(56% 46% at 34% 26%, rgba(255, 255, 255, 0.75), transparent 62%),
       var(--mfg-active);
     box-shadow:
-      0 0 8px var(--mfg-active),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+      0 0 9px var(--mfg-active),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.4);
   }
   .mfg-lamp[data-lit="2"] {
     background:
-      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
+      radial-gradient(56% 46% at 34% 26%, rgba(255, 255, 255, 0.75), transparent 62%),
       var(--mfg-warn);
     box-shadow:
-      0 0 8px var(--mfg-warn),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+      0 0 9px var(--mfg-warn),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.4);
   }
   .mfg-lamp[data-lit="3"] {
     background:
-      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.8), transparent 60%),
+      radial-gradient(56% 46% at 34% 26%, rgba(255, 255, 255, 0.85), transparent 62%),
       var(--mfg-alarm);
     box-shadow:
-      0 0 10px var(--mfg-alarm),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
-    animation: mfg-blink 0.9s steps(2, start) infinite;
+      0 0 11px var(--mfg-alarm),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.4);
+  }
+  /**
+   * Flashing is **opt-in**, not automatic on alarm, because on a real panel a
+   * flashing lamp means *unacknowledged* rather than *bad*. Pressing the lamp
+   * makes it steady; the condition clearing makes it dark.
+   */
+  .mfg-lamp[data-flash="true"] {
+    animation: mfg-blink 0.72s steps(2, start) infinite;
   }
   @keyframes mfg-blink {
     50% {
-      opacity: 0.5;
+      opacity: 0.4;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .mfg-lamp[data-lit="3"] {
+    .mfg-lamp[data-flash="true"] {
       animation: none;
     }
   }

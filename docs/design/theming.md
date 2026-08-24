@@ -9,6 +9,45 @@ says how to *make* one. Rendering technology and why it is DOM at all:
 
 ---
 
+## The register: an industrial machine, not a website
+
+Settled 2026-08-24, and it decides more visual arguments than anything else
+here. Three rules, in order of how often they are broken:
+
+1. **The label is a separate object.** Every control is named by an engraved
+   plate bolted near it (`.mfg-legend`), never by text set inside it or beside
+   it. Text in a control is a website; a plate is a machine — made by a
+   different process, at a different time, by whoever fitted the thing, and
+   capable of being wrong about what it is bolted next to.
+2. **A plate never changes.** It is engraved metal. A label that rewrites itself
+   to report state is a screen pretending to be a panel. TILT-GUARD's plate says
+   `TILT-GUARD` whether the guard is working, limiting or bypassed.
+3. **The lens is the state.** Colour and position, not words. Dark is not
+   running, lit is running, amber and red mean what they always mean. You read a
+   panel the way you read a room, not the way you read a page.
+
+Three registers, each doing exactly one job: **the plate names**, **the lens
+reports**, and **the strip** — the single line of words on the panel — says the
+one sentence, when there is one. Nothing else on the dash is allowed to talk.
+
+Corollaries that fall out and are worth stating because they get re-litigated:
+no scrolling (a panel that has run out of room grows another row); no horizontal
+splits (things are bolted where they fit and the panel wraps); and a digital
+readout is a *character choice for one manufacturer*, not a default.
+
+## Cell formats
+
+A small closed set, so a component of a kind you have never seen still reads.
+Each is roughly the footprint of a small instrument or less.
+
+| format | what it is | who |
+|---|---|---|
+| **1-lamp** | one illuminated pushbutton, one plate. The base case. | anyone |
+| **lamp + counter** | the same, plus a tiny numeric window | TOWA |
+| **lamp, no toggle** | safety kit: the lens reports, and there is no way to switch it off from here | HANSA |
+| **two-button** | a raise/lower pair with one plate between them — the commonest thing on a KIBA machine after a lamp, for a tool extension | *not built; add by need* |
+| **selector** | a multi-position pointer knob with an arc of positions | *not built* |
+
 ## The three layers, cheapest first
 
 Use the cheapest one that works. This is the rule that keeps a theming system

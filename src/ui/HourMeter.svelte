@@ -31,7 +31,6 @@ const tenth = $derived(Math.floor((hours % 1) * 10).toFixed(0));
     {/each}
     <span class="drum tenths">{tenth}</span>
   </div>
-  <div class="label">HOURS</div>
 </div>
 
 <style>
@@ -65,9 +64,5 @@ const tenth = $derived(Math.floor((hours % 1) * 10).toFixed(0));
   /* The tenths wheel is white-on-red on every one of these ever made. */
   .tenths {
     background: linear-gradient(180deg, #5c1108, #b8331f 38% 62%, #5c1108);
-  }
-  .label {
-    margin-top: 2px;
-    color: #4a4230;
   }
 </style>

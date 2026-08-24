@@ -126,7 +126,6 @@ const noop = () => {};
         {modules}
         snapshot={current?.snapshot}
         onchange={noop}
-        onclose={noop}
         debug={false}
       />
     </div>

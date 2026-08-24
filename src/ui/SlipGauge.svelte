@@ -41,7 +41,6 @@ const worst = $derived(
 
 <div class="slip" style="width: {size}px">
   <div class="face">
-    <div class="head">SLIP</div>
     {#each tracks as track (track.id)}
       <div class="row">
         <span class="cap">{track.id}</span>
@@ -59,7 +58,6 @@ const worst = $derived(
     {/each}
   </div>
   <div class="read">{worst.toFixed(1)}</div>
-  <div class="label">m/s</div>
 </div>
 
 <style>
@@ -76,11 +74,6 @@ const worst = $derived(
     border: 1px solid #b7b0a0;
     border-radius: 4px;
     padding: 4px 4px 5px;
-  }
-  .head {
-    font-size: 6px;
-    color: #4a4230;
-    margin-bottom: 2px;
   }
   .row {
     display: flex;
@@ -134,9 +127,5 @@ const worst = $derived(
     border-radius: 2px;
     padding: 1px 0;
     font-variant-numeric: tabular-nums;
-  }
-  .label {
-    margin-top: 1px;
-    color: #4a4230;
   }
 </style>

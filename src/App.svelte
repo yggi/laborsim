@@ -414,7 +414,6 @@ $effect(() => {
             modules={rack}
             snapshot={latest}
             onchange={() => rackVersion++}
-            onclose={() => (rackOpen = false)}
             debug={showDebug}
           />
         {/key}

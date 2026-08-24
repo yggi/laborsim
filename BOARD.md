@@ -29,6 +29,15 @@ Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
 1 over the rack as the build surface. The verdict, its voice and the dash are
 built; what remains is more to break, replay, and the path to the conflict.
 
+### [L-040] The machine symphony — synthesised sound
+- **what:** engine-generated audio from the quantities the sim already
+  publishes — track speed, slip, contacts, impact energy — plus the alarms, which
+  now exist and are mute. Never sampled: a clip is a black box triggered by an
+  event, a synth voice is another rendering of a simulated quantity.
+- **done-when:** a machine labouring at 90% grip sounds like it, an impact's
+  voice follows how hard it was, and an unacknowledged master alarm is audible.
+- **needs:** L-031
+
 ### [L-049] Themes, authored independently — the agentic round
 - **what:** one author per manufacturer, each given only its own `LORE.md`
   entry, `components.md`, `theming.md` and the KIBA reference — blind to the
@@ -56,13 +65,6 @@ built; what remains is more to break, replay, and the path to the conflict.
   maker's packet like the dashboard does.
 - **done-when:** the cage frame and the levers are recognisably the same
   manufacturer's as the panel they sit behind.
-
-### [L-041] SPEED-LIM — the third dumb module
-- **what:** caps track speed to a number on its faceplate. The obvious partner
-  to TILT-GUARD and the first module whose right answer is *situational*: slow
-  is safe near the pipe stack and useless on the far side of the site.
-- **done-when:** it is in the rack with a limit slider and its own instrument,
-  and the ledger can tell you it was set too high.
 
 ### [L-039] Breakables worth breaking
 - **what:** the site as an inventory of expensive things. More props, more
@@ -112,6 +114,13 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
+### [L-041] SPEED-LIM — the third dumb module
+- **what:** caps track speed to a number on its faceplate. The obvious partner
+  to TILT-GUARD and the first module whose right answer is *situational*: slow
+  is safe near the pipe stack and useless on the far side of the site.
+- **done-when:** it is in the rack with a limit slider and its own instrument,
+  and the ledger can tell you it was set too high.
+
 ### [L-038] The machine breaks too, and the reset
 - **what:** damage to the vehicle and destruction, and a **manual** diegetic
   reset — the rig re-racks the exercise, never yanks control. Ends on: machine
@@ -135,15 +144,6 @@ built; what remains is more to break, replay, and the path to the conflict.
   the machine to the world it is tearing up, and it is the first ground evidence
   the ledger's talk of "rutted surface" can point at.
 - **done-when:** driving leaves a visible trail that follows the tracks.
-
-### [L-040] The machine symphony — synthesised sound
-- **what:** engine-generated audio from the quantities the sim already
-  publishes — track speed, slip, contacts, impact energy. Never sampled: a clip
-  is a black box triggered by an event, a synth voice is another rendering of a
-  simulated quantity.
-- **done-when:** a machine labouring at 90% grip sounds like it, and an impact's
-  voice follows how hard it was.
-- **needs:** L-031
 
 ### [L-035] Throttle-and-steer — the rung-2 control upgrade
 - **what:** the named successor to the two levers, and a component curriculum
@@ -222,6 +222,15 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-052] The dash becomes a panel — **closed**
+No inline labelling: every control is named by a separate engraved plate, a
+plate never changes, and the lens carries the state. One wrapping flow, no
+horizontal split and no scrolling. The rack toggle became the latch it always
+was — full width on the bottom seam, and the rack's duplicate close went. The
+masters are push-to-acknowledge and the E-STOP latches beside them. Dropped the
+SLIP/GND/¥ legend row, which was the panel explaining itself in words. Found,
+not built: ordering a guard above what it guards makes it advisory.
+
 ### [L-048] The triptych — plate, cell, pod — **closed**
 A component is one thing seen from three postures, and only the plate is
 mandatory; its maker decides the rest. Three currencies: a chassis component
@@ -290,10 +299,5 @@ boxes, and the site is steeper.
 Under a pipeline there is no owner to name, so the chain is shown stage by
 stage down to the terminal, with active/idle/bypassed LEDs and each module's
 one-sentence statement of what it considers.
-
-### [L-024] Cel pipeline port — **closed**
-Stepped toon ramp, guarded fresnel rim, per-axis inverted-hull ink. Banded sky
-dome. Site furniture as real colliders in `src/world/props.ts`, clustered into
-work areas — world data, not decoration, because the ledger must price it.
 
 

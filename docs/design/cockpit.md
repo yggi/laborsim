@@ -93,6 +93,28 @@ somebody bolted in, which is what it is meant to be. It also makes the rack
 *legible at a glance while driving* — you find the orange plate, not the third
 row down.
 
+## The masters are the bridge, and you acknowledge them (built, L-052)
+
+MASTER ALARM and MASTER WARNING are where the machine's own thresholds and every
+fitted component's condition arrive together. They are the prototypical labelled
+indicator — a lens and a plate, in the chassis maker's house style — and they are
+the only thing on the dash that speaks for parts it does not own.
+
+They are **push-to-acknowledge**, the way an annunciator panel works: a new
+condition flashes, pressing it makes it steady, and it goes dark only when the
+condition actually clears. **Acknowledging is not dismissing.** You cannot make
+the panel stop telling you; you can only tell it you have heard.
+
+The E-STOP sits with them, because it is the same conversation, and it latches
+in the way a real mushroom does — down and locked until it is released.
+
+Consequence worth recording: **a guard moved above the thing it guards becomes a
+warning light.** TILT-GUARD scales what reaches it, so above the pilot it scales
+HALT and the pilot's SET overwrites the result — no authority at the terminal —
+while its condition still lights the masters. Guard, bypass, or advise, chosen by
+*ordering alone*, with no new verb, setting or mechanism. Nobody designed it; it
+fell out of the rack being a pipeline, and it is under test.
+
 ## The dash is the seam, and it travels (built, L-048)
 
 The dash is the **only thing visible in both postures**, and it does not fade

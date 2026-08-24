@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Module } from "../src/control/bus.ts";
-import { runRack } from "../src/control/bus.ts";
+import { ALARM, runRack } from "../src/control/bus.ts";
 import { MAX_TRACK_SPEED, RIGHT_X } from "../src/core/spec.ts";
 import type { Quat } from "../src/core/vec.ts";
 import { createTiltGuard } from "../src/modules/tiltguard.ts";
@@ -142,5 +142,37 @@ describe("TILT-GUARD", () => {
       const command = runRack([driver(MAX_TRACK_SPEED, 0), bypassed]).command;
       expect(command.left).toBe(MAX_TRACK_SPEED);
     });
+  });
+});
+
+/**
+ * Moving a guard **above** the thing it guards turns it into a warning light.
+ *
+ * Nothing implements this. It falls out of the rack being a pipeline: TILT-GUARD
+ * multiplies whatever reached it, and above the pilot what reaches it is HALT —
+ * so it scales zero, and the driver's SET below it overwrites the result. The
+ * drivetrain never feels it. Its `condition` is published either way, so the
+ * dash still lights, the cell still goes amber, and the strip still names it.
+ *
+ * That is a third mode — guard, bypass, advise — bought with no new machinery,
+ * no new verb and no new setting. *Ordering* buys it, which is the argument for
+ * the pipeline in one test (META: a reframing that dissolves several questions
+ * at once is probably right).
+ */
+describe("ordering turns the guard into an advisor", () => {
+  it("has no authority above the driver, and still reports", () => {
+    const guard = guardAt(pitched(40), { pitch: 20 });
+    const pilot = driver(1.5, 1.5);
+
+    // Below the driver it is a guard, and it takes the drive away.
+    const guarding = runRack([pilot, guard]);
+    expect(guarding.command.left).toBeLessThan(1.5);
+
+    // Above it: same module, same tilt, full drive at the terminal.
+    const advising = runRack([guard, pilot]);
+    expect(advising.command.left).toBeCloseTo(1.5, 6);
+
+    // And it has not gone quiet — it still tells the dash what it thinks.
+    expect(advising.stages.find((s) => s.id === "TILT")?.condition).toBe(ALARM);
   });
 });

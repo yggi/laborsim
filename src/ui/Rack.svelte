@@ -17,6 +17,9 @@
  * settings — plus immediate strength feedback, which is the part you read
  * while driving rather than while thinking.
  *
+ * There is no close button here. The dash's latch is the only way in and out,
+ * because it *is* the latch — one handle on the seam, the way a hood has one.
+ *
  * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
  */
 
@@ -30,13 +33,11 @@ const {
   modules,
   snapshot,
   onchange,
-  onclose,
   debug = false,
 }: {
   modules: Module[];
   snapshot: Snapshot | undefined;
   onchange: () => void;
-  onclose: () => void;
   debug?: boolean;
 } = $props();
 
@@ -89,7 +90,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   <div class="head">
     <span>RACK &mdash; SIGNAL FLOWS DOWN</span>
     <span class="warn">EYES OFF THE GLASS</span>
-    <button class="close" onclick={onclose} aria-label="close the rack">CLOSE ▼</button>
   </div>
 
   <div class="slots">
@@ -241,16 +241,6 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .head .warn {
     color: #f0a830;
-  }
-  .head .close {
-    font: inherit;
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    color: #14171a;
-    background: #e8b53a;
-    border: none;
-    padding: 3px 8px;
-    cursor: pointer;
   }
   /* The cabinet interior the faceplates are screwed into. */
   .slots {
