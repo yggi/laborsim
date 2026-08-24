@@ -60,6 +60,14 @@ Steering tests asserted that yaw *changed*, never which way, so a mirrored
 control shipped. The fix is not just a better assertion — it is *reintroducing
 the bug to watch the test fail*. Three failed; that is what made them real.
 
+**A test can pass by measuring the bug.**
+The first "machine drives into a cone" test passed, and *failed* when the damage
+code was disabled — both signals green. It had never hit anything: the world's
+own `step()` re-ran the rack and overwrote the test's `drive` with an empty
+rack's HALT, and what it was actually detecting was furniture destroying itself
+on spawn. A bite check proves the code path ran, not that the scenario happened.
+Assert the scenario too — here, that the impact speed was non-zero.
+
 **Verify by exit code, not by grepping output.**
 A deploy failed on formatting because the local check grepped for `lint/` rule
 hits and a formatter diagnostic does not match that pattern.

@@ -1,4 +1,5 @@
 import type { Stage } from "../control/bus.ts";
+import type { DamageEvent } from "../sim/damage.ts";
 
 /**
  * Architecture rule 3: state crosses from sim to UI in one direction, through
@@ -47,6 +48,16 @@ export interface MachineState {
   readonly roll: number;
 }
 
+/**
+ * Where a piece of site furniture has ended up. Only sent for props that are
+ * actually moving — a site standing still costs nothing to transmit.
+ */
+export interface PropPose {
+  readonly index: number;
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number, number];
+}
+
 export interface Snapshot {
   readonly tick: number;
   readonly simSeconds: number;
@@ -60,6 +71,12 @@ export interface Snapshot {
    * where it matters most.
    */
   readonly stages: readonly Stage[];
+  /** Props that moved this step. Empty on an undisturbed site. */
+  readonly props: readonly PropPose[];
+  /** The ledger so far, oldest line first. */
+  readonly damage: readonly DamageEvent[];
+  /** Total billed, yen. */
+  readonly bill: number;
 }
 
 /**

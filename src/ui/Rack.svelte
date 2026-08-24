@@ -108,10 +108,16 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 
         <div class="plate">
           <div class="ident">
+            <!-- The maker's mark. Graphic design belongs in SVG, not in more
+                 CSS — see docs/design/instrument-rendering.md. -->
+            <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
+              <path d={style.mark} />
+            </svg>
             <span class="wordmark">{style.wordmark}</span>
             <span class="name">{module.label}</span>
           </div>
           <div class="considers">{module.considers}</div>
+          <div class="silkscreen">{style.plateText}</div>
 
           {#if module.params?.length}
             <!-- Settings, on the faceplate where you turn them. Not a tuning
@@ -243,7 +249,14 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .ear {
     width: 16px;
     flex: none;
-    background: var(--bezel);
+    /* Brushed steel upright, lit from the left the way a real one would be. */
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 0 1px,
+        transparent 1px 3px
+      ),
+      linear-gradient(90deg, #2f3639 0%, var(--bezel) 55%, #0a0d0e 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -276,6 +289,15 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     min-width: 0;
     padding: 7px 9px;
     border-left: 3px solid var(--accent);
+    /* Stamped sheet: a faint top highlight and a wash of vent slots. */
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 22%),
+      repeating-linear-gradient(
+        90deg,
+        transparent 0 6px,
+        rgba(0, 0, 0, 0.14) 6px 7px
+      );
+    background-blend-mode: normal;
   }
   .idle .plate {
     border-left-color: #f0a830;
@@ -288,8 +310,23 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .ident {
     display: flex;
-    align-items: baseline;
-    gap: 7px;
+    align-items: center;
+    gap: 6px;
+  }
+  .mark {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+  }
+  .silkscreen {
+    margin-top: 3px;
+    font-size: 7px;
+    letter-spacing: 0.14em;
+    color: color-mix(in srgb, var(--face) 34%, transparent);
   }
   .wordmark {
     font-size: 7px;
@@ -311,14 +348,35 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
 
   /* House styles. Same parts, arranged the way each maker arranges them. */
+  /* TOWA: centred, glassy, consumer-electronics. */
   .stack .ident {
     flex-direction: column;
     align-items: center;
     gap: 0;
   }
-  .stack .considers {
+  .stack .considers,
+  .stack .silkscreen {
     text-align: center;
   }
+  .stack .plate {
+    border-left-width: 1px;
+    border-radius: 0 4px 4px 0;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(111, 227, 196, 0.09), transparent 70%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 30%);
+  }
+  .stack .mark {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* KIBA: stamped steel, the wordmark punched into the plate. */
+  .strip .wordmark {
+    padding: 1px 4px;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    border-left: 2px solid var(--accent);
+  }
+  /* HANSA: everything in a bordered field, because everything is a rating. */
   .boxed .ident {
     border: 1px solid var(--accent);
     padding: 2px 6px;
@@ -327,6 +385,33 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     align-items: flex-start;
     gap: 0;
     background: rgba(0, 0, 0, 0.35);
+  }
+  .boxed .mark {
+    position: absolute;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    opacity: 0.5;
+  }
+  .boxed .plate {
+    position: relative;
+  }
+  .boxed .silkscreen {
+    letter-spacing: 0.18em;
+  }
+  .boxed .verb {
+    border-radius: 0;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.4);
+  }
+  .boxed .led {
+    border-radius: 0;
+    border-width: 2px;
+  }
+  .stack .led {
+    border-radius: 50%;
+  }
+  .stack .verb {
+    border-radius: 9px;
   }
   .boxed .plate {
     border-left-width: 6px;

@@ -19,6 +19,7 @@ import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
 import Attitude from "./ui/Attitude.svelte";
+import Ledger from "./ui/Ledger.svelte";
 import Lever from "./ui/Lever.svelte";
 import NavRadar from "./ui/NavRadar.svelte";
 import Rack from "./ui/Rack.svelte";
@@ -178,6 +179,12 @@ $effect(() => {
 
 {#if showDebug}
   <Telemetry snapshot={latest} showChain={!rackOpen} />
+{/if}
+
+<!-- The rig keeps the account whether you are watching or not. It shows in
+     the chase view too: that is the view you were in when it happened. -->
+{#if !rackOpen}
+  <Ledger snapshot={latest} />
 {/if}
 
 {#if mode === "cab"}

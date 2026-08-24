@@ -24,22 +24,18 @@ build mode from sim, lazily load instruments.
 *Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser
 track geometry — and no frame ever timed on a phone. L-034 gets the number.
 
-*World size and part counts*, and whether the sim runs off the main thread,
-follow from those two numbers rather than preceding them. Must be answered
-before `src/sim/` grows.
+*World size and part counts* follow from those two numbers rather than preceding
+them — and 130 dynamic bodies now step every frame. Must be answered before
+`src/sim/` grows.
 
 ## Missions, and what "operator interaction" means
 
-A play session produced a coherent direction — Zachtronics-style budgeting,
-scored on budget / time / **complexity**, with complexity as parts-and-weight
-traded against operator interaction. Written up in `docs/design/missions.md`
-and explicitly **not v0**.
-
-Two things there are worth carrying even if missions never land. First: it
-inverts the chase camera from a cost into a reward, because a solution good
-enough to run itself is one you can watch. Second: determinism stops being only
-an attribution tool and becomes the substrate for *verifying* a solution across
-several sites.
+Zachtronics-style budgeting, scored on budget / time / **complexity**, with
+complexity as parts-and-weight traded against operator interaction. Written up
+in `docs/design/missions.md` and explicitly **not v0**. Two things worth
+carrying even if missions never land: it inverts the chase camera from a cost
+into a reward, and determinism stops being only an attribution tool and becomes
+the substrate for *verifying* a solution across several sites.
 
 The unresolved core is the metric. **What counts as operator interaction** —
 lever changes, seconds hands-on, distinct inputs? It is the load-bearing number
@@ -51,6 +47,16 @@ Left over from the chase-camera decision. Instruments are installed, not
 toggled — but may they be *stowed* in the field at a cost in hands or seconds,
 or not at all? The chase camera's shape suggests an answer (available, but it
 costs you something real while it is up), which has not been confirmed.
+
+## The site is hard to crash into on purpose
+
+A twelve-year-old found the fun in seconds by driving at the construction
+material. A scripted driver went ten minutes without touching anything: 130
+props in six clusters across 256 m, and the waypoint route does not pass any of
+them. That is a site-design problem, not a damage problem — work areas should be
+somewhere a driver is *going*, and the route should run through them. Feeds
+L-039 and L-027, and it is a hint that "difficulty is the site" needs the site
+to be composed rather than scattered.
 
 ## Does equal-share normal load hold up for the load chart?
 
@@ -72,13 +78,6 @@ not a player-facing one. Still unanswered: whether the player sees a **domain
 stack** (structure / mechanics / power / thermal / signal) they can open
 individually, or a **fidelity ladder** they can descend, or both as a matrix.
 Shapes `src/sim/layers/` directly.
-
-## Gain tuning is a trap
-
-Tedious, and it lets players brute-force past the interesting choice. The
-working answer — make topology, priority and sensor selection the game, expose
-gains as **one slider with a visible margin readout** — is a directive, not yet
-a design. Watch for it creeping back in as per-component tuning.
 
 ## What does the procedural generator generate?
 

@@ -126,18 +126,25 @@ describe("slip is real and reported", () => {
   });
 
   it("is large when a track is commanded but cannot bite", () => {
-    // Full command from rest: the drivetrain outruns the ground for a moment.
+    // On the flat with six samples down, the drivetrain's own ramp keeps slip
+    // near zero — the machine simply grips. Slip needs ground that cannot hold
+    // the command, so this asks for a grade past the friction limit.
+    //
+    // It used to launch on the flat and pass, but only because construction
+    // dropped the machine and it was still bouncing: intermittent contact, not
+    // a traction limit. Settling the site at construction exposed that, and the
+    // old assertion was testing a spawn artifact.
     const world = createWorld({
+      terrain: makeRampTerrain(55, 5),
       modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
     });
-    for (let i = 0; i < 30; i++) world.step();
     let peak = 0;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 600; i++) {
       world.step();
       peak = Math.max(peak, Math.abs(world.snapshot().machine.left.slip));
     }
     world.free();
-    expect(peak).toBeGreaterThan(0.1);
+    expect(peak).toBeGreaterThan(0.5);
   });
 });
 

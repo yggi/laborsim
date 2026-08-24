@@ -3,9 +3,9 @@
 Spilled from `MEMORY.md` § 3.1. The voice the ledger speaks in is in
 `docs/design/tone.md`; this is what it is speaking *about*.
 
-Nothing here exists yet. It is the next thing built (`BOARD.md` L-031 onward),
-and it is the missing third beat of the failure loop — see
-`docs/design/roadmap.md`.
+The model is **built** (L-031): furniture is dynamic, impacts are measured in
+joules, and lines are priced and attributed. The end-of-run report, more things
+worth breaking, machine damage and sound are still ahead.
 
 ---
 
@@ -26,6 +26,42 @@ The attribution rule applies in full: a ledger that says *what* without *why* is
 a score, and scores do not teach. Every line has to be traceable to what you did
 and what was driving at the time — which is why replay comes before the ledger
 rather than after it.
+
+## How an impact is measured
+
+**Joules absorbed**, not hit points. Every step, a breakable body's kinetic
+energy is compared with its energy last step, and the increase is what was
+delivered into it. That works for anything hit by anything — the machine, or a
+barrier the machine has just thrown — without the model knowing what hit what,
+and it is a quantity the player can be shown. "The cone took 15 J and it is
+rated for 5" is a diagnosis; "the cone lost 40 HP" is a number we made up.
+
+Two guards, both paid for:
+
+- **An impact must clear a floor set by the body's mass**, expressed as a speed
+  (0.35 m/s). A flat joule threshold means opposite things to a 6 kg cone and a
+  260 kg pipe stack.
+- **A body must have been at rest to be hit.** Without this, anything already
+  sliding integrates the energy gravity feeds it and eventually writes itself
+  off. The site billed itself ¥9,540 for its own hillside before the machine
+  had moved. The cost of the guard: a prop hit *again* while still moving is
+  not billed for the second hit, so the ledger under-counts — which is the
+  right way round for something that is accusing the player of things.
+
+And the site settles at construction before anyone is accountable for it.
+
+## Toughness is a fraction of what the machine can actually deliver
+
+The numbers are not free, and getting them wrong is not a balance nit. A heavy
+machine hitting a light object cannot put more than about **½·m·v²** into it —
+the object simply leaves at roughly the machine's speed. A 6 kg cone can absorb
+at most 15 J from a 6.2 t machine at its 2.2 m/s top speed, so rating the cone
+at 22 J made it **indestructible by any means the game has**.
+
+So every toughness is set as a fraction of `½·m·v_max²` for that mass. A
+full-speed hit writes the thing off; a crawl scuffs it. The choice the player
+has is not how hard to hit something — the machine only has one speed worth
+using — it is whether to be anywhere near it.
 
 ## Why it goes deep rather than wide
 
@@ -81,7 +117,7 @@ In order, and each one is a `BOARD.md` card:
 
 | Card | Why it is where it is |
 |---|---|
-| L-031 damage model | mass, price, threshold, priced events. Nothing is felt or counted until an impact means something. |
+| L-031 damage model | **built.** Mass, price, toughness, priced and attributed events; furniture is dynamic and scatters. |
 | L-039 breakables | a site worth breaking: more props, materials, prices. The model is worthless against six crates. |
 | L-032 record and playback | the ledger's *why* column. Also the only way a line can be argued with. |
 | L-029 the ledger itself | itemised, named, priced, condescending. |

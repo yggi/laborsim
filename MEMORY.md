@@ -13,6 +13,7 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
+| `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
 | `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
@@ -31,9 +32,8 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 ## 1. Identity
 
 **laborsim** — a 3D browser game. Patlabor-themed mecha and vehicle simulator
-sandbox, built on a multi-layer educational physics/kinematics engine.
-Gameplay loop partially KSP-inspired: **build mode** and **sim mode**, with the
-control-software layer bridging them.
+sandbox on a multi-layer educational physics/kinematics engine. Loop partially
+KSP-inspired: **build mode** and **sim mode**, bridged by the control layer.
 
 "Labor" = the Patlabor sense: industrial/utility machines that are tools first —
 construction, salvage, disaster work. Not war machines. You spec a Labor in a
@@ -113,8 +113,10 @@ Environments are the difficulty axis: **a quarry is simpler than a city.**
 
 It goes **deep, not wide**: you feel the impact, see the thing come apart, hear
 it, and only then are told what it cost. **The machine is not exempt** — it
-breaks too, which is what needs a reset. Model, scope and build order:
-`docs/design/damage.md`. Voice: `docs/design/tone.md`.
+breaks too, which is what needs a reset. The model is **built**: damage is
+**joules absorbed**, never hit points, so it is a quantity the player can be
+shown. Model, numbers and build order: `docs/design/damage.md`. Voice:
+`docs/design/tone.md`.
 
 ## 4. Core loop
 
@@ -149,13 +151,11 @@ balance controller — tipping is emergent from contacts alone.
 5. Off-road hexapod · 6. Bipedal walker
 
 **Sequence the ladder, not the biped.** The biped is the worst entry point for
-physics and the best one for concept art — which is exactly why the probe
-started there and production must not. Full table:
-`docs/design/machinery-ladder.md`.
-
-The ladder is non-monotonic by design: the Phantom Labor attacks the sensor
-surface capability created, so the unscrambleable two-lever cage at rung one
-must stay a genuinely good machine, never a tutorial.
+physics and the best one for concept art — which is why the probe started there
+and production must not. Full table: `docs/design/machinery-ladder.md`. The
+ladder is non-monotonic by design: the Phantom Labor attacks the sensor surface
+capability created, so the two-lever cage at rung one must stay a genuinely good
+machine, never a tutorial.
 
 ## 6. The cockpit — panel budget and occlusion
 

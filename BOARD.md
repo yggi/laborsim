@@ -28,19 +28,19 @@ Card format:
 Order and reasoning: `docs/design/roadmap.md`. The first five cards close the
 core loop once, at rung 1, over the rack as the build surface.
 
-### [L-031] Damage model — the world can be broken
-- **what:** world objects get mass, a price and a destruction threshold. Contact
-  energy above it destroys the object and emits a priced, named event on the sim
-  side. No presentation — that is L-029.
-- **done-when:** driving into the scooter destroys it and the sim records what,
-  where, how hard and what it cost.
+### [L-041] SPEED-LIM — the third dumb module
+- **what:** caps track speed to a number on its faceplate. The obvious partner
+  to TILT-GUARD and the first module whose right answer is *situational*: slow
+  is safe near the pipe stack and useless on the far side of the site.
+- **done-when:** it is in the rack with a limit slider and its own instrument,
+  and the ledger can tell you it was set too high.
 
 ### [L-039] Breakables worth breaking
 - **what:** the site as an inventory of expensive things. More props, more
-  kinds, materials and prices — a damage model is worthless against six crates.
-  Quarry tier first: plenty to wreck, nobody to hurt.
+  kinds, materials and prices — five kinds and one scooter is not an inventory.
+  Quarry tier first: plenty to wreck, nobody to hurt. Also: work areas want to
+  be somewhere a driver actually goes, not scattered where nothing leads.
 - **done-when:** a careless run through a work area produces a list, not a line.
-- **needs:** L-031
 
 ### [L-032] Record and playback — one engine
 - **what:** an input trace plus the seed reproduces a run exactly in this
@@ -54,8 +54,9 @@ core loop once, at rung 1, over the rack as the build surface.
   voice. Never aggregated. Citizens are categorical failure, never a line item.
   Quarry (few hazards, nobody to hurt) as the easy environment tier.
 - **done-when:** a run ends with a line-by-line account that says *what* and
-  *why*, each line traceable to what you did and what was driving.
-- **needs:** L-031, L-032
+  *why*, each line traceable to what you did and what was driving. The running
+  account already exists; this is the end-of-run report and the register.
+- **needs:** L-032
 
 ### [L-018] The acceptance scenario, made legible
 - **what:** levers and NAV-1 under `CAP` already are two components fighting
@@ -192,6 +193,16 @@ core loop once, at rung 1, over the rack as the build surface.
 
 ## history
 
+### [L-031] Damage model — the world can be broken — **closed**
+Breakable furniture is dynamic and scatters; damage is **joules absorbed**, not
+hit points, so it is a quantity the player can be shown. Lines carry what was
+driving and what was bypassed. Two bugs paid for: props spawned overlapping and
+destroyed each other (¥55,690 before the machine moved), and energy fed to
+anything already sliding got integrated until it wrote itself off. Rejected:
+Rapier's contact-force events — a solver force magnitude is not inspectable and
+energy is. Learned: toughness must be a fraction of ½·m·v², or a cone rated at
+22 J is indestructible by a 6.2 t machine.
+
 ### [L-036] TILT-GUARD — the first safety component — **closed**
 Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
 Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
@@ -209,11 +220,6 @@ chassis instrument, TILT-GUARD's two banded gauges as its own. Rack toggle
 became a control-panel cover at the seam; the camera became an item in the
 instrument column. Tracks are belts wrapped round their wheels rather than
 boxes, and the site is steeper.
-
-### [L-007] `autonav` as the reference dumb module — **closed**
-NAV-1 steers on bearing and distance to the pin and considers nothing else,
-which is the design rather than a limitation. Heading error from a dot and a
-cross product, so no transcendental closes a loop back into the sim.
 
 ### [L-017] The attribution rule — **closed for rung 1**
 Under a pipeline there is no owner to name, so the chain is shown stage by

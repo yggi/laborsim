@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { makeRng } from "../core/rng.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
-import type { Prop } from "../world/props.ts";
+import { PROP_BOX, type Prop } from "../world/props.ts";
 import { sampleTerrain, type Terrain } from "../world/terrain.ts";
 import type { Pin } from "../world/waypoints.ts";
 import { ink, inked, terrainMaterial, toon } from "./toon.ts";
@@ -144,6 +144,28 @@ export function createViewport(
   bumper.position.set(0, TRACK.height + CLEARANCE + 0.16, noseZ);
   machine.add(bumper);
 
+  // Undercarriage. The belly clearance is real — 0.42 m of nothing between the
+  // top of each belt and the underside of the hull — and with nothing drawn in
+  // it the tracks read as *detached*, which is exactly how it looked the first
+  // time the machine ended up on its roof. Frames and a cross-member.
+  const frameY = TRACK.height + CLEARANCE / 2;
+  for (const x of [LEFT_X, RIGHT_X]) {
+    const frame = inked(
+      new THREE.BoxGeometry(TRACK.width * 0.72, CLEARANCE, TRACK.length * 0.66),
+      dark,
+    );
+    frame.position.set(x, frameY, 0);
+    machine.add(frame);
+  }
+  for (const z of [-TRACK.length * 0.26, TRACK.length * 0.24]) {
+    const beam = inked(
+      new THREE.BoxGeometry(LEFT_X - RIGHT_X, CLEARANCE * 0.45, 0.2),
+      dark,
+    );
+    beam.position.set(0, frameY, z);
+    machine.add(beam);
+  }
+
   /**
    * Sprockets and idlers, one pair per track. They exist for three reasons and
    * every one of them is load-bearing:
@@ -246,7 +268,11 @@ export function createViewport(
   }
 
   scene.add(buildPins(waypoints));
-  scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }));
+  const propNodes: PropNode[] = [];
+  scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }, propNodes));
+  // Anything written off is repainted once, when the ledger says so.
+  const wrecked = toon(0x4a4640, { rim: 0x8fa0a8, rimStrength: 0.45 });
+  let seenDamage = 0;
 
   greeble(machine, { accent, dark, hazard, lamp: lampMat });
 
@@ -264,6 +290,26 @@ export function createViewport(
 
   return {
     render(snapshot: Snapshot) {
+      // Site furniture that is moving — usually nothing, briefly everything.
+      for (const moved of snapshot.props) {
+        const node = propNodes[moved.index];
+        if (!node) continue;
+        const [x, y, z] = moved.position;
+        const [rx, ry, rz, rw] = moved.rotation;
+        node.node.position.set(x, y, z);
+        node.node.quaternion.set(rx, ry, rz, rw);
+      }
+      // New ledger lines since last frame. A write-off gets repainted; the
+      // physics already threw it wherever it went.
+      for (let i = seenDamage; i < snapshot.damage.length; i++) {
+        const line = snapshot.damage[i];
+        if (!line || line.state !== "destroyed") continue;
+        const node = propNodes[line.prop];
+        if (!node) continue;
+        for (const part of node.parts) part.material = wrecked;
+      }
+      seenDamage = snapshot.damage.length;
+
       const [px, py, pz] = snapshot.machine.pose.position;
       const [qx, qy, qz, qw] = snapshot.machine.pose.rotation;
       machine.position.set(px, py, pz);
@@ -455,6 +501,16 @@ function buildTerrainMesh(terrain: Terrain): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * A prop's scene node, plus the meshes whose material can be swapped when it
+ * is written off. The ink shells are children of those meshes and must keep
+ * their own material, which is why this holds the parts rather than traversing.
+ */
+interface PropNode {
+  readonly node: THREE.Group;
+  readonly parts: THREE.Mesh[];
+}
+
 type PropMaterials = {
   hazard: THREE.Material;
   dark: THREE.Material;
@@ -469,7 +525,11 @@ type PropMaterials = {
  * the thing you collide with — a cone you can drive through would be worse
  * than no cone at all.
  */
-function buildProps(props: readonly Prop[], mat: PropMaterials): THREE.Group {
+function buildProps(
+  props: readonly Prop[],
+  mat: PropMaterials,
+  out: PropNode[],
+): THREE.Group {
   const group = new THREE.Group();
 
   // Geometry is shared across every instance of a kind; only transforms differ.
@@ -482,56 +542,73 @@ function buildProps(props: readonly Prop[], mat: PropMaterials): THREE.Group {
     barrierPlank: new THREE.BoxGeometry(2.4, 0.5, 0.16),
     barrierLeg: new THREE.BoxGeometry(0.14, 1.0, 0.5),
     rock: new THREE.IcosahedronGeometry(1, 0),
+    scooterBody: new THREE.BoxGeometry(0.34, 0.3, 1.15),
+    scooterSeat: new THREE.BoxGeometry(0.3, 0.14, 0.44),
+    scooterStem: new THREE.BoxGeometry(0.1, 0.62, 0.1),
+    scooterBar: new THREE.BoxGeometry(0.54, 0.07, 0.07),
+    scooterWheel: new THREE.CylinderGeometry(0.26, 0.26, 0.11, 10),
   };
 
-  for (const prop of props) {
+  for (const [index, prop] of props.entries()) {
+    // The node sits where the *body* sits — the collider's centre — because it
+    // has to be able to take a pose straight from the sim once something has
+    // knocked it over. The art inside is built from the ground up, so it hangs
+    // one half-height below.
+    const [, hy] = PROP_BOX[prop.kind];
     const node = new THREE.Group();
-    node.position.set(prop.x, prop.y, prop.z);
+    node.position.set(prop.x, prop.y + hy * prop.scale, prop.z);
     node.quaternion.set(0, prop.yawY, 0, prop.yawW);
     node.scale.setScalar(prop.scale);
+    const base = new THREE.Group();
+    base.position.y = -hy;
+    node.add(base);
+    const parts: THREE.Mesh[] = [];
+    const add = (mesh: THREE.Mesh) => {
+      base.add(mesh);
+      parts.push(mesh);
+      return mesh;
+    };
 
     if (prop.kind === "cone") {
-      const cone = inked(geo.cone, mat.hazard);
-      cone.position.y = 0.5;
-      node.add(cone);
-      const base = inked(geo.coneBase, mat.rubber);
-      base.position.y = 0.045;
-      node.add(base);
+      add(inked(geo.cone, mat.hazard)).position.y = 0.5;
+      add(inked(geo.coneBase, mat.rubber)).position.y = 0.045;
     } else if (prop.kind === "pole") {
-      const pole = inked(geo.pole, mat.dark, 0.02);
-      pole.position.y = 1.5;
-      node.add(pole);
-      const flag = inked(geo.flag, mat.hazard, 0.02);
-      flag.position.set(0.3, 2.7, 0);
-      node.add(flag);
+      add(inked(geo.pole, mat.dark, 0.02)).position.y = 1.5;
+      add(inked(geo.flag, mat.hazard, 0.02)).position.set(0.3, 2.7, 0);
     } else if (prop.kind === "pipes") {
       // Three down, one nested on top — a stack that has been there a while.
       for (const [i, offset] of [-0.68, 0, 0.68].entries()) {
-        const pipe = inked(geo.pipe, mat.accent);
+        const pipe = add(inked(geo.pipe, mat.accent));
         pipe.rotation.z = Math.PI / 2;
         pipe.position.set(offset, 0.32, i * 0.001);
-        node.add(pipe);
       }
-      const top = inked(geo.pipe, mat.accent);
+      const top = add(inked(geo.pipe, mat.accent));
       top.rotation.z = Math.PI / 2;
       top.position.set(-0.34, 0.9, 0);
-      node.add(top);
     } else if (prop.kind === "barrier") {
-      const plank = inked(geo.barrierPlank, mat.hazard);
-      plank.position.y = 0.95;
-      node.add(plank);
+      add(inked(geo.barrierPlank, mat.hazard)).position.y = 0.95;
       for (const side of [-1, 1]) {
-        const leg = inked(geo.barrierLeg, mat.dark);
-        leg.position.set(side, 0.5, 0);
-        node.add(leg);
+        add(inked(geo.barrierLeg, mat.dark)).position.set(side, 0.5, 0);
+      }
+    } else if (prop.kind === "scooter") {
+      // Somebody rode this to work. It is the one thing on site that belongs
+      // to a person, and the ledger prices it accordingly.
+      add(inked(geo.scooterBody, mat.accent, 0.02)).position.set(0, 0.42, 0.05);
+      add(inked(geo.scooterSeat, mat.rubber, 0.02)).position.set(0, 0.63, -0.2);
+      add(inked(geo.scooterStem, mat.dark, 0.02)).position.set(0, 0.7, 0.52);
+      add(inked(geo.scooterBar, mat.dark, 0.02)).position.set(0, 0.98, 0.52);
+      for (const z of [-0.42, 0.55]) {
+        const wheel = add(inked(geo.scooterWheel, mat.rubber, 0.02));
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(0, 0.26, z);
       }
     } else {
       // Faceted on purpose: the toon ramp needs flats to band across.
-      const rock = inked(geo.rock, mat.stone);
+      const rock = add(inked(geo.rock, mat.stone));
       rock.scale.set(1, 0.62, 1);
       rock.position.y = 0.7;
-      node.add(rock);
     }
+    out[index] = { node, parts };
     group.add(node);
   }
   return group;

@@ -19,6 +19,13 @@ export type Layout =
   /** Label in a boxed field with a hazard edge. Safety gear. */
   | "boxed";
 
+/**
+ * The manufacturer's mark, as an SVG path on a 16x16 grid.
+ *
+ * SVG rather than more CSS: this is graphic design, and the cheapest place to
+ * put character without a combinatorial explosion of rules. See
+ * docs/design/instrument-rendering.md for why the panels are DOM at all.
+ */
 export interface MakerStyle {
   /** Small type on the plate. Uppercase, as printed. */
   readonly wordmark: string;
@@ -31,6 +38,10 @@ export interface MakerStyle {
   /** LED, meters and the live edge. */
   readonly accent: string;
   readonly layout: Layout;
+  /** The maker's mark, drawn on a 16x16 viewBox. */
+  readonly mark: string;
+  /** Silkscreen under the wordmark: model code, rating, standard. */
+  readonly plateText: string;
 }
 
 const DEFAULT: MakerStyle = {
@@ -40,6 +51,8 @@ const DEFAULT: MakerStyle = {
   face: "#c6d0cb",
   accent: "#6fe3c4",
   layout: "strip",
+  mark: "M3 8 h10 M8 3 v10",
+  plateText: "NO PLATE",
 };
 
 const MAKERS: Record<string, MakerStyle> = {
@@ -52,6 +65,9 @@ const MAKERS: Record<string, MakerStyle> = {
     face: "#efe2c0",
     accent: "#e8b53a",
     layout: "strip",
+    // A fang. Kiba means fang, and the chassis is named for it.
+    mark: "M8 2 L13 14 L8 10 L3 14 Z",
+    plateText: "TYPE 3A · OEM FIT · MADE IN JAPAN",
   },
   // Navigation electronics. Lighter, newer, sold separately — and it looks it.
   "TOWA DENKI": {
@@ -61,6 +77,9 @@ const MAKERS: Record<string, MakerStyle> = {
     face: "#cfe6ef",
     accent: "#6fe3c4",
     layout: "stack",
+    // A swept bearing line. Navigation kit, and it wants you to know.
+    mark: "M2 12 a6 6 0 0 1 12 0 M8 12 L12 5",
+    plateText: "TD-NAV1 · 12–30 VDC · CLASS II",
   },
   // Safety kit from a maker with lawyers. Orange, boxed, and slightly smug.
   "HANSA REGELTECHNIK": {
@@ -70,6 +89,9 @@ const MAKERS: Record<string, MakerStyle> = {
     face: "#f2ded0",
     accent: "#f07b2a",
     layout: "boxed",
+    // A shield with a bar through it. Safety kit, from people with lawyers.
+    mark: "M8 2 L14 5 V9 Q14 13 8 15 Q2 13 2 9 V5 Z M4 8 H12",
+    plateText: "SG-2 · SIL 1 · PRÜFZEICHEN 41-880",
   },
 };
 

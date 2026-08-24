@@ -18,6 +18,59 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — the world can be broken
+
+Cards: [L-031] closed · [L-041] opened · [L-039] [L-029] reshaped
+
+**Damage is measured in joules absorbed**, not in hit points. That is the load-
+bearing decision and it comes straight from the inspectability pillar: energy is
+a quantity the machine already has and can be shown. "The cone took 15 J and it
+is rated for 5" is a diagnosis; "the cone lost 40 HP" is a number we made up.
+
+Every breakable is now a **dynamic body**, so hitting things scatters them —
+the visceral half, and it cost one word (`dynamic()` instead of `fixed()`) plus
+`CoefficientCombineRule.Max` so props get friction against ground the track
+model deliberately left frictionless. Lines carry price, energy, speed, **and
+what was driving and what was bypassed**.
+
+**Rejected: Rapier's contact-force events.** They exist and were probed. A
+solver force magnitude is not a quantity the player can be shown, and it cannot
+explain a prop hit by another prop. Energy can do both.
+
+**Three bugs, all worth writing down.**
+
+- *The site billed itself ¥55,690 before the machine had moved.* Dynamic props
+  spawned overlapping and shoved each other apart hard enough to self-destruct.
+  Fixed with spawn separation and a settling phase at construction.
+- *Then it billed itself ¥9,540.* Anything already sliding integrates the energy
+  gravity feeds it until it writes itself off. Fixed by requiring a body to have
+  been **at rest** to be hit. The cost, stated in the code: a prop hit again
+  while still moving is not billed for the second hit, so the ledger
+  under-counts — the right way round for something accusing the player.
+- *A cone rated at 22 J was indestructible.* A heavy machine cannot put more
+  than ½·m·v² into a light object, and 6 kg at 2.2 m/s is 15 J. Every toughness
+  is now a fraction of what the drivetrain can actually deliver into that mass.
+
+**The nastiest one was a green test.** The first "drives into a cone" test
+passed, and failed when the damage code was disabled — both signals green. It
+had never hit anything: `world.step()` re-runs the rack and overwrote the test's
+`drive` with an empty rack's HALT, and what it detected was the spawn bug. Now
+in META as *a test can pass by measuring the bug*.
+
+**Panel rendering, discussed and settled** — `docs/design/instrument-rendering.md`.
+Stay in the DOM: tokens for structure, inline SVG for character. Rejected a UI
+library (adds weight, makes industrial kit look like a web app), canvas
+textures and 3D geometry (hit-testing becomes ours, and mobile frame time is
+still unmeasured), and `CSS3DRenderer` — it can anchor real DOM to a three.js
+camera, but there is no shared depth buffer, so DOM cannot be occluded by WebGL.
+For a cockpit whose subject *is* occlusion, that is the wrong tool. Rendering
+DOM into a WebGL texture is not possible at all; do not go looking.
+
+Also: maker marks and silkscreen ratings per manufacturer, and an
+**undercarriage** — the 0.42 m belly clearance is real, and with nothing drawn
+in it the tracks read as detached, which is exactly how the first roll-over
+screenshot looked.
+
 ## 2026-08-23 — TILT-GUARD, and the rack becomes equipment
 
 Cards: [L-036] [L-037] closed · [L-039] [L-038] [L-040] opened · [L-035]
