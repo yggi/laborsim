@@ -93,6 +93,22 @@ somebody bolted in, which is what it is meant to be. It also makes the rack
 *legible at a glance while driving* — you find the orange plate, not the third
 row down.
 
+## The dash is the seam, and it travels (built, L-048)
+
+The dash is the **only thing visible in both postures**, and it does not fade
+out and back in — it moves. Bottom of your view while you are driving, top of
+your view once you have dropped your eyes to the cabinet.
+
+That is honest cab geometry rather than a transition: the dash physically sits
+between the windscreen and the rack, so looking past it puts it overhead. It is
+one object at one height, and the dash and the rack together are one deck.
+
+The consequence worth keeping: **the levers go with the glass.** Looking down
+puts your hands in the cabinet, not on the controls. The bus keeps carrying
+whatever they last held and the machine keeps doing it — you simply cannot reach
+them while you are reading. The same bargain as the chase camera, made with a
+different part of the body.
+
 ## The cover is the machine's status panel (built, L-043)
 
 The cover over the rack is not a button — it is **the closed face of the rack,
@@ -143,16 +159,26 @@ The numeric values stay, but demoted to **debug telemetry**. A number is
 something you read; a bar is something you notice, and the difference matters
 when your attention is on the ground rather than the panel.
 
-## ATT-0: the one instrument that ships with the bare chassis
+## ATT-0 is on the dash, and the bare cage has clear glass
 
 Heading and attitude in one head — a compass card round an attitude ball —
 because the pilot reads them as one question: *which way am I pointing, and how
-level am I?* Two instruments side by side would cost twice the glass to answer
+level am I?* Two instruments side by side would cost twice the space to answer
 it.
 
-It is the reference point for the budget: the cage you start in is not empty
-glass, it is glass with one thing in it, and everything after that is a trade
-you made.
+**It lives on the dashboard, not on the glass** (2026-08-24, overruling this
+file's earlier claim that it was the one instrument shipping with the bare
+chassis). It is not a component's pod. It is part of what the vehicle came with,
+like the speedo, and the chassis maker built it into the panel — where it
+replaced the incline bubble, which was reading the same two quantities with less
+to say.
+
+The consequence is better than the motivation, and it is now the reference point
+for the budget: **the bare cage has completely clear glass.** The first
+component you fit is the first view you lose, which is the sharpest statement of
+KIBA's doctrine the cab has made — a machine, and no help, and nothing between
+you and the ground. Everything on the glass after that is a trade you made, and
+L-025 now has a zero to price against.
 
 Nothing on it is advice. It shows where north is and where the horizon is, and
 it never colours anything. The module with an opinion is TILT-GUARD, and it

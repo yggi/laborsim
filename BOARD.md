@@ -29,6 +29,34 @@ Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
 1 over the rack as the build surface. The verdict, its voice and the dash are
 built; what remains is more to break, replay, and the path to the conflict.
 
+### [L-049] Themes, authored independently — the agentic round
+- **what:** one author per manufacturer, each given only its own `LORE.md`
+  entry, `components.md`, `theming.md` and the KIBA reference — blind to the
+  other makers' work. Each produces that maker's plate, cell and pod. Then a
+  **non-blind** adversarial comparison pass over all three side by side.
+- **done-when:** three racks read as kit from three suppliers *and* as one game,
+  and the pre-registered failure conditions in `theming.md` are answered either
+  way — including the one where a person cannot pick the maker of an unlabelled
+  plate.
+- **needs:** L-048 (built)
+
+### [L-050] Pods on arms, and the view that recentres
+- **what:** instruments clamp to the cage and translate with the look instead of
+  being viewport-fixed; placement moves from screen space into cage space, where
+  the bound is the reach of the arm; the view eases back to forward on its own,
+  with a house-voice nag. `voice.tips` already exists and nothing consumes it.
+- **done-when:** looking around moves the pods, a drop is refused by arm reach
+  rather than by the screen edge, and the look recentres without a per-instrument
+  rune firing at 60 Hz.
+- **needs:** NOTES thread "Pods on arms"
+
+### [L-051] The cage and the levers are KIBA's too
+- **what:** the chassis component brings the cab furniture, and it is currently
+  a plain inset shadow and two generic sliders. They belong in the chassis
+  maker's packet like the dashboard does.
+- **done-when:** the cage frame and the levers are recognisably the same
+  manufacturer's as the panel they sit behind.
+
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
   to TILT-GUARD and the first module whose right answer is *situational*: slow
@@ -194,6 +222,18 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-048] The triptych — plate, cell, pod — **closed**
+A component is one thing seen from three postures, and only the plate is
+mandatory; its maker decides the rest. Three currencies: a chassis component
+costs nothing and brings the cockpit, a capability component costs glass, a
+safety component costs capability. Severity crosses the boundary as a number so
+MASTER WARNING and MASTER ALARM derive themselves and the dash stopped knowing
+what a TILT-GUARD is. `src/cockpit/` filled in as the registry. The dash became
+the seam and now travels between postures; ATT-0 moved onto it, leaving the bare
+cage with clear glass. A sandbox at `sandbox.html` plus `npm run shots` closes
+the look-at-it loop. Rejected: a budget for the indicator row — three fronts
+competing for space is one too many, so cells just work.
+
 ### [L-043] The dash — status panel and closed face of the rack — **closed**
 A live industrial control panel: yellow sheet steel, white-bezel needle gauges
 (speed, grip), incline bubble, annunciator lamps, a master alarm that opens the
@@ -255,10 +295,5 @@ one-sentence statement of what it considers.
 Stepped toon ramp, guarded fresnel rim, per-axis inverted-hull ink. Banded sky
 dome. Site furniture as real colliders in `src/world/props.ts`, clustered into
 work areas — world data, not decoration, because the ledger must price it.
-
-### [L-030] Playable from GitHub Pages — **closed**
-Public URL, deployed on every green push to the default branch. CI gates the
-deploy on lint, typecheck and tests, so a broken machine cannot reach the site.
-Base path comes from the Pages config, not hardcoded.
 
 

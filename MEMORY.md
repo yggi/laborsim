@@ -14,7 +14,7 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
 | `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
-| `docs/design/theming.md` | the substrate, the token contract, and the brief a maker's author is given |
+| `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
 | `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
 | `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
 | `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |

@@ -89,6 +89,15 @@ Build green, tests green, and the cab view was a solid black wall — an ink she
 seen from inside. Then a cyan wall: an opaque windscreen 0.47 m from the eye.
 Neither is expressible as an assertion. Look at the thing.
 
+**Build the bench before authoring against it, not after.**
+Corollary, and it has its own scar: a dash was written blind over an hour, read
+correctly in code, typechecked and passed 104 tests — and the first screenshot
+showed the whole instrument cluster scrolled off at 390 px, leaving a
+speedometer. Two more defects fell out of the same loop in minutes. Looking is
+only reliable when it is *cheap*: a fixture bench that boots without the physics
+engine turns "look at it" from a thing you intend to do into a thing you do
+every edit. Build it first when the work is visual.
+
 ## Design
 
 **A reframing that dissolves several open questions at once is probably right.**
@@ -124,7 +133,9 @@ settled question comes back every few months wearing a new hat.
 
 **A gate you do not check is not a gate.**
 `MEMORY.md` was reported as within its 300-line limit at 307. Print the number;
-do not estimate it.
+do not estimate it — and print it *before* the commit, not after: a later round
+did run `wc`, in the same command that committed the trim, and shipped `NOTES.md`
+at 104 with the message claiming it was done.
 
 **Spill before the gate forces you to.**
 Trimming under pressure produces worse cuts than trimming on purpose. The

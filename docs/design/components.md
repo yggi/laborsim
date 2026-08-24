@@ -4,8 +4,9 @@ A **component** is one thing you bought, and it shows up in the cockpit in up to
 three places at once. This file is the contract: what every manufacturer must
 honour, and what each is free to invent.
 
-Status: **agreed in discussion, not yet built.** The decisions below are settled;
-the open items at the bottom are not. Nothing here has reached `MEMORY.md` yet.
+Status: **built** (L-048), except pods-on-arms, which is deliberately split off
+(`NOTES.md`). The crystallized half is `MEMORY.md` § 6.1; how to *make* a theme
+is `docs/design/theming.md`.
 
 ---
 
@@ -167,7 +168,12 @@ Bypassing it then:
 void anybody's warranty. The flag has to distinguish a deliberate bypass from a
 system-level stop.
 
-## Pods are on arms
+## Pods are on arms — designed, deferred
+
+**Not built, and split off on purpose** — it is a different problem from "what
+does a component look like", and it drags in three decisions of its own. The
+thread is in `NOTES.md`. What follows is the design as it stands, so the next
+round starts from here rather than from scratch.
 
 Instruments are **not viewport-fixed overlays.** They are clamped to the cage, so
 they translate on screen as the pilot looks around, and they swing back as the
@@ -188,13 +194,15 @@ Consequences, all of them good:
   compositor moves the rest. Per-instrument runes at 60 Hz is exactly the shape
   architecture rule 3 exists to prevent.
 
-## The view recentres itself
+## The view recentres itself — designed, deferred with the arms
 
 After the pilot stops looking around, the view eases back to forward. A swipe is
 a quick check, and normal returns by itself.
 
 It is a QoL fix and it is also a theming opportunity: the nag that accompanies it
-("keep your eyes on the road") is house voice, per manufacturer.
+("keep your eyes on the road") is house voice, per manufacturer. The `voice.tips`
+slot exists and is populated for all three makers; **nothing consumes it yet**,
+because this is its trigger and this is deferred.
 
 Open: whether it applies in chase view. Probably not — in chase you are outside
 the machine and free look is the whole point.
@@ -243,16 +251,25 @@ These are the contract. A theme that breaks one is wrong, not distinctive.
 
 ---
 
-## Open
+## Settled since
 
-- Does `PILOT` "bringing the default glass" mean the cage and windscreen
-  furniture, or an actual default instrument? Read here as the former: the bare
-  KIBA cage is **clear glass**, and the first component you fit is the first view
-  you lose.
-- `docs/design/cockpit.md` § *ATT-0: the one instrument that ships with the bare
-  chassis* is now **wrong** — ATT-0 moves to the dash. It must be rewritten when
-  this lands, not left to contradict.
-- ATT-0 and the dash's existing `INCLINE` bubble read the same quantities.
-  Recommendation: ATT-0 replaces the bubble rather than sitting beside it.
-- `makers.ts` `DEFAULT` merges into KIBA. When the grey-market maker arrives it
-  needs its own style; the fallback for an unknown maker stays KIBA.
+- **`PILOT` brings no instrument.** It brings the cage, the windscreen and the
+  dashboard. The bare KIBA cage is **clear glass**, and the first component you
+  fit is the first view you lose. `cockpit.md` is rewritten to match; ATT-0
+  replaced the incline bubble rather than sitting beside it.
+- **`UNMARKED` merged into KIBA.** An unknown maker renders as OEM kit, because
+  the chassis builder is the house default. When the grey-market maker arrives it
+  takes that slot with a character of its own — hackjob is a *style*, not the
+  absence of one — and the fallback stays KIBA.
+- **The cage and the levers are themed too.** They are the chassis component's
+  parts as much as the dashboard is, so they belong in that maker's packet.
+  Not yet done: the cage is still a plain inset shadow.
+
+## Still open
+
+- Whether a component may ship a pod its maker designed to be *dash-only* — a
+  compact variant that trades detail for glass. Reads as a TOWA product; HANSA
+  would never. Probably a component-curriculum hook (`MEMORY.md` § 7) rather
+  than a general capability.
+- What the second chassis is. Everything here says the dashboard's layout is the
+  vehicle maker's, and nothing has tested that claim against a second vehicle.

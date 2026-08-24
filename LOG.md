@@ -18,6 +18,96 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — the triptych: plate, cell, pod
+
+Cards: [L-048] closed. Opened [L-049] [L-050] [L-051].
+
+A component is now one thing seen from three postures — a **plate** in the rack
+(hands), a **cell** on the dash (periphery), a **pod** on the glass (eyes) — and
+only the plate is mandatory. Its manufacturer decides the rest; the player never
+moves a part between surfaces, which is what keeps the panel budget honest.
+
+The idea that made it a mechanic rather than a layout system was **three
+currencies**: a chassis component costs nothing and brings the cockpit, a
+capability component costs *glass*, and a safety component costs *capability* —
+it strands you on an incline instead of blocking your view. So TILT-GUARD
+shipping no pod is not a discount, it is a different bill.
+
+Started by spilling, because MEMORY was at exactly 300 and NOTES at exactly 100
+— both at their gates, so anything this round crystallized would have overflowed.
+The diegetic frame went to `docs/design/training-frame.md`, which also settled
+something that had been implicit: the frame covers the world and the rig and
+never the cab, and **L.A.B.O.R. certifies and bills while a manufacturer sells
+and warns**. That split turned out to be load-bearing an hour later.
+
+The refactor that pays regardless of the theming: **severity crosses the
+snapshot boundary as a number** (0..3). `DashPanel` had been reaching into
+TILT-GUARD's private readout to light a lamp, which meant every new component
+was an edit to the dash. Now MASTER WARNING and MASTER ALARM derive over the
+whole machine and nothing is wired to a named module. A number rather than a
+word specifically so the *word* stays a theme decision — HANSA says `STÖRUNG`
+where KIBA says `STOP`, and a theme decision has no business in sim state.
+
+`src/cockpit/` finally exists, which the repo map reserved on day one. It holds
+the registry, the makers and the annunciator; modules still declare only what
+they publish, so rule 1 never came under pressure.
+
+**The dash became the seam.** It no longer fades when the rack opens — it
+travels, bottom of the view to top of it, because that is where it physically
+sits between the windscreen and the cabinet. Dash and rack are one deck now.
+Falling out of that: the levers go with the glass, since looking down puts your
+hands in the cabinet. The bus keeps carrying what they last held.
+
+ATT-0 moved from the glass onto the panel, replacing the incline bubble.
+This overruled `cockpit.md`, and the consequence beat the motivation: **the bare
+cage now has completely clear glass**, so the first component you fit is the
+first view you lose. L-025 has a zero to price against for the first time.
+
+Rejected, with reasons:
+
+- **A budget for the indicator row.** Proposed rack-unit-style cells competing
+  for dash space. Cut on the grounds that fighting for space on three fronts
+  (glass, rack, dash) is one front too many. Cells just work, float left, wrap.
+  Better call than mine.
+- **Making a bypassed guard quiet.** A disabled safety module stands at WARN
+  until it goes back in, rather than reporting nominal. Four lines in `runRack`
+  that make the pop-the-hood bargain structural instead of remembered.
+- **Naming a component's condition in words on the alarm strip.** There is no
+  honest word: TILT-GUARD taking the drivetrain to zero is not a *fault*, the
+  module is working exactly as designed. The strip carries the component's name
+  and the colour carries the severity.
+- **The ignition key.** `aria-hidden` decoration duplicating the ident, on a
+  panel where everything else reads a real simulated quantity. The hour meter
+  does its job and reads `simSeconds`.
+
+Slip finally got a face — centre-zero, per track, because the sign is the
+diagnosis and the difference between the sides is the thing. It is rung 1's
+teaching quantity and it had been living on the debug line and one lamp.
+
+**The sandbox is the other half of the round.** `sandbox.html` renders every
+component in every state at phone width from hand-built snapshots, with no
+Rapier and no renderer, and `npm run shots` screenshots it and fails on a page
+error. It earned its cost within the hour: the dash was authored blind, looked
+right in code, and the first screenshot showed the whole instrument cluster
+scrolled off at 390px leaving nothing but a speedometer. Two more bugs came out
+of the same loop — the strip naming a bypassed HANSA guard in KIBA's word, and
+a fixture that exercised no GND condition.
+
+Three tests were bite-checked by reintroducing the bugs and watching them fail,
+per the method rule. Conformance for the coming themes is by **accessible name**
+rather than CSS review, plus greps for `:global` and for unprefixed custom
+properties — the `.bar` collision cost a faceplate once, and independent authors
+make that likelier rather than less.
+
+Pods-on-arms was designed and then deliberately **split off** rather than built:
+it needs look angle in the DOM without Svelte reactivity, placement moved from
+screen space into cage space, and the recentring QoL, which is three decisions
+wearing one hat.
+
+The experiment itself is **pre-registered** in `docs/design/theming.md` — the
+conditions under which the blind-author round counts as a failure are written
+down before it runs, so `META.md` gets whichever entry it earns.
+
 ## 2026-08-24 — the dash, the voice, the debrief, and a world
 
 Cards: [L-043] [L-044] [L-029] [L-008] closed · LORE.md written
