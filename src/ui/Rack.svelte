@@ -213,6 +213,11 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     color: #c6d0cb;
     padding-bottom: env(safe-area-inset-bottom);
+    /* A pinch of film grain, generated not sampled. The world is allowed to
+       look like a simulation (contour lines); the cockpit is not, so the panels
+       get the wear a real cabinet has. feTurbulence is the old 2D trick, laid
+       over everything at soft-light so it reads as texture, never as dirt. */
+    --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   .head {
     display: flex;
@@ -238,13 +243,31 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
 
   /* -- one faceplate ----------------------------------------------------- */
   .slot {
+    position: relative;
     display: flex;
     align-items: stretch;
     gap: 0;
-    margin: 3px 0;
+    margin: 4px 5px;
     background: var(--plate);
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    border-bottom: 1px solid #05080a;
+    border-radius: 3px;
+    /* Physical: a lit top edge, a shadowed bottom edge, and a real drop so the
+       plate sits proud of the cabinet rather than being painted on it. */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+      0 2px 4px rgba(0, 0, 0, 0.55);
+  }
+  /* Grain, over the plate but under nothing you touch. */
+  .slot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 3px;
+    background-image: var(--noise);
+    background-size: 90px 90px;
+    mix-blend-mode: soft-light;
+    opacity: 0.5;
+    pointer-events: none;
   }
   .ear {
     width: 16px;
@@ -287,7 +310,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .plate {
     flex: 1;
     min-width: 0;
-    padding: 7px 9px;
+    padding: 5px 8px;
     border-left: 3px solid var(--accent);
     /* Stamped sheet: a faint top highlight and a wash of vent slots. */
     background:
@@ -323,7 +346,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     stroke-linejoin: round;
   }
   .silkscreen {
-    margin-top: 3px;
+    margin-top: 2px;
     font-size: 7px;
     letter-spacing: 0.14em;
     color: color-mix(in srgb, var(--face) 34%, transparent);
@@ -344,7 +367,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   .considers {
     font-size: 9px;
     color: #78827f;
-    margin-top: 1px;
+    margin-top: 0;
   }
 
   /* House styles. Same parts, arranged the way each maker arranges them. */
@@ -459,8 +482,8 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     flex: none;
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 7px 8px 7px 0;
+    gap: 6px;
+    padding: 5px 7px 5px 0;
   }
   .led {
     width: 18px;
@@ -469,8 +492,12 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     padding: 0;
     border: 1px solid #05080a;
     border-radius: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
+    background:
+      radial-gradient(50% 42% at 38% 32%, rgba(255, 255, 255, 0.7), transparent 60%),
+      var(--accent);
+    box-shadow:
+      0 0 8px var(--accent),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.45);
   }
   .idle .led {
     background: #f0a830;
@@ -485,10 +512,18 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font-size: 11px;
     letter-spacing: 0.12em;
     color: #14171a;
-    background: var(--accent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, white), var(--accent));
     border: 1px solid #05080a;
+    border-radius: 2px;
+    /* A real key: lit top, a seat of shadow under it. */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 1px 2px rgba(0, 0, 0, 0.5);
     padding: 6px 7px;
     flex: none;
+  }
+  .verb:active:not(:disabled) {
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
   .verb:disabled {
     color: #6d7a76;

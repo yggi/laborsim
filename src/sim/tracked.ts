@@ -94,14 +94,24 @@ export function spawnTrackedMachine(world: World, at: Vec3): TrackedMachine {
   const trackY = TRACK.height / 2;
   const hullY = TRACK.height + CLEARANCE + HULL.height / 2;
 
-  // friction 0 everywhere: all horizontal force comes from the model below.
+  // The hull carries real friction; the tracks do not.
+  //
+  // Track colliders stay at 0 so every horizontal force on an upright machine
+  // comes from the model — that is the whole teaching layer. But an upright
+  // machine never touches the ground with its hull (0.42 m of belly clearance),
+  // so hull friction is inert during normal driving and only bites when the
+  // machine is on its back or bellied on a ridge. Without it a flipped wreck
+  // skates across the site like it is on ice, which reads as broken rather than
+  // as broken-down. `Max` combine takes the hull's friction against the
+  // friction-0 ground, the same trick the props use.
   const hull = RAPIER.ColliderDesc.cuboid(
     HULL.width / 2,
     HULL.height / 2,
     HULL.length / 2,
   )
     .setTranslation(0, hullY, 0)
-    .setFriction(0)
+    .setFriction(0.85)
+    .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max)
     .setRestitution(0)
     .setDensity(0);
   world.createCollider(hull, body);

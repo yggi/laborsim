@@ -215,13 +215,17 @@ export function createViewport(
    * telemetry number said the same thing, but a number is something you read
    * and this is something you notice.
    */
-  const GROUSERS = 15;
+  // Oversized on purpose: chunky plates read as *tracks* at a glance and at a
+  // distance, and they suit the slightly cartoonish register. Fewer, fatter
+  // plates beat many thin ones for legibility, which is the whole reason the
+  // belt is drawn at all — it is how you see slip.
+  const GROUSERS = 11;
   const GROUSER_PITCH = TRACK.length / GROUSERS;
   /** The straight runs, wheel centre to wheel centre, and the nose-up rise. */
   const RUN_REAR = -(TRACK.length / 2 - SPROCKET_R);
   const RUN_FRONT = TRACK.length / 2 - IDLER_R;
   const BELT_RISE = SPROCKET_R - IDLER_R;
-  const grouserGeom = new THREE.BoxGeometry(TRACK.width * 1.06, 0.05, 0.09);
+  const grouserGeom = new THREE.BoxGeometry(TRACK.width * 1.08, 0.09, 0.17);
   const grousers: { left: THREE.Mesh[]; right: THREE.Mesh[] } = {
     left: [],
     right: [],
@@ -331,10 +335,14 @@ export function createViewport(
             wheel.pivot.rotation.x += (track.commanded / wheel.radius) * dt;
           }
 
-          // Advance the belt by commanded speed and wrap it into one pitch.
+          // Advance the belt and wrap it into one pitch. The sign is negative
+          // because the *ground-contact* run must travel rearward under a
+          // machine driving forward — the wheels already spin that way, and a
+          // belt that ran the other way disagreed with its own sprockets. A
+          // track's plates move opposite to the vehicle, on the bottom.
           const loop = TRACK.length * 2;
           beltPhase[name] =
-            (((beltPhase[name] + track.commanded * dt) % loop) + loop) % loop;
+            (((beltPhase[name] - track.commanded * dt) % loop) + loop) % loop;
           const plates = grousers[name];
           for (let i = 0; i < plates.length; i++) {
             const plate = plates[i];
