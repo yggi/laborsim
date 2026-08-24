@@ -55,10 +55,7 @@ const {
   rate?: number;
   /** Integer places. */
   digits?: number;
-  /**
-   * Fractional places. The point costs no column — it is drawn on the seam
-   * between two digits, so `00` and `0.0` are the same width.
-   */
+  /** Fractional places. The point gets a quarter-column of its own (`POINT`). */
   decimals?: number;
   /** Pixel height of one digit; the face scales to it. */
   height?: number;
@@ -85,6 +82,17 @@ const {
 const ROLL = 110;
 /** em per digit column, the natural monospace advance. */
 const ADV = 0.62;
+/**
+ * em for the decimal point's column.
+ *
+ * It used to be zero — the point was drawn on the seam between two digits so
+ * that `00` and `0.0` came out the same width. It was, and the screenshot said
+ * so: at a monospace advance the glyphs already fill their columns, so a point
+ * on the seam lands on the foot of the digit to its left and disappears into
+ * it. A quarter of a column is enough air to read it as a point, and a drum
+ * that gains a decimal place is not a thing this instrument does.
+ */
+const POINT = 0.26;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -95,7 +103,7 @@ const digitAt = (v: number, p: number): number =>
 
 const shown = $derived(Math.max(0, value));
 const cols = $derived(digits + decimals);
-const width = $derived((cols + (prefix ? 1 : 0)) * ADV);
+const width = $derived((cols + (prefix ? 1 : 0)) * ADV + (decimals > 0 ? POINT : 0));
 
 interface Roll {
   from: number;
@@ -172,7 +180,7 @@ const places = $derived.by(() => {
   role="img"
   aria-label="{label}: {value.toFixed(decimals)}"
   style="height: {height}px; font-size: {(height * 0.74).toFixed(1)}px;
-         width: {width.toFixed(2)}em; --mfg-adv: {ADV}em"
+         width: {width.toFixed(2)}em; --mfg-adv: {ADV}em; --mfg-point: {POINT}em"
 >
   {#key epoch}
     <!-- Fixed width, reels stacked absolutely: on an epoch change both are
@@ -262,17 +270,20 @@ const places = $derived.by(() => {
     opacity: 0.8;
     text-align: center;
   }
-  /* Zero WIDTH but a full line box: the glyph is real and sits on the digits'
-     baseline while costing no column. A zero-height box puts it above the reel,
-     where overflow:hidden eats it. */
+  /* A narrow column of its own, and a full line box, so the glyph sits on the
+     digits' baseline. A zero-height box puts it above the reel, where
+     overflow:hidden eats it — and a zero-*width* one hides it a subtler way, by
+     landing it on the foot of the digit to its left (see POINT). */
   .pt {
     position: relative;
     display: block;
-    width: 0;
+    width: var(--mfg-point);
   }
+  /* The glyph is one em wide and centred, so it is centred in the thin column
+     regardless of what the font does with a period's advance. */
   .pt i {
     position: absolute;
-    left: -0.5em;
+    left: calc(var(--mfg-point) / 2 - 0.5em);
     top: 0;
     width: 1em;
     text-align: center;

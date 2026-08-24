@@ -98,12 +98,19 @@ One wrapping flow. No columns, no scrolling — things are bolted where they fit
 and a panel that has run out of room grows another row.
 
 1. **The dataplate and the instruments** — the chassis maker's own cluster,
-   arranged the way aircraft settled it: attitude biggest, in the middle.
-2. **`ALARM`, the stop, and then every fitted component's cell** in rack order,
-   on one baseline. That row *is* the seam: it starts with the two things the
-   chassis says about the whole machine and continues into what is bolted to it.
-3. **The strip** — the one line of words, and the way into the debrief.
+   arranged the way aircraft settled it: attitude biggest, in the middle. A gauge
+   measuring something that can raise a condition carries a **tell**: a small
+   lamp on its plate's line, lit when that condition is the master's source.
+2. **`ALARM` and the stop** — the two things the chassis says about the machine
+   as a whole, bolted together because they are the same conversation.
+3. **Every fitted component's cell**, in rack order, on the same baseline but
+   **floated to the far end of its row**. That gap is the seam: everything left
+   of it came with the machine, everything right of it was bolted on. It is
+   worth a hand's width of empty panel to see which is which at a glance.
 4. **The latch**, pinned along the bottom edge, which is the top of the cabinet.
+
+There is **no status line**. The panel does not caption its own lamps; the words
+live in the debrief (`docs/design/cockpit.md`).
 
 The cells have **no budget and nothing to configure.** Fighting for space on
 three fronts (glass, rack, dash) is one front too many. Cells just work.

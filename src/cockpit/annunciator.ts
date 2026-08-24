@@ -32,9 +32,17 @@ export interface Annunciation {
   readonly id: string;
   /** Short enough for a lamp legend. Four characters or so. */
   readonly word: string;
-  /** The line under the master alarm when this is the worst thing happening. */
+  /** The line the debrief uses when this is the worst thing happening. */
   readonly text: string;
   readonly condition: Condition;
+  /**
+   * The dashboard instrument that shows the quantity behind this condition, if
+   * any. It gets its own small lamp, so a lit master has a *source*: the panel
+   * says "something is wrong" once and "it is this one" beside the dial that
+   * knows why. Conditions with no instrument — a citizen, the bill, the stop —
+   * light only the master, which is honest, because no gauge is measuring them.
+   */
+  readonly at?: string;
 }
 
 /** The worst thing happening anywhere. Nominal over an empty list. */
@@ -46,6 +54,16 @@ export function worst(conditions: readonly Condition[]): Condition {
 
 export const isWarning = (c: Condition): boolean => c >= WARN && c < ALARM;
 export const isAlarm = (c: Condition): boolean => c >= ALARM;
+
+/** The worst condition attached to one named instrument. */
+export function conditionAt(
+  annunciations: readonly Annunciation[],
+  instrument: string,
+): Condition {
+  return worst(
+    annunciations.filter((a) => a.at === instrument).map((a) => a.condition),
+  );
+}
 
 /** How much slip counts as slipping, m/s. Above this the tracks are sliding. */
 const SLIPPING = 0.4;
@@ -95,12 +113,16 @@ export function chassisConditions(
       word: "GND",
       text: "TRACK — NO CONTACT",
       condition: airborne ? ALARM : NOMINAL,
+      // A track touching nothing has no traction, so the grip dial is where you
+      // see it: pinned, with no ground under it.
+      at: "GRIP",
     },
     {
       id: "SLIP",
       word: "SLIP",
       text: "TRACKS SLIPPING",
       condition: slip > SLIPPING ? WARN : NOMINAL,
+      at: "SLIP",
     },
     {
       id: "YEN",

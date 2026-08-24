@@ -79,11 +79,11 @@ about it was wrong, it just was not there. Any scripted edit asserts it matched.
 A deploy failed on formatting because the local check grepped for `lint/` rule
 hits and a formatter diagnostic does not match that pattern.
 
-**Rules enforced by a test, not by a document.**
-Rule 2 was written down, read, and violated twice anyway — prop yaw and NAV-1's
-route both used `Math.sin`/`cos`, writing non-portable values into sim state. A
-scanner found both in seconds. Anything stated as "never" should have something
-that checks it.
+**Rules enforced by a test — and scoped to where they can break.**
+Rule 2 was written down, read and violated twice anyway; a scanner found both
+`Math.sin` uses in seconds. The scanner's *scope* is the next trap: the
+`:global` ban scanned `src/cockpit/`, whose author already thinks about it, and
+the first violation after the ban landed in `src/ui/`, unwatched.
 
 **Tests can encode accidents.**
 An autonav test asserted raw displacement over a short window, and broke when

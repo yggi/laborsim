@@ -6,7 +6,8 @@ Not plans, not open questions.
 **Gate: 1000 lines.** On overflow, cut the oldest year into `docs/log/<year>.md`
 and link it from the archive list below.
 
-Archives: `docs/log/2026-early.md` — the scaffolding, up to the stack decision.
+Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first
+deploy.
 
 Entry format:
 
@@ -17,6 +18,53 @@ What happened, in past tense. Anything tried and rejected, and why.
 ```
 
 ---
+
+## 2026-08-24 — the panel stops talking
+
+Cards: [L-052] extended. Opened: [L-054].
+
+**The status strip is gone.** A line of words along the bottom of the dash
+naming the worst thing happening was the panel reading its own lamp out loud,
+and a lamp that needs a caption has failed. What it said is now split three ways
+and each part goes where it belongs: the master carries severity in colour and
+rhythm, the **tells** point at the instrument that knows why, and the sentence
+moved into the debrief, which is the one surface in this cab allowed to finish
+one. `masterLine` did not change — only who reads it.
+
+**Tells.** A gauge measuring a quantity that can raise a condition now carries a
+small lamp on its plate's line: GRIP for a track that has lost the ground, SLIP
+for tracks sliding. One master says *something is wrong* and says it once, which
+is right and useless on its own, because the pilot's next question is always
+which instrument to look at. `Annunciation` gained an optional `at` naming the
+instrument, so a condition with no gauge — a citizen, the bill, the stop — lights
+only the master, which is honest. The tells do not flash: rhythm means
+unacknowledged, the master owns that, and two things blinking out of phase is a
+panel arguing with itself.
+
+**The E-STOP is the way out.** There is no menu button, because a training rig
+does not have one: you stop the machine, and then somebody comes and talks to
+you about it. The mushroom latches the drive dead and opens the folder in one
+press; RESUME twists it back out, which makes releasing a stop the deliberate
+act it is on a real machine. `toggleEstop` became `setEstop(next)` so hitting an
+already-latched stop is not a release.
+
+**Hours and distance became one instrument** — one housing, two drums, units
+screened on its own face rather than engraved on panel plates, because a gauge
+arrives from its supplier with its units on the dial while a plate names a
+control. Two housings cost two bezels and two plates for one idea. And the cells
+now float to the far end of their row: the gap is the seam between what the
+machine came with and what somebody bolted on.
+
+**The odometer had no decimal point.** It was in the DOM, the right colour, the
+right size, correctly positioned — and drawn on the seam between two digit
+columns, where at a monospace advance it lands on the foot of the digit to its
+left and vanishes into it. Only a screenshot found it; every assertion about it
+would have passed. It has a quarter-column of its own now.
+
+**The `:global` conformance test now scans `src/ui/` as well as `src/cockpit/`.**
+It was scanning only the directory whose author is already thinking about the
+rule — and the first `:global` written after the ban went in was written in
+`Rack.svelte`, where nothing was watching.
 
 ## 2026-08-24 — drums, and a dead slot is dead
 
@@ -850,147 +898,3 @@ No COOP/COEP headers are needed, which is worth recording as a dividend of the
 stack choice: Rapier runs single-threaded so nothing wants SharedArrayBuffer,
 and plain static hosting is enough. Godot's web export would have needed
 cross-origin isolation configured.
-
-## 2026-08-23 — L-014: rung 1 drives
-
-Cards: closed [L-014] [L-016] · absorbed [L-022]
-
-The tracked platform exists and you can drive it on a phone. Four decisions
-came in first: two independent track levers (tank steering, two thumbs — with
-throttle-and-steer demoted to a rung-two *upgrade*, which is the component
-curriculum working); levers that do not self-centre, grabbing on touch and
-staying where dropped, with a dead zone that snaps to a clear HALT; cab view as
-the primary sim view; and no blade, on the grounds that a tank can do plenty of
-damage to a construction site without one.
-
-**The track model is ours, and that is the design.** Rapier has no anisotropic
-collider friction and its vehicle controller models wheels with suspension, so
-neither shortcut applies — verified rather than assumed. Hull and track
-colliders carry friction 0, Rapier supplies normal support and collisions only,
-and six ray samples per track apply impulses capped at `mu · N · dt`. A black
-box producing correct-looking motion would have been a layer the player cannot
-open, which principle 5 forbids outright.
-
-One tuned constant, `MU = 0.95`. Everything else is a dimension or a mass, and
-the behaviour falls out rather than being scripted. The climb limit measured at
-`atan(MU)` ≈ 43.5°: it climbs 42° at 95% grip and fails past that. Push it to
-50° and it grinds partway up, rears to −72°, loses contact, **flips over
-backwards and slides to the bottom.** There is no tipping logic anywhere. That
-is the "fail stupidly, but predictably" pillar arriving for free, and it is now
-pinned by tests so a model change has to be deliberate.
-
-Profiling caught what the green tests did not. The first grade probe reported
-zero climb at every angle — the ramp started 30 m away and the machine covers
-11 m in five seconds, so it never reached it. Worth remembering: 10 passing
-tests said the machine was fine, and it *was* fine; the probe was wrong. Look
-at the numbers, not only at the ticks.
-
-Verified Rapier's heightfield indexing empirically instead of guessing: the
-slow-varying index is X and the fast one is Z, which is the opposite of what
-the generator assumed. Both the collider and the terrain mesh are built from
-that one verified fact.
-
-**The transcendental thread is closed, by avoiding the problem rather than
-managing it.** Terrain is value noise from an integer hash — integer ops,
-multiply, add and `Math.sqrt`, which IEEE-754 requires to be correctly rounded.
-Heights are quantized to 1/1024 m as belt and braces. One licensed exception is
-recorded: pitch and roll for display use `asin`/`atan2`, and that is safe
-precisely because nothing reads them back into the sim. The ban is on
-transcendentals that close a loop.
-
-The actuator bus went in from the first commit even though only the levers
-write to it, because the acceptance test needs two components fighting over one
-actuator *on rung 1*. It already reports its owner and who it suppressed, and a
-test drives NAV over PILOT to prove it.
-
-The chase camera cost almost nothing to implement, which is a good sign about
-the decision: hiding the levers *is* "hands off the wheel". The bus keeps
-carrying whatever the levers were last set to and the machine keeps doing it.
-No pause, no auto-stop, no special case in the sim at all.
-
-Two smaller things found by looking at real screenshots rather than trusting
-the build: the operator's eye was inside the hull box, so the cab view showed
-none of the machine — moved into the cab so the hood is visible as a reference;
-and the windscreen was an opaque box 0.47 m from the eye, i.e. a cyan wall, now
-actual transparent glass.
-
-## 2026-08-23 — L-013: toolchain up, architecture rules made executable
-
-Cards: closed [L-013]
-
-Scaffold stands: TypeScript, Vite 8, Svelte 5, Vitest 4, Biome, Three 0.185,
-Rapier 0.20 deterministic-compat. `dev`, `build`, `test`, `typecheck` and `lint`
-are all green, and the commands are in `README.md`.
-
-The part worth recording is that **the three architecture rules are now
-executable rather than aspirational.** `tests/architecture.test.ts` reads the
-source tree and fails the build on a violation: no renderer import under
-`src/sim`, `src/control`, `src/modules` or `src/core`; no DOM access in sim
-code; no `Math.random` anywhere in `src`; no renderer or physics import under
-`src/ui`; no reactive scene-graph wrapper in dependencies. Breaking a rule now
-has to be a deliberate act that edits `docs/design/architecture-rules.md` first.
-
-That test caught itself on the first run — `rng.ts` has to name `Math.random` in
-order to forbid it, and the scan flagged its own doc comment. Fixed by stripping
-comments before scanning, which is the right answer anyway: the rules are about
-code, not prose.
-
-`tests/determinism.test.ts` proves the other half: 15 tests, the sim stepping in
-plain Node with `document` undefined, and identical `takeSnapshot()` fingerprints
-across two separate runs of 180 steps. Replay determinism is now a standing test
-rather than a claim, which was the point of choosing the deterministic build.
-A deliberate counter-test asserts that different run lengths *do* diverge, so a
-constant fingerprint cannot make the suite pass while proving nothing.
-
-Corrected a documentation error carried in from the Rapier docs: the JS API is
-`world.takeSnapshot()`, not `createSnapshot()`. Fixed in `MEMORY.md`, `BOARD.md`
-and `architecture-rules.md`. Found by probing the actual API rather than
-trusting the prose — worth repeating for anything load-bearing.
-
-Two smaller decisions. Biome excludes `prototype/` so the frozen probe is never
-reformatted, and disables the unused-import rules for `.svelte` files because
-Biome parses only the `<script>` block and cannot see template usage —
-`svelte-check` covers that properly. The dev server binds to `0.0.0.0` so the
-cockpit can be opened on a real phone from day one.
-
-New thread on first-load weight: the *empty* scaffold is already 3.44 MB raw /
-1.25 MB gzipped, with Three and Rapier roughly comparable and the `-compat`
-flavour inlining wasm as base64 at about a third overhead. Mobile-first is a
-hard pillar, so a first-load budget should be set before the bundle grows enough
-to make the choice for us.
-
-## 2026-08-23 — tone crystallized, chase view is hands-off-the-wheel
-
-Cards: [L-029] reshaped
-
-A sixth guiding principle went into `CLAUDE.md`, which is a rare thing to add:
-**you are an operator, not a demigod.** The fantasy is not an invincible war
-mecha; it is a humble, unstable, hard-to-operate contraption you are trying not
-to break everything with. Retrofuturistic forklift-operator training, not power.
-It earns principle status because it *decides arguments* — if a change makes the
-machine feel heroic rather than awkward, it is working against the game, and
-that is now a check anyone can apply without asking.
-
-`docs/design/tone.md` carries the detail, including a working-with / working-
-against table for proposals, because this is the kind of decision that erodes
-quietly rather than being overturned.
-
-**The damage counter was promoted to the damage ledger** and reclassified: it is
-the game's *core feedback mechanism*, not a verdict it happens to also provide.
-Itemised, named, Yen-priced, never aggregated — `citizen asset (scooter)
-damaged −¥3,000`. Delivered in a condescending institutional voice: the rig is
-not angry, it is disappointed, patiently, and writing it down. Harming a citizen
-stays categorical failure and never gets a price.
-
-The voice turns out to do structural work rather than just being funny. The same
-speaker that reports `citizen asset (scooter) damaged −¥3,000` can report
-`NAV-1 retained bus authority; pilot input suppressed` without changing gear —
-so the attribution rule and the comedy come out of one mouth, and the training
-frame licenses both.
-
-**Chase view resolved to "hands off the wheel"**, which is stronger than the
-stop-and-survey reading I had been leaning toward. It is not a pause and not an
-auto-stop: the sim keeps stepping and the machine keeps doing whatever it was
-last told. Leave the throttle locked open and go sightseeing, and the ledger
-will explain the consequences afterwards. Last chase-camera thread closed; only
-panel field-stowing survives from that cluster.

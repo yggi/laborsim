@@ -18,14 +18,24 @@
  *   one fixed exemption is the latch, which is structural.
  * - *The lens is the state.* Colour and position, not words.
  *
- * **The masters are the bridge** between the machine's own thresholds and the
+ * **The master is the bridge** between the machine's own thresholds and the
  * components' conditions: anything that reaches WARN or ALARM, from the chassis
- * or from any fitted component, lights them. They are **push-to-acknowledge**,
- * the way an annunciator panel works — a new condition flashes, pressing makes
- * it steady, and it goes dark only when the condition actually clears. So
+ * or from any fitted component, lights it. It is **push-to-acknowledge**, the
+ * way an annunciator panel works — a new condition flashes, pressing makes it
+ * steady, and it goes dark only when the condition actually clears. So
  * acknowledging is not dismissing, and the panel keeps telling you.
  *
- * The E-STOP sits with them, because they are the same conversation.
+ * There is **no status line**. A strip of words under the panel was the dash
+ * reading the lamp out loud, and a lamp that needs a caption is a lamp that has
+ * failed. What the strip used to say the master now says by colour and rhythm,
+ * the tells beside the gauges say by pointing at the instrument that knows why,
+ * and the sentence — which is a sentence, and belongs where sentences belong —
+ * moved to the debrief.
+ *
+ * The E-STOP sits with the master, because they are the same conversation, and
+ * it is also the way out: hitting it stops the machine *and* opens the folder.
+ * That is one control for "I want out of this", which is the only thing a pilot
+ * reaching for a mushroom button actually means.
  *
  * Every gauge reads a real simulated quantity. A gauge that lied about the
  * machine would break the inspectability pillar as surely as a hidden sim layer.
@@ -35,9 +45,9 @@
 import {
   type Annunciation,
   chassisConditions,
+  conditionAt,
   isAlarm,
   isWarning,
-  masterLine,
   worst,
 } from "../cockpit/annunciator.ts";
 import { styleOf } from "../cockpit/makers.ts";
@@ -47,9 +57,8 @@ import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import Attitude from "./Attitude.svelte";
 import Gauge from "./Gauge.svelte";
+import Meters from "./Meters.svelte";
 import SlipGauge from "./SlipGauge.svelte";
-import TimeMeter from "./TimeMeter.svelte";
-import TripMeter from "./TripMeter.svelte";
 
 let {
   snapshot,
@@ -58,7 +67,6 @@ let {
   height = $bindable(0),
   onOpenRack,
   onEstop,
-  onReport,
   onToggleModule,
 }: {
   snapshot: Snapshot | undefined;
@@ -69,7 +77,6 @@ let {
   height?: number;
   onOpenRack: () => void;
   onEstop: () => void;
-  onReport: () => void;
   onToggleModule: (id: string) => void;
 } = $props();
 
@@ -84,9 +91,10 @@ const speed = $derived(m?.speed ?? 0);
 const grip = $derived(Math.max(m?.left.traction ?? 0, m?.right.traction ?? 0));
 
 /**
- * The chassis's own conditions. They no longer get individual lamps — a row of
- * SLIP/GND/¥ legends was the dash explaining itself in words, which is exactly
- * what a panel does not do. They still feed the masters and name the strip.
+ * The chassis's own conditions. They get no legend row of their own — a strip of
+ * SLIP/GND/¥ lamps was the dash explaining itself in words, which is exactly
+ * what a panel does not do. They feed the master, and the ones that *have* a
+ * gauge light a tell beside it.
  */
 const chassisLamps = $derived<readonly Annunciation[]>(
   chassisConditions(snapshot, estopped),
@@ -95,7 +103,23 @@ const chassisLamps = $derived<readonly Annunciation[]>(
 const overall = $derived(
   worst([...chassisLamps.map((a) => a.condition), ...stages.map((s) => s.condition)]),
 );
-const line = $derived(masterLine(chassisLamps, stages, "SYSTEMS NOMINAL"));
+
+/**
+ * The tells: one small lamp beside the dial that knows why.
+ *
+ * A single master says *something is wrong* and says it once, which is right —
+ * and useless on its own, because the pilot's next question is always which
+ * instrument to look at. So the gauges measuring a quantity that can raise a
+ * condition carry the source light themselves. They do not flash: rhythm means
+ * unacknowledged, the master owns that, and two things blinking out of phase is
+ * a panel arguing with itself.
+ */
+const tells = $derived({
+  GRIP: conditionAt(chassisLamps, "GRIP"),
+  SLIP: conditionAt(chassisLamps, "SLIP"),
+});
+const said = (c: Condition): string =>
+  c >= ALARM ? "alarm" : c >= WARN ? "warning" : "nominal";
 
 /**
  * Annunciator acknowledgement.
@@ -183,26 +207,37 @@ const cells = $derived(
           danger={0.85}
           size={44}
         />
-        <span class="mfg-legend">GRIP %</span>
+        <span class="plateline">
+          <span
+            class="tell mfg-lamp"
+            data-lit={tells.GRIP}
+            role="img"
+            aria-label="grip {said(tells.GRIP)}"
+          ></span>
+          <span class="mfg-legend">GRIP %</span>
+        </span>
       </div>
       <div class="inst">
         <SlipGauge {snapshot} size={46} />
-        <span class="mfg-legend">SLIP M/S</span>
+        <span class="plateline">
+          <span
+            class="tell mfg-lamp"
+            data-lit={tells.SLIP}
+            role="img"
+            aria-label="slip {said(tells.SLIP)}"
+          ></span>
+          <span class="mfg-legend">SLIP M/S</span>
+        </span>
       </div>
+      <!-- Hours over distance, one housing. No plate: the units are screened on
+           the gauge's own face by whoever supplied it. -->
       <div class="inst">
-        <TimeMeter {snapshot} />
-        <span class="mfg-legend">TIME</span>
-      </div>
-      <div class="inst">
-        <TripMeter {snapshot} />
-        <span class="mfg-legend">KM</span>
+        <Meters {snapshot} />
       </div>
     </div>
 
-    <!-- The seam between the chassis and everything bolted to it: one lamp for
-         anything the machine or any component has to say, the thing that stops
-         it, and then the components themselves — all on one row, all on one
-         grid, plates aligned. -->
+    <!-- What the machine has to say, and the thing that stops it. Two controls,
+         bolted together because they are the same conversation. -->
     <div class="group alarms">
       <div class="inst">
         <button
@@ -229,7 +264,13 @@ const cells = $derived(
         </button>
         <span class="mfg-legend" data-danger="true">EMERGENCY STOP</span>
       </div>
+    </div>
 
+    <!-- The fitted components, floated to the far side of whatever row they land
+         on. That gap is the seam between what the machine came with and what
+         somebody bolted on afterwards, and it is worth a hand's width of empty
+         panel to see at a glance which is which. -->
+    <div class="group cells">
       {#each cells as entry (entry.stage.id)}
         {@const Cell = entry.cell}
         {#if Cell}
@@ -242,9 +283,6 @@ const cells = $derived(
       {/each}
     </div>
   </div>
-
-  <!-- The one line of words on the panel, and the way into the account. -->
-  <button class="strip" data-cond={line.condition} onclick={onReport}>{line.text}</button>
 
   <!-- The latch. It *is* the way into the rack, so it lives on the seam: the
        bottom edge of the dash, which is the top edge of the cabinet below. -->
@@ -312,12 +350,21 @@ const cells = $derived(
   }
   /* Plates on one line, controls ragged above it — so the stop stands taller
      than the lamps and HANSA's beacon taller again, which is exactly what they
-     do on a real panel. Cells are in this row too: an indicator is a control
-     like any other and belongs on the same grid, not in a strip of its own. */
+     do on a real panel. */
   .alarms {
     gap: 10px;
     align-items: flex-end;
     flex-wrap: wrap;
+  }
+  /* Everything the machine did not come with, pushed to the far edge of its
+     row. `auto` rather than a fixed gap because the panel wraps: the cells take
+     the right-hand end of whichever row they end up on. */
+  .cells {
+    margin-left: auto;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   /* A mounted thing and the plate that names it. */
   .inst {
@@ -325,6 +372,22 @@ const cells = $derived(
     flex-direction: column;
     align-items: center;
     gap: 3px;
+  }
+  /* A plate, and — on the gauges that measure something the machine can raise a
+     condition about — the tell bolted beside it. Keeping the lamp on the plate's
+     line rather than on the dial keeps every plate in the cluster on one
+     baseline, which is what makes the row read as a fitted cluster. */
+  .plateline {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .tell {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-width: 1px;
+    border-radius: 50%;
   }
 
   /* -- the nameplate ------------------------------------------------------ */
@@ -434,40 +497,6 @@ const cells = $derived(
   @media (prefers-reduced-motion: reduce) {
     .cap {
       transition: none;
-    }
-  }
-
-  /* -- the strip ---------------------------------------------------------- */
-  .strip {
-    display: block;
-    width: 100%;
-    font: inherit;
-    text-align: center;
-    letter-spacing: 0.2em;
-    padding: 3px 0;
-    border: none;
-    border-top: 1px solid rgba(0, 0, 0, 0.3);
-    background: #2a2418;
-    color: #6a8f7a;
-    cursor: pointer;
-  }
-  .strip[data-cond="2"] {
-    background: #a8760c;
-    color: #fff3d6;
-  }
-  .strip[data-cond="3"] {
-    background: #b81c0c;
-    color: #ffe6e0;
-    animation: strip-blink 0.72s steps(2, start) infinite;
-  }
-  @keyframes strip-blink {
-    50% {
-      opacity: 0.58;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .strip[data-cond="3"] {
-      animation: none;
     }
   }
 

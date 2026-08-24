@@ -9,22 +9,43 @@
  * The voice is condescending institutional politeness: the rig is not angry, it
  * is disappointed, patiently, and it has written everything down.
  *
- * Two ways out: RESET SIMULATOR re-racks the exercise; RESUME closes the folder
- * and lets you keep driving — the rig never yanks control (L-038).
+ * Two ways out: RESET SIMULATOR re-racks the exercise; RESUME closes the folder,
+ * twists the stop back out and lets you keep driving — the rig never yanks
+ * control (L-038).
+ *
+ * It also carries **the state of the machine in words**, which the dash used to
+ * carry on a strip under the panel. That was the panel captioning its own lamp;
+ * here it is a line in a document, which is what it always was. The dash tells
+ * you *that* something is wrong and *which instrument* knows why. The folder is
+ * the only surface in the cab allowed to finish the sentence.
  *
  * Architecture rule 3: reads a snapshot, reports two intents up.
  */
+import { chassisConditions, masterLine } from "../cockpit/annunciator.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 
 const {
   snapshot,
+  estopped,
   onReset,
   onResume,
 }: {
   snapshot: Snapshot | undefined;
+  /** The stop is a cockpit control rather than a simulated quantity, so it is
+   *  handed in rather than read off the snapshot. */
+  estopped: boolean;
   onReset: () => void;
   onResume: () => void;
 } = $props();
+
+/** The single worst thing the machine has to say, named. */
+const state = $derived(
+  masterLine(
+    chassisConditions(snapshot, estopped),
+    snapshot?.stages ?? [],
+    "SYSTEMS NOMINAL",
+  ),
+);
 
 const lines = $derived(snapshot?.damage ?? []);
 const bill = $derived(snapshot?.bill ?? 0);
@@ -58,6 +79,10 @@ function why(line: (typeof lines)[number]): string {
       <div class="stamp">L.A.B.O.R. TRAINING SYSTEM</div>
       <div class="title">DAMAGE ASSESSMENT &mdash; EXERCISE DEBRIEF</div>
     </div>
+
+    <!-- What the panel is showing right now, spelled out. The colour is the
+         lamp's; the words are the folder's. -->
+    <div class="state" data-cond={state.condition}>{state.text}</div>
 
     {#if citizen}
       <div class="fail">CITIZEN PROPERTY INVOLVED &middot; EXERCISE FAILED</div>
@@ -135,6 +160,24 @@ function why(line: (typeof lines)[number]): string {
     font-size: 13px;
     letter-spacing: 0.1em;
     color: #efe6cf;
+  }
+  /* The old dash strip, in its proper home. Same three colours as the master
+     lamp, and no blinking: a document does not flash at you. */
+  .state {
+    padding: 4px 12px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    background: #191d20;
+    color: #6a8f7a;
+    border-bottom: 1px solid #0d1012;
+  }
+  .state[data-cond="2"] {
+    background: #a8760c;
+    color: #fff3d6;
+  }
+  .state[data-cond="3"] {
+    background: #b81c0c;
+    color: #ffe6e0;
   }
   .fail {
     padding: 5px 12px;

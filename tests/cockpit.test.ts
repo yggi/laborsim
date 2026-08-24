@@ -37,6 +37,16 @@ import {
 } from "../src/control/bus.ts";
 
 const COCKPIT = new URL("../src/cockpit", import.meta.url).pathname;
+/**
+ * The `:global` ban covers the cab, not just the contract.
+ *
+ * It used to scan `src/cockpit/` alone, which is exactly the directory whose
+ * author is already thinking about the rule — and the first `:global` written
+ * after the ban went in was written in `src/ui/Rack.svelte`, to size a decal,
+ * where nothing was watching. A conformance test that only checks the careful
+ * half of the codebase is a test that will pass while the invariant dies.
+ */
+const CAB = [COCKPIT, new URL("../src/ui", import.meta.url).pathname];
 
 function filesUnder(dir: string): string[] {
   let found: string[] = [];
@@ -214,11 +224,13 @@ describe("the theme contract — invariants every maker must honour", () => {
    * puts it all back — and a house-style class called `bar` once collided with
    * a meter's `.bar` and collapsed a faceplate to 7px with everything green.
    */
-  it("uses no :global in any cockpit component", () => {
-    for (const file of filesUnder(COCKPIT).filter((f) => f.endsWith(".svelte"))) {
-      expect(readFileSync(file, "utf8"), `${file} must not use :global`).not.toMatch(
-        /:global\s*\(/,
-      );
+  it("uses no :global anywhere in the cab", () => {
+    for (const dir of CAB) {
+      for (const file of filesUnder(dir).filter((f) => f.endsWith(".svelte"))) {
+        expect(readFileSync(file, "utf8"), `${file} must not use :global`).not.toMatch(
+          /:global\s*\(/,
+        );
+      }
     }
   });
 

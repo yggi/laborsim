@@ -149,22 +149,39 @@ whatever they last held and the machine keeps doing it — you simply cannot rea
 them while you are reading. The same bargain as the chase camera, made with a
 different part of the body.
 
-## The cover is the machine's status panel (built, L-043)
+## The dash is the machine's status panel (built, L-043, rebuilt L-052)
 
-The cover over the rack is not a button — it is **the closed face of the rack,
-and a live instrument in its own right.** It is a strip of yellow industrial
-sheet metal at the bottom of the glass, in view while you drive: white-bezel
-needle gauges (speed, grip), an incline bubble, annunciator lamps
-(slip / tilt / ground / yen), a master-alarm that opens the debrief, an
-ignition key for identity, and a red mushroom **E-STOP** that kills the drive by
-disabling every module. A **latch** opens the rack — the panel drops, the rack
-comes up. Same bargain as the chase camera, made with your hands not your eyes.
+The closed face of the rack is not a button — it is **a live instrument in its
+own right**, a sheet of yellow industrial steel across the bottom of the glass
+and in view while you drive. On it: the machine's riveted dataplate (whose
+serial is the world seed), the chassis maker's instrument cluster — road speed,
+ATT-0, grip, slip, and one housing carrying hours over distance on drums — one
+**ALARM** annunciator, the red mushroom **E-STOP**, and then every fitted
+component's cell. A **latch** across the bottom edge opens the rack: the panel
+rides up, the cabinet comes with it. Same bargain as the chase camera, made with
+your hands rather than your eyes.
 
-Two rules that survived contact with a phone: the critical controls (E-STOP and
-the latch) are **pinned** to a fixed right column so they never scroll off a
-narrow screen, while the instrument strip may scroll; and **every gauge reads a
-real simulated quantity**, because a gauge that lied about the machine would
-break the inspectability pillar as surely as a hidden sim layer.
+Three rules, each of which cost something:
+
+- **Every gauge reads a real simulated quantity.** A gauge that lied about the
+  machine would break the inspectability pillar as surely as a hidden sim layer.
+- **No scrolling and no pinning.** Both were here (a scrolling instrument strip,
+  a pinned right column for the critical controls) and both were a website's
+  answers. One wrapping flow: things are bolted where they fit, and a panel that
+  has run out of room grows another row.
+- **The panel does not talk.** There was a status line along the bottom naming
+  the worst thing happening. It was the dash reading its own lamp out loud, and
+  a lamp that needs a caption has failed. What it said is now split three ways:
+  the master lamp carries severity in colour and rhythm, a **tell** — a small
+  lamp beside a gauge — points at the instrument that knows why, and the
+  sentence moved to the debrief, which is the one surface in this cab allowed to
+  finish it.
+
+The E-STOP is also the way out. There is no menu button, because a training rig
+does not have one: you stop the machine, and *then* somebody comes and talks to
+you about it. Hitting the mushroom latches the drive dead and opens the folder in
+the same press, and RESUME is what twists it back out — which makes releasing a
+stop the deliberate ceremony it is on a real machine.
 
 The live half of the ledger stacks above it (L-044), and the thing you glance
 at constantly is the machine's health, not a menu.

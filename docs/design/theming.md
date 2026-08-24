@@ -36,8 +36,11 @@ here. Three rules, in order of how often they are broken:
    into it — but it may not omit it, and it may not make it say something else.
 
 Three registers, each doing exactly one job: **the plate names**, **the lens
-reports**, and **the strip** — the single line of words on the panel — says the
-one sentence, when there is one. Nothing else on the dash is allowed to talk.
+reports**, and **the tell points** — a small lamp beside the gauge that measures
+the quantity behind a condition, so a lit master has a source. **Nothing on the
+dash is allowed to say a sentence.** There was a status strip that did; it was
+the panel captioning its own lamp, and the line it carried moved to the debrief,
+which is the only surface in this cab that may use words.
 
 Corollaries that fall out and are worth stating because they get re-litigated:
 no scrolling (a panel that has run out of room grows another row); no horizontal
@@ -130,12 +133,13 @@ Each is roughly the footprint of a small instrument or less.
 | **two-button** | a raise/lower pair with one plate between them — the commonest thing on a KIBA machine after a lamp, for a tool extension | *not built; add by need* |
 | **selector** | a multi-position pointer knob with an arc of positions | *not built* |
 
-A cell is roughly a small instrument's footprint, and it sits in the **same row
-and on the same baseline** as the chassis maker's own controls: plates aligned
-along one line, the controls ragged above it, because the labels were fitted in
-a row and the hardware was not. An indicator is a control like any other and has
-no strip of its own. `ALARM` and the stop sit at the head of that row, which is
-where the chassis stops speaking and the components start.
+A cell is roughly a small instrument's footprint, and it sits on the **same
+baseline** as the chassis maker's own controls: plates aligned along one line,
+the controls ragged above it, because the labels were fitted in a row and the
+hardware was not. An indicator is a control like any other and has no strip of
+its own. `ALARM` and the stop hold the head of that row; the cells are floated
+to its far end, and the gap between them is where the chassis stops speaking and
+the components start.
 
 ## The three layers, cheapest first
 
@@ -218,7 +222,8 @@ the last two are the ones that make a theme feel authored rather than tinted:
 - **`plateText`** — silkscreen. Model code, voltage, standard number.
 - **`lexicon`** — how this maker words the states everything shares. `on`,
   `off`, `fault`, `bypassed`. HANSA says `ÜBERBRÜCKT` where KIBA says `OFF`, and
-  the annunciator strip uses the *component's* maker's word, not the chassis's.
+  the debrief's state line names a bypassed guard in the *component's* maker's
+  word, not the chassis's.
 - **`voice`** — the maker's own strings: the warranty notice when its safety kit
   is bypassed, and its house safety tips. This is the first channel where a
   manufacturer speaks for itself, and it must never be confused with

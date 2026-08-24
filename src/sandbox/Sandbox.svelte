@@ -82,7 +82,6 @@ const noop = () => {};
                 estopped={specimen.estopped ?? false}
                 onOpenRack={noop}
                 onEstop={noop}
-                onReport={noop}
                 onToggleModule={noop}
               />
             </div>

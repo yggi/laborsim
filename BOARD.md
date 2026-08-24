@@ -121,6 +121,18 @@ built; what remains is more to break, replay, and the path to the conflict.
 - **done-when:** it is in the rack with a limit slider and its own instrument,
   and the ledger can tell you it was set too high.
 
+### [L-054] What a module considers — and what it is wired to
+- **what:** `considers` ("your two thumbs", "the route and the hull's heading")
+  is on every module and rendered on **no surface** since the plates stopped
+  talking — it belongs in the debrief, where words are allowed. Then extend it:
+  a module considers things because it is **wired to sensors**, so the sentence
+  becomes a list of named inputs a component declares and the machine either
+  supplies or does not. That makes an unwired module a real state, makes a
+  bypassed sensor visible, and is the surface L-009's hazards attack.
+- **done-when:** the debrief can say what each module was considering, and a
+  module's inputs are declared data rather than a prose string.
+- **needs:** L-006 (the part/module model is where a declared input lives)
+
 ### [L-053] The second chassis — a TOWA tracked platform
 - **what:** the same machine in a new dress. Identical mechanics, tuned only
   (lighter, smaller, faster, more agile, more brittle) — **no new rung and no new

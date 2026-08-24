@@ -146,8 +146,9 @@ function setView(next: CameraMode) {
  * exactly the enable-state you had, because a safety control that quietly
  * rewired your rack would be its own hazard.
  */
-function toggleEstop() {
-  estop = !estop;
+function setEstop(next: boolean) {
+  if (next === estop) return;
+  estop = next;
   if (estop) {
     preEstop = {};
     for (const mod of rack) {
@@ -160,6 +161,30 @@ function toggleEstop() {
     for (const mod of rack) mod.enabled = preEstop[mod.id] ?? true;
   }
   rackVersion++;
+}
+
+/**
+ * The stop is also the way out of the exercise.
+ *
+ * There is no menu button, because a training rig does not have one: you stop
+ * the machine, and *then* somebody comes and talks to you about it. So the
+ * mushroom latches the drive dead and opens the folder in the same press, and
+ * RESUME is what twists it back out — the same gesture in reverse, and the only
+ * way to release it, which is exactly the ceremony a real stop demands.
+ *
+ * Pressing it again while the folder is open does nothing new: the stop is
+ * already in, and a latched stop is not a toggle.
+ */
+function hitEstop() {
+  setEstop(true);
+  report = true;
+}
+
+/** Close the folder and hand the machine back. Twists the stop out if the stop
+ *  is what opened it; a folder opened by a citizen leaves the drive as it was. */
+function resumeRun() {
+  report = false;
+  setEstop(false);
 }
 
 /** The rig re-racks the exercise. Fresh world, fresh site, everything at rest. */
@@ -416,8 +441,7 @@ $effect(() => {
         estopped={estop}
         bind:height={dashHeight}
         onOpenRack={() => (rackOpen = !rackOpen)}
-        onEstop={toggleEstop}
-        onReport={() => (report = true)}
+        onEstop={hitEstop}
         onToggleModule={toggleModule}
       />
       {#if rackOpen}
@@ -434,7 +458,12 @@ $effect(() => {
   {/if}
 
   {#if report}
-    <RunReport snapshot={latest} onReset={resetSim} onResume={() => (report = false)} />
+    <RunReport
+      snapshot={latest}
+      estopped={estop}
+      onReset={resetSim}
+      onResume={resumeRun}
+    />
   {/if}
 </div>
 
