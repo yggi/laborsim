@@ -19,12 +19,15 @@ import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
 import Attitude from "./ui/Attitude.svelte";
-import Ledger from "./ui/Ledger.svelte";
+import DashPanel from "./ui/DashPanel.svelte";
+import Draggable from "./ui/Draggable.svelte";
 import Lever from "./ui/Lever.svelte";
 import NavRadar from "./ui/NavRadar.svelte";
 import Rack from "./ui/Rack.svelte";
+import RunReport from "./ui/RunReport.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
 import TiltGauges from "./ui/TiltGauges.svelte";
+import Toasts from "./ui/Toasts.svelte";
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
@@ -59,6 +62,15 @@ let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
 let showDebug = $state(true);
 
+/** Bumping this re-racks the exercise: the sim effect rebuilds from scratch. */
+let runId = $state(0);
+let report = $state(false);
+let estop = $state(false);
+/** Enabled-state of each module before the E-stop, so release can restore it. */
+let preEstop: Record<string, boolean> = {};
+/** So the report auto-opens once on a citizen, not every frame. */
+let citizenSeen = false;
+
 let setViewMode: (m: CameraMode) => void = () => {};
 
 function setView(next: CameraMode) {
@@ -66,16 +78,74 @@ function setView(next: CameraMode) {
   setViewMode(mode);
 }
 
+/**
+ * Emergency stop. Kills the drive by disabling every module — the terminal
+ * falls to HALT whatever was driving — and parks the levers. Releasing restores
+ * exactly the enable-state you had, because a safety control that quietly
+ * rewired your rack would be its own hazard.
+ */
+function toggleEstop() {
+  estop = !estop;
+  if (estop) {
+    preEstop = {};
+    for (const mod of rack) {
+      preEstop[mod.id] = mod.enabled;
+      mod.enabled = false;
+    }
+    leverL = 0;
+    leverR = 0;
+  } else {
+    for (const mod of rack) mod.enabled = preEstop[mod.id] ?? true;
+  }
+  rackVersion++;
+}
+
+/** The rig re-racks the exercise. Fresh world, fresh site, everything at rest. */
+function resetSim() {
+  report = false;
+  estop = false;
+  leverL = 0;
+  leverR = 0;
+  rackOpen = false;
+  mode = "cab";
+  citizenSeen = false;
+  runId++;
+}
+
 /** Is a module with this id in the rack? Its instrument is fitted if so. */
 const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
 
+/** Instrument placements on the glass — draggable, and remembered per session.
+ *  They start down the right, clear of the camera control at the very top. */
+const rightX = typeof window === "undefined" ? 280 : innerWidth - 124;
+let attPos = $state({ x: rightX, y: 50 });
+let navPos = $state({ x: rightX, y: 224 });
+let tiltPos = $state({ x: rightX, y: 398 });
+
+// Auto-open the debrief the moment a citizen is involved: it is categorical
+// failure, and the rig does not let that scroll past.
 $effect(() => {
+  if (latest?.damage.some((d) => d.category === "citizen asset") && !citizenSeen) {
+    citizenSeen = true;
+    report = true;
+  }
+});
+
+$effect(() => {
+  // Reading runId here makes RESET SIMULATOR rebuild the whole world: the effect
+  // re-runs, cleaning up the old sim and building a new one.
+  runId;
   let frame = 0;
   let disposed = false;
   let cleanup = () => {};
 
   void initPhysics().then(() => {
     if (disposed) return;
+
+    // Re-racking must not duplicate modules: mutate the rack back to just the
+    // pilot in place (its identity is held by the world we are about to build),
+    // then re-add the components below.
+    rack.splice(0, rack.length, pilot);
 
     const world = createWorld({ modules: rack });
     // NAV needs the pose of the machine it is driving, so it is built once the
@@ -181,10 +251,10 @@ $effect(() => {
   <Telemetry snapshot={latest} showChain={!rackOpen} />
 {/if}
 
-<!-- The rig keeps the account whether you are watching or not. It shows in
-     the chase view too: that is the view you were in when it happened. -->
+<!-- The live voice: the rig narrating as it happens, in the same register as
+     the end-of-run report. Stacks, then fades; a citizen latches. -->
 {#if !rackOpen}
-  <Ledger snapshot={latest} />
+  <Toasts snapshot={latest} />
 {/if}
 
 {#if mode === "cab"}
@@ -194,48 +264,67 @@ $effect(() => {
   <div class="handsoff">HANDS OFF THE WHEEL &mdash; the machine is still running</div>
 {/if}
 
-<!--
-  The instrument column. Everything fitted to the glass lives here, in the
-  order it was fitted: the chassis head first, then whatever the rack brought
-  with it. Each one is a piece of view you gave up (docs/design/cockpit.md) —
-  the budget that prices that is L-025, and this is the pile it will price.
-
-  The camera is an item in the same column, not a chrome button: choosing the
-  view is a thing you do with the equipment, and in the chase view it is the
-  only piece of equipment you still have.
--->
-<div class="column">
-  <div class="item camera">
-    {#each ["cab", "chase"] as const as option (option)}
-      <button class:on={mode === option} onclick={() => setView(option)}>
-        {option === "cab" ? "CAB" : "CHASE"}
-      </button>
-    {/each}
-  </div>
-
-  {#if mode === "cab" && !rackOpen}
-    <Attitude snapshot={latest} />
-    <!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
-    {#if nav}
-      <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
-    {/if}
-    {#if fitted("TILT")}
-      <TiltGauges snapshot={latest} />
-    {/if}
-  {/if}
+<!-- The camera is a fixed control, top-right: choosing the view is a thing you
+     do with the equipment, and in chase it is the only equipment you keep. -->
+<div class="camera item">
+  {#each ["cab", "chase"] as const as option (option)}
+    <button class:on={mode === option} onclick={() => setView(option)}>
+      {option === "cab" ? "CAB" : "CHASE"}
+    </button>
+  {/each}
 </div>
 
-<!-- The cover over the control panel, at the seam it opens. Lifting it is the
-     same bargain as the chase view: you get the rack, you lose the glass. -->
-<button class="cover" class:open={rackOpen} onclick={() => (rackOpen = !rackOpen)}>
-  <span class="chev">{rackOpen ? "▼" : "▲"}</span>
-  {rackOpen ? "CLOSE COVER" : "CONTROL PANEL"}
-</button>
+<!--
+  Fitted instruments, draggable on the glass by their titlebars (L-008). Each
+  one is a piece of view you gave up; the budget that prices that is L-025, and
+  this is the pile it will price. They must stay wholly on the glass and clear
+  of each other — the Draggable refuses a drop that breaks either rule.
+-->
+{#if mode === "cab" && !rackOpen}
+  <Draggable title="ATT-0" bind:x={attPos.x} bind:y={attPos.y}>
+    <Attitude snapshot={latest} />
+  </Draggable>
+  <!-- NAV-1 ships this and it is mandatory: fit the component, fit its glass. -->
+  {#if nav}
+    <Draggable title="NAV-1" bind:x={navPos.x} bind:y={navPos.y}>
+      <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
+    </Draggable>
+  {/if}
+  {#if fitted("TILT")}
+    <Draggable title="TILT-GUARD" bind:x={tiltPos.x} bind:y={tiltPos.y}>
+      <TiltGauges snapshot={latest} />
+    </Draggable>
+  {/if}
+{/if}
+
+<!-- The dash: the machine's live status panel and the closed face of the rack.
+     Its latch opens the rack; its E-stop kills the drive; its master alarm
+     opens the debrief. Present in the cab; in chase you are outside it. -->
+{#if mode === "cab"}
+  <DashPanel
+    snapshot={latest}
+    {rackOpen}
+    estopped={estop}
+    onOpenRack={() => (rackOpen = !rackOpen)}
+    onEstop={toggleEstop}
+    onReport={() => (report = true)}
+  />
+{/if}
 
 {#if rackOpen}
   {#key rackVersion}
-    <Rack modules={rack} snapshot={latest} onchange={() => rackVersion++} debug={showDebug} />
+    <Rack
+      modules={rack}
+      snapshot={latest}
+      onchange={() => rackVersion++}
+      onclose={() => (rackOpen = false)}
+      debug={showDebug}
+    />
   {/key}
+{/if}
+
+{#if report}
+  <RunReport snapshot={latest} onReset={resetSim} onResume={() => (report = false)} />
 {/if}
 
 <style>
@@ -270,10 +359,12 @@ $effect(() => {
     box-shadow: inset 0 0 0 6px #0d1012, inset 0 0 160px rgba(0, 0, 0, 0.72);
   }
 
-  /* Bottom corners, because that is where thumbs are. */
+  /* Bottom corners, because that is where thumbs are — but above the dash,
+     which owns the very bottom of the glass. */
   .levers {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom) + 16px);
+    bottom: calc(env(safe-area-inset-bottom) + 124px);
+    z-index: 3;
   }
   .levers.left {
     left: 14px;
@@ -298,22 +389,17 @@ $effect(() => {
     pointer-events: none;
   }
 
-  /* The fitted glass, stacked down the right. */
-  .column {
-    position: fixed;
-    right: 12px;
-    top: calc(env(safe-area-inset-top) + 10px);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-  }
   .item {
     background: rgba(16, 19, 21, 0.94);
     border: 1px solid #333a3b;
     box-shadow: 0 0 0 3px #0d1012;
   }
+  /* Fixed control, top-right, above the draggable instruments. */
   .camera {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: 12px;
+    z-index: 5;
     display: flex;
   }
   .camera button {
@@ -331,40 +417,5 @@ $effect(() => {
   .camera button.on {
     color: #14171a;
     background: #6fe3c4;
-  }
-
-  /* Anchored on `bottom` in both states so it travels to the seam the rack
-     opens at (top: 26vh → 74vh of cover travel) instead of jumping there. */
-  .cover {
-    position: fixed;
-    left: 50%;
-    bottom: 12px;
-    transform: translateX(-50%);
-    width: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font: 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.14em;
-    color: #c6d0cb;
-    background: #23282a;
-    border: 1px solid #0d1012;
-    border-bottom-width: 3px;
-    padding: 9px 12px;
-    transition: bottom 0.28s ease;
-    z-index: 1;
-  }
-  .cover.open {
-    bottom: 74vh;
-    color: #14171a;
-    background: #e8b53a;
-    border-color: #b8891f;
-  }
-  .cover .chev {
-    color: #6d7a76;
-  }
-  .cover.open .chev {
-    color: #14171a;
   }
 </style>

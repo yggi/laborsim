@@ -29,11 +29,13 @@ const {
   modules,
   snapshot,
   onchange,
+  onclose,
   debug = false,
 }: {
   modules: Module[];
   snapshot: Snapshot | undefined;
   onchange: () => void;
+  onclose: () => void;
   debug?: boolean;
 } = $props();
 
@@ -86,6 +88,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   <div class="head">
     <span>RACK &mdash; SIGNAL FLOWS DOWN</span>
     <span class="warn">EYES OFF THE GLASS</span>
+    <button class="close" onclick={onclose} aria-label="close the rack">CLOSE ▼</button>
   </div>
 
   <div class="slots">
@@ -230,6 +233,16 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   }
   .head .warn {
     color: #f0a830;
+  }
+  .head .close {
+    font: inherit;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: #14171a;
+    background: #e8b53a;
+    border: none;
+    padding: 3px 8px;
+    cursor: pointer;
   }
   /* The cabinet interior the faceplates are screwed into. */
   .slots {
