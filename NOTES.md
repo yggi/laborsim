@@ -21,8 +21,8 @@ One thread, because they are one question: mobile-first is a hard pillar and
 cheapest first: plain deterministic build plus `vite-plugin-wasm`, code-split
 build mode from sim, lazily load instruments.
 
-*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser
-track geometry — and no frame ever timed on a phone. L-034 gets the number.
+*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser track
+geometry — and no frame ever timed on a phone. L-034 gets the number.
 
 *World size and part counts* follow from those two numbers rather than preceding
 them — and 130 dynamic bodies now step every frame. Must be answered before
@@ -31,11 +31,10 @@ them — and 130 dynamic bodies now step every frame. Must be answered before
 ## Missions, and what "operator interaction" means
 
 Zachtronics-style budgeting, scored on budget / time / **complexity**, with
-complexity as parts-and-weight traded against operator interaction. Written up
-in `docs/design/missions.md` and explicitly **not v0**. Two things worth
-carrying even if missions never land: it inverts the chase camera from a cost
-into a reward, and determinism stops being only an attribution tool and becomes
-the substrate for *verifying* a solution across several sites.
+complexity as parts-and-weight traded against operator interaction. Written up in
+`docs/design/missions.md` and explicitly **not v0**. Two things worth carrying
+even if missions never land: it inverts the chase camera from a cost into a
+reward, and determinism becomes the substrate for *verifying* a solution.
 
 The unresolved core is the metric. **What counts as operator interaction** —
 lever changes, seconds hands-on, distinct inputs? It is the load-bearing number
@@ -43,14 +42,12 @@ in the only scoring axis that puts two goods in tension, and it is undefined.
 
 ## The site is hard to crash into on purpose
 
-A twelve-year-old found the fun in seconds by driving at the construction
-material. A scripted driver went ten minutes without touching anything: 130
-props in six clusters across 256 m, and the waypoint route does not pass any of
-them. That is a site-design problem, not a damage problem — work areas should be
-somewhere a driver is *going*, and the route should run through them. Feeds
-L-039 and L-027: "difficulty is the site" needs the site **composed, not
-scattered** — footing, clearances, an unsurveyed obstruction on the actual
-route. What that means as a generator is still unwritten.
+A twelve-year-old found the fun in seconds by driving at the material; a scripted
+driver went ten minutes without touching anything, because 130 props sit in six
+clusters the route never passes. A site-design problem, not a damage one. The
+composed-not-scattered half is carded (L-039, L-027); what stays a thread is what
+"composed" means **as a generator** — footing, clearances, an unsurveyed
+obstruction on the route you were actually given.
 
 ## Does equal-share normal load hold up for the load chart?
 
