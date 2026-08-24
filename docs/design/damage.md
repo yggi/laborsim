@@ -27,6 +27,18 @@ a score, and scores do not teach. Every line has to be traceable to what you did
 and what was driving at the time — which is why replay comes before the ledger
 rather than after it.
 
+**The ledger has two faces.** A *live* one and a *final* one, and they are the
+same voice at two tempos:
+
+- **Live** (L-044): the rig speaks as it happens, as **stacking, auto-dismissing
+  notifications** — a scooter goes down, a line slides in, waits, fades. Severe
+  ones latch (a citizen, a master-alarm) until acknowledged. This is the channel
+  that reaches you mid-drive, alongside the warning lights on the status panel.
+- **Final** (L-029): at the end of a run, an **itemised, scrollable report** as a
+  modal — the full account, in register, with a manual **RESET SIMULATOR**
+  button. This is the debrief, and it is the natural first screen of the game:
+  you arrive at the rig, you read the last trainee's account, you reset.
+
 ## How an impact is measured
 
 **Joules absorbed**, not hit points. Every step, a breakable body's kinetic
@@ -86,7 +98,19 @@ badly is partly *your* machine, and a wrecked machine ends the exercise.
 That needs a **reset**, and the reset should be diegetic — the training rig
 re-racks the exercise, it does not "respawn" you. The frame already licenses
 it (`MEMORY.md` § 1.1): a rig that records sessions is a rig that can start a
-new one.
+new one. **The reset is always manual** — the rig never yanks control away; it
+tells you the exercise is over and waits for you to press RESET SIMULATOR.
+
+What ends an exercise (L-038):
+
+- **The machine is wrecked** — destroyed, or **unrecoverable**: on its back or
+  high-centred with no way to drive out. "Unrecoverable" is a real state to
+  detect, not a health bar hitting zero.
+- **A citizen is harmed.** Categorical failure, and *deliberately hard to
+  reach*: citizens try to get out of the way. Doing them justice needs NPCs who
+  see the machine and dodge, which is a round of its own and may be deferred —
+  until then the scooter (a citizen *asset*, not a person) carries the weight.
+- **The operator calls it** — RESET at any time.
 
 Open question this raises rather than answers: does damage to the machine
 degrade it *before* it destroys it — a track that has lost grip, a bent frame
@@ -106,6 +130,16 @@ a black box triggered by an event, and a synthesised voice is another rendering
 of a simulated quantity. Slip already has a number, a bar and a belt racing
 under a stationary machine; sound is the channel that reaches you when your
 eyes are on the ground.
+
+**The machine should become a lemon.** As it takes abuse it should slip, pull to
+one side, buckle; smoke and leak oil; set off alarms and warning lights. Two
+tiers, and they can land apart: the *symptoms* (smoke and oil as particles,
+alarms and lights on the status panel, a rougher engine note) are feedback and
+eye-candy that need no new physics and can ship early; true *degradation* — a
+track that has genuinely lost grip, a frame that genuinely pulls — is the
+expensive, load-bearing version (see the NOTES thread) and comes later. Ship the
+symptoms first; they teach the player to listen before the physics makes it
+matter.
 
 It is also, bluntly, the cheapest visceral feedback available in a browser —
 no assets, no download budget, and it survives being on a phone with the screen

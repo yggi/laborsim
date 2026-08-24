@@ -18,6 +18,54 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-24 — feel fixes, and a face for the cockpit
+
+Cards: [L-043] [L-046] [L-047] [L-044] opened · [L-029] [L-038] reshaped ·
+CLAUDE principle 7 added
+
+**Playtest feedback, acted on.** From a session where a twelve-year-old found
+the fun immediately (drive at the construction material) and then flipped the
+machine by bypassing TILT-GUARD:
+
+- *Flipped machine skated on ice.* The hull collider was friction 0 — right for
+  upright driving, where the track model owns all horizontal force, but it left
+  a wreck nothing to stop it. Gave the hull real friction with a Max combine
+  rule; it is inert during normal driving (0.42 m belly clearance) and bites
+  only on its back or bellied. A wreck shoved at 5 m/s now stops in a few
+  seconds. Verified in Node.
+- *The grouser belt ran backwards.* Its ground-contact run travelled forward
+  under a machine driving forward, disagreeing with its own sprockets. A track's
+  bottom plates move rearward. One-line sign flip; the wheels were the correct
+  reference.
+- *Grousers oversized*, count thinned, for legibility and a chunkier read.
+
+**The modules got physical.** Raised plates with lit top edges and drop shadows,
+glossy embossed keys and LEDs, and a feTurbulence film-grain overlay at
+soft-light — generated, not sampled. This is the first application of a new
+principle.
+
+**CLAUDE principle 7 — "honest world, real machine."** The world may look like a
+simulation (contour lines, a plotted route) because in the fiction it *is* one;
+the machine and cockpit may not. Spend fidelity asymmetrically. This is the
+user's "core idea," and it decides design arguments, so it earned a place in the
+contract rather than a doc.
+
+**Crystallized from a design dump** (`docs/design/cockpit.md`, `damage.md`):
+
+- The rack cover becomes **the machine's status panel** — a live strip (fuel,
+  oil, engine key, MASTER-ALARM) with a latch that opens the rack. It is where
+  the live voice will stack. Themeable per chassis, giving the cockpit identity
+  (L-043).
+- The ledger has **two faces**: live stacking notifications (L-044) and an
+  end-of-run scrollable modal with RESET SIMULATOR (L-029), which is also the
+  game's first screen.
+- **Reset is always manual**, triggered by wreck / unrecoverable-flip /
+  citizen-harm (deferred to NPCs who dodge) / operator (L-038).
+- The **lemon**: symptoms (smoke, oil, warning lights, rough note) ship as
+  feedback before the expensive drive-degradation physics.
+
+Still open: props seem to **float** — not diagnosed, measure the rest gap first.
+
 ## 2026-08-24 — the world can be broken
 
 Cards: [L-031] closed · [L-041] opened · [L-039] [L-029] reshaped

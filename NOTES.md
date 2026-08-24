@@ -41,13 +41,6 @@ The unresolved core is the metric. **What counts as operator interaction** —
 lever changes, seconds hands-on, distinct inputs? It is the load-bearing number
 in the only scoring axis that puts two goods in tension, and it is undefined.
 
-## Field stowing of panels
-
-Left over from the chase-camera decision. Instruments are installed, not
-toggled — but may they be *stowed* in the field at a cost in hands or seconds,
-or not at all? The chase camera's shape suggests an answer (available, but it
-costs you something real while it is up), which has not been confirmed.
-
 ## The site is hard to crash into on purpose
 
 A twelve-year-old found the fun in seconds by driving at the construction
@@ -55,8 +48,9 @@ material. A scripted driver went ten minutes without touching anything: 130
 props in six clusters across 256 m, and the waypoint route does not pass any of
 them. That is a site-design problem, not a damage problem — work areas should be
 somewhere a driver is *going*, and the route should run through them. Feeds
-L-039 and L-027, and it is a hint that "difficulty is the site" needs the site
-to be composed rather than scattered.
+L-039 and L-027: "difficulty is the site" needs the site **composed, not
+scattered** — footing, clearances, an unsurveyed obstruction on the actual
+route. What that means as a generator is still unwritten.
 
 ## Does equal-share normal load hold up for the load chart?
 
@@ -75,24 +69,32 @@ not speculatively before.
 
 The physics tiers in `physics-migration.md` are a *development* fidelity ladder,
 not a player-facing one. Still unanswered: whether the player sees a **domain
-stack** (structure / mechanics / power / thermal / signal) they can open
-individually, or a **fidelity ladder** they can descend, or both as a matrix.
-Shapes `src/sim/layers/` directly.
+stack** (structure / mechanics / power / thermal / signal), a **fidelity
+ladder** they descend, or both as a matrix. Shapes `src/sim/layers/` directly.
 
-## What does the procedural generator generate?
+## The lemon — symptoms now, degradation later
 
-Landscape is scenery. **Job sites** — footing, clearances, load, an unsurveyed
-obstruction — are the puzzle, and the thing that makes a load chart
-insufficient. What that means as a generator is unwritten.
+Confirmed direction: an abused machine should **become a lemon** — slip, pull,
+buckle, smoke, leak oil, raise alarms and warning lights. Split into two tiers
+that can ship apart:
 
-## What does a damaged machine feel like to drive?
+- **Symptoms** (carded around L-040 / L-046 / L-043): smoke and oil as
+  particles, warning lights and alarms on the status panel, a rougher engine
+  note. Pure feedback and eye-candy, no new physics. Ship first — they teach the
+  player to *listen* before it costs anything.
+- **Degradation** (still a thread): the drive genuinely changes — per-track `MU`
+  falls, a bias enters the normal-load share, a sprocket will not take full
+  torque. This makes a damaged machine a *different machine*, which is the whole
+  subject, and it is the expensive part. The friction model can already express
+  most of it, which is suspicious in a good way. Not v0; do not let the reset
+  design (L-038) foreclose it.
 
-Damage to the vehicle is carded (L-038) as break-and-reset. The stronger version
-is **degradation before destruction**: a track that has lost grip, a bent frame
-that pulls to one side, a sprocket that will not take full torque. It would make
-a damaged machine a *different machine*, which is exactly the subject of the
-whole project — and it is the most expensive thing on the list.
+## Friction feel — hull skate fixed, "float" still open
 
-The friction model can already express most of it (per-track `MU`, a bias in the
-normal-load share), which is suspicious in a good way. Not v0; revisit when
-L-038 lands, and do not let the reset design foreclose it.
+The flipped-machine ice-slide is fixed (hull friction, L round of 2026-08-24).
+The other half of the "friction feels off" report — props seeming to **float** —
+is not diagnosed. Candidates: the settled resting gap between a box collider on
+triangulated ground and the bilinear placement height; too little contact
+shadow, so props read as pasted on; or the toon material flattening the
+ground-contact seam. Measure the actual rest gap before theorising further
+(META: ask the sim what it computed).

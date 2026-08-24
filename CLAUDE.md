@@ -76,6 +76,12 @@ These decide design arguments. If a change makes one weaker, say so out loud.
    trying not to break everything with. Retrofuturistic forklift-operator
    training, not power. If a change makes the machine feel heroic rather than
    awkward, it is working against the game.
+7. **Honest world, real machine.** The world may look like a simulation — bare
+   contour lines, an obvious grid, a plotted route — because in the fiction it
+   *is* one. The machine and the cockpit may not: they are the real thing the
+   player sits in. So spend fidelity asymmetrically — a legible, diagrammatic
+   world, and a cockpit with wear, weight, grain and the wrong kind of light.
+   The player is in a simulation, but in a real cab.
 
 ## Working rules
 

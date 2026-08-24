@@ -49,14 +49,24 @@ core loop once, at rung 1, over the rack as the build surface.
 - **done-when:** replaying a recorded run yields the same damage events in the
   same order, asserted in a test.
 
-### [L-029] The damage ledger — v0's verdict and core feedback
-- **what:** itemised, named, Yen-priced damage in a condescending institutional
-  voice. Never aggregated. Citizens are categorical failure, never a line item.
-  Quarry (few hazards, nobody to hurt) as the easy environment tier.
-- **done-when:** a run ends with a line-by-line account that says *what* and
-  *why*, each line traceable to what you did and what was driving. The running
-  account already exists; this is the end-of-run report and the register.
+### [L-029] The damage ledger — the end-of-run report
+- **what:** the *final* face of the ledger: an itemised, scrollable modal in the
+  condescending register, with a manual **RESET SIMULATOR** button — and the
+  natural first screen of the game. Never aggregated; citizens categorical. The
+  live running account already exists (Ledger.svelte); L-044 turns it into the
+  in-game voice.
+- **done-when:** a run ends with a scrollable line-by-line account, each line
+  traceable to what you did and what was driving, and a button to re-rack.
 - **needs:** L-032
+
+### [L-043] The status panel — the closed face of the rack
+- **what:** the CONTROL PANEL cover becomes a live status strip at the bottom of
+  the glass — fuel/oil pressure, engine key, warning lights, MASTER-ALARM — with
+  a latch that opens it into the rack. It is also where the live voice (L-044)
+  stacks. Themeable per chassis (bulldozer ↔ police Labor), so the interior has
+  identity. See docs/design/cockpit.md.
+- **done-when:** the cover shows live machine state and a raised alarm, and a
+  latch reveals the rack behind it.
 
 ### [L-018] The acceptance scenario, made legible
 - **what:** levers and NAV-1 under `CAP` already are two components fighting
@@ -93,12 +103,36 @@ core loop once, at rung 1, over the rack as the build surface.
 ## backlog
 
 ### [L-038] The machine breaks too, and the reset
-- **what:** damage to the vehicle, destruction, and a diegetic reset — the rig
-  re-racks the exercise, it does not respawn you. Degradation before
-  destruction is the strong version and explicitly not v0.
-- **done-when:** you can wreck the machine badly enough to end the exercise, and
-  starting again costs you nothing but the run.
+- **what:** damage to the vehicle and destruction, and a **manual** diegetic
+  reset — the rig re-racks the exercise, never yanks control. Ends on: machine
+  wrecked or **unrecoverable** (flipped / high-centred, a real state to detect),
+  a citizen harmed (hard to reach; NPCs dodge; may defer to an NPC round), or
+  the operator calling RESET. Degradation before destruction is the strong
+  version and explicitly not v0. See docs/design/damage.md.
+- **done-when:** an unrecoverable machine ends the exercise and offers RESET, and
+  nothing is lost but the run.
 - **needs:** L-031
+
+### [L-044] The live voice — stacking, auto-dismissing notifications
+- **what:** the rig speaks as it happens: lines slide in, wait, fade; severe
+  ones (citizen, master-alarm) latch until acknowledged. Same voice as L-029, at
+  a different tempo. Reworks the current always-on Ledger list.
+- **done-when:** breaking three things in a row produces three stacked notices
+  that clear themselves, and a citizen hit stays until dismissed.
+- **needs:** L-043
+
+### [L-046] External lights and beacons
+- **what:** headlights/spotlight, a red brake light, rotating warning beacons on
+  the machine — feedback in the chase view and plain eye-candy. Wire them to sim
+  state (braking, alarm) so they mean something, not just decoration.
+- **done-when:** the beacon turns under a master-alarm and the brake light comes
+  on when you reverse the tracks against motion.
+
+### [L-047] The machine leaves a mark
+- **what:** a dirt track on the ground behind the belts — a decal/trail. Ties
+  the machine to the world it is tearing up, and it is the first ground evidence
+  the ledger's talk of "rutted surface" can point at.
+- **done-when:** driving leaves a visible trail that follows the tracks.
 
 ### [L-040] The machine symphony — synthesised sound
 - **what:** engine-generated audio from the quantities the sim already

@@ -82,8 +82,30 @@ somebody bolted in, which is what it is meant to be. It also makes the rack
 *legible at a glance while driving* — you find the orange plate, not the third
 row down.
 
-The cover over it is the same bargain as the chase camera, made with your hands
-instead of your eyes: lift it and the viewport slides up out of the way.
+## The cover is the machine's status panel (planned, L-043)
+
+The cover over the rack is not a button — it is **the closed face of the rack,
+and it is a live instrument in its own right.** It sits as a strip at the bottom
+of the glass, in view while you drive, and it shows the machine's vital state:
+fuel and oil pressure, an engine key, and the warning lights and MASTER-ALARM
+that the rig raises. `MASTER-ALARM · MAIN-BUS-B UNDERVOLT`. Then a **latch**
+opens it — the viewport slides up, the cover swings down, and the rack is behind
+it. Same bargain as the chase camera, made with your hands instead of your eyes.
+
+This gives the live half of the ledger somewhere to live (the rig's voice
+stacks here, L-044) and it means the thing you glance at constantly is the
+machine's health, not a menu.
+
+## Cockpit identity — the interior is not exchangeable
+
+The status panel, the gauges, the key, the frame around the glass are **themed
+per chassis**, the same way the rack modules are themed per manufacturer. A
+rugged municipal bulldozer and a fancy police Labor share a code path and share
+nothing else: different gauge faces, different warning-light language, different
+furniture. The maker-styling system already proved this works for the rack;
+extending it to the cab is what stops the interior from being a sterile,
+exchangeable box. The cockpit having an *identity* is part of feeling real
+(principle 7).
 
 ## Modules carry settings, and settings are not gains
 
