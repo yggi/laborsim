@@ -13,6 +13,9 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
+| `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
+| `docs/design/theming.md` | the substrate, the token contract, and the brief a maker's author is given |
+| `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
 | `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
 | `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
@@ -49,21 +52,10 @@ between what a machine is rated to do and what it does on the day.**
 system.** The player is not piloting a Labor; they are using the rig that
 teaches people to. Tonal anchor: the simulator sequence that opens *Patlabor 2*.
 
-This is not flavour — it is the frame that licenses most of the design, and it
-should be checked before inventing machinery to justify something:
-
-- **Inspectability is diegetic.** An open sim layer is not a debug overlay
-  breaking fiction; it is the training rig's instrumentation. The "educational
-  means inspectable" pillar stops fighting the fiction and starts being it.
-- **Replay is native.** Training systems record and review sessions. Attribution
-  from a replay needs no in-world excuse.
-- **Failure is affordable.** Killing a citizen is a training failure, not a
-  moral event the game has to dramatise. It can be scored bluntly and reset.
-- **Sandbox is the native mode.** A training rig has free-drive. v0 needs no
-  story-shaped reason to exist.
-- **Procedural sites are the point** — a rig generates exercises. Difficulty is
-  the site, not a curve.
-- **It sets the UI register**: industrial training software, not a game HUD.
+Not flavour: it is the frame that licenses inspectability, replay, affordable
+failure, sandbox-as-native, procedural sites and the UI register — so check it
+**before** inventing machinery to justify something. Full list, where the frame
+stops, and which institution speaks: `docs/design/training-frame.md`.
 
 ## 2. The design thesis
 
@@ -105,18 +97,11 @@ If that scenario cannot be constructed on rung one, the rack is decoration.
 ### 3.1 The damage ledger — v0's verdict and core feedback
 
 **No job tickets in v0.** The failure loop needs a third beat and the damage
-ledger is it: **the game's core feedback mechanism**, not a scoreboard.
-Itemised, named, priced, never aggregated — `citizen asset (scooter) damaged
-−¥3,000` — in a **condescending institutional voice**. **Harming a citizen is
-categorical failure**, never a line item; never give a person a price.
-Environments are the difficulty axis: **a quarry is simpler than a city.**
-
-It goes **deep, not wide**: you feel the impact, see the thing come apart, hear
-it, and only then are told what it cost. **The machine is not exempt** — it
-breaks too, which is what needs a reset. The model is **built**: damage is
-**joules absorbed**, never hit points, so it is a quantity the player can be
-shown. Model, numbers and build order: `docs/design/damage.md`. Voice:
-`docs/design/tone.md`.
+ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage
+is **joules absorbed**, never hit points, so it is a quantity the player can be
+shown; **harming a citizen is categorical failure**, never a priced line item.
+Model, numbers, the two faces of the ledger and the build order:
+`docs/design/damage.md`. Voice: `docs/design/tone.md`.
 
 ## 4. Core loop
 
@@ -175,6 +160,24 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **The rail is a server rack, not a DIN rail**: faceplates stacked vertically,
   screwed in, **each in its manufacturer's house style**. Kit from different
   makers must look like kit from different makers.
+
+### 6.1 A component is a triptych, and each kind bills you differently
+
+Full contract: `docs/design/components.md`. The load-bearing claims:
+
+- A component appears in up to three places: a **plate** in the rack (hands), a
+  **cell** on the dash (periphery), a **pod** on the glass (eyes). Only the plate
+  is mandatory; the **manufacturer** decides the rest, never the player.
+- **Three currencies.** A chassis component costs nothing and brings the cockpit;
+  a **capability** component costs **glass**; a **safety** component costs
+  **capability** — it strands you on the incline instead of blocking your view.
+  So a safety module shipping no pod is not a discount.
+- **Severity crosses the boundary as a number** (`0 nominal · 1 active · 2 warn ·
+  3 alarm`). MASTER WARNING and MASTER ALARM are derived from it, never
+  hand-wired. The *word* on the annunciator is a theme decision, not sim state.
+- **The dash is the seam.** The only thing visible in both postures, and it
+  travels: bottom of the view looking forward, top of it looking down at the
+  rack. Its theme belongs to the **vehicle's** manufacturer.
 
 ## 7. Mechanics that fall out of the above
 
@@ -267,23 +270,18 @@ turns out to be wrong, and record the move here.
 
 ### The three architecture rules
 
-Adopted before any production code. Each is load-bearing for a pillar and each
-is mechanically checkable. Rationale and checks: `docs/design/architecture-rules.md`.
+Adopted before any production code. Each is load-bearing for a pillar, each is
+enforced by `tests/architecture.test.ts`, and breaking one is not a style
+disagreement — say so out loud and change that file first. Rationale, the reasons
+and the checks: `docs/design/architecture-rules.md`.
 
-1. **The sim runs headless.** No renderer dependency in `src/sim/`,
-   `src/control/` or `src/modules/` — no `three`, no DOM, no canvas. This is
-   what makes Vitest useful for a game and what keeps a worker possible.
-2. **Fixed timestep, seeded PRNG.** The sim advances in fixed steps; rendering
-   interpolates and never drives. **No `Math.random()` sim-visible, ever** — the
-   seed is part of the recorded scenario. Attribution is the design, and a
-   failure you cannot reproduce cannot be blamed on a decision.
-3. **One-directional snapshot boundary.** Sim is imperative at ~60 Hz; UI reads
-   a snapshot at ~10 Hz. Instruments never subscribe to live sim state — an
-   instrument is a view of a recording, which is why the same code drives a
-   replay. **Svelte never owns the canvas. Do not use Threlte.**
-
-Breaking one of these is not a style disagreement. Say so out loud, and change
-that file first.
+1. **The sim runs headless.** No `three`, no DOM, no canvas under `src/sim/`,
+   `src/control/`, `src/modules/`.
+2. **Fixed timestep, seeded PRNG.** Rendering interpolates and never drives; no
+   `Math.random()` and no transcendental that closes a loop back into sim state.
+3. **One-directional snapshot boundary.** Sim imperative at 60 Hz, UI reads a
+   snapshot at 10 Hz. An instrument is a view of a recording — which is why the
+   same code drives a replay. **Svelte never owns the canvas. No Threlte.**
 
 ### Coding
 

@@ -72,29 +72,33 @@ not a player-facing one. Still unanswered: whether the player sees a **domain
 stack** (structure / mechanics / power / thermal / signal), a **fidelity
 ladder** they descend, or both as a matrix. Shapes `src/sim/layers/` directly.
 
-## The lemon — symptoms now, degradation later
+## The lemon — degradation
 
-Confirmed direction: an abused machine should **become a lemon** — slip, pull,
-buckle, smoke, leak oil, raise alarms and warning lights. Split into two tiers
-that can ship apart:
+The symptom half of this thread became cards (L-040 sound, L-046 lights, L-043
+the status panel, now closed): smoke, lamps and a rougher note teach the player
+to *listen* before anything costs them.
 
-- **Symptoms** (carded around L-040 / L-046 / L-043): smoke and oil as
-  particles, warning lights and alarms on the status panel, a rougher engine
-  note. Pure feedback and eye-candy, no new physics. Ship first — they teach the
-  player to *listen* before it costs anything.
-- **Degradation** (still a thread): the drive genuinely changes — per-track `MU`
-  falls, a bias enters the normal-load share, a sprocket will not take full
-  torque. This makes a damaged machine a *different machine*, which is the whole
-  subject, and it is the expensive part. The friction model can already express
-  most of it, which is suspicious in a good way. Not v0; do not let the reset
-  design (L-038) foreclose it.
+What is still a thread is **degradation**: the drive genuinely changes — per-track
+`MU` falls, a bias enters the normal-load share, a sprocket will not take full
+torque. That makes a damaged machine a *different machine*, which is the whole
+subject, and it is the expensive part. The friction model can already express
+most of it, which is suspicious in a good way. Not v0; do not let the reset
+design (L-038) foreclose it.
 
-## Friction feel — hull skate fixed, "float" still open
+## Friction feel — props seem to "float"
 
-The flipped-machine ice-slide is fixed (hull friction, L round of 2026-08-24).
-The other half of the "friction feels off" report — props seeming to **float** —
-is not diagnosed. Candidates: the settled resting gap between a box collider on
-triangulated ground and the bilinear placement height; too little contact
-shadow, so props read as pasted on; or the toon material flattening the
-ground-contact seam. Measure the actual rest gap before theorising further
-(META: ask the sim what it computed).
+Hull skate is fixed; this half is not diagnosed. Candidates: the settled rest gap
+between a box collider and bilinear placement height; too little contact shadow;
+or the toon material flattening the ground seam. Measure the actual rest gap
+before theorising further (META: ask the sim what it computed).
+
+## Pods on arms — deferred, and deliberately separated
+
+Instruments should be **clamped to the cage** and move on screen as you look
+around, not sit as viewport-fixed overlays (`docs/design/components.md`). Split
+off from the triptych work on purpose, because it drags in three things that are
+each their own decision: look angle has to reach the DOM without going through
+Svelte reactivity; L-008's placement rules move from screen space into cage
+space, where the bound becomes the reach of the arm rather than the screen edge;
+and the view-recentring QoL is entangled with it. None of it is blocked — it is
+just a different problem than "what does a component look like."
