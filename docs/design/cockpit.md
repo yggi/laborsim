@@ -357,6 +357,42 @@ and the player would rightly blame the autopilot for driving into something the
 Pins are selectable: tapping one retargets the module. That is the pilot's one
 lever on the autopilot short of switching it off.
 
+## The cab camera — the horizon belongs to the machine
+
+**The cab view rolls with the hull.** Lean the machine 25° and the horizon lies
+25° across the glass; the dash, the cage and the levers do not move a pixel,
+because they are bolted to the same thing your spine is.
+
+It was horizon-stable at first, and that was not a style choice but an artefact
+of how the camera was aimed: `lookAt` takes an up vector and produces the
+orientation with *no roll about the view axis relative to it*, so passing world
+up quietly discarded the hull's roll every frame. Pitch and yaw survived, which
+is what made it hard to see — the view leaned into a climb honestly and then
+stayed spirit-level through a side slope.
+
+The stable version is a **chase camera's honesty**: it tells you the truth about
+the world by lying about where you are sitting. Principle 7 — *honest world,
+real machine* — puts the cab on the other side of that trade. The world may be a
+diagram; the cab is the one thing that is real, and a real cab has no gimbal.
+
+It also costs the player a reading they should have to work for. If the horizon
+is always level, roll is only ever a number on ATT-0, and the operator learns to
+watch an instrument for something their inner ear was built to feel. With the
+glass tilted, ATT-0 stops being the primary sense and becomes what an instrument
+is for: the exact figure, and the one you still trust in the dark.
+
+Two consequences to keep in view, neither a reason to undo it:
+
+- **Screen-fixed instruments are now the odd ones out.** They were always going
+  to be (L-050 moves them into cage space), but a rolling horizon behind
+  viewport-pinned pods is the first place it reads as wrong rather than merely
+  unfinished.
+- **It is a motion-comfort surface.** Roll on rough ground is exactly the signal
+  that provokes sim sickness, and the counter is a cab that is visibly still —
+  which is what the cage and the dash are. If it ever needs a mitigation, the
+  honest one is a damped *fraction* of hull roll, never a level horizon: the
+  quantity is real, the gain on it is taste.
+
 ## The chase camera — "hands off the wheel"
 
 **Available — but you cannot drive from it, and the world does not wait.**

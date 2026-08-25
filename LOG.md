@@ -7,7 +7,7 @@ Not plans, not open questions.
 and link it from the archive list below.
 
 Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to and
-including the first deploy.
+including the round that made the rack a pipeline.
 
 Entry format:
 
@@ -18,6 +18,53 @@ What happened, in past tense. Anything tried and rejected, and why.
 ```
 
 ---
+
+## 2026-08-25 — the horizon rolls with the machine
+
+Cards: none. A defect in the cab camera, plus the bench that was missing to see
+it with.
+
+**The cab view was spirit-levelled and nobody had asked for that.** Lean the
+machine over and the horizon stayed dead flat; only pitch and yaw followed the
+hull, which is why it survived this long — the view leaned honestly into a climb
+and then stayed level through a side slope. The cause was not a decision. The
+camera was aimed with `camera.lookAt(aim)`, and `lookAt` produces the
+orientation with *no roll about the view axis relative to its up vector*; the up
+vector was world up, so the hull's roll was discarded every frame, silently.
+
+Fixed by composing the orientation instead of aiming it: `hull · yaw(−pan) ·
+pitch(−tilt) · Ry(π)`, the last term being the half turn between a camera that
+looks down −Z and a machine whose nose is +Z. New file `src/render/camera.ts`,
+which exists to be testable — `createViewport` needs a WebGL context and the
+signs do not.
+
+**Signs derived, not tried** (META), and checked against the aim vector they
+replace: the composition reproduces the old direction exactly, so pan and tilt
+could not silently mirror while roll was being added. Then the other half of
+that lesson — the old implementation was pasted back in over the new one to
+watch the tests fail. Four of the five passed under it and only *rolls with the
+hull* failed, which is what makes that test worth having; a fifth run with a
+plain `Object3D` instead of a camera failed four, because `Object3D.lookAt`
+flips its convention for cameras and lights. Probe the API, do not trust the
+prose.
+
+**`npm run cab` — a bench for the view through the glass.** `npm run shots`
+benches the cockpit's DOM and nothing benched the 3D. The obstacle was never the
+renderer, it is that the interesting frames are transient: 25° of roll is a
+thing you drive into and cannot hold. So `scripts/cab.mjs` builds the real world
+and the real viewport and hands the renderer a pose set by hand — the cockpit
+bench's trick, one layer down. Seven poses, gitignored output. It paid for
+itself inside the same hour: the roll direction was confirmed from a screenshot
+rather than argued about.
+
+Recorded in `docs/design/cockpit.md` as its own section, with the two
+consequences: screen-fixed pods now read as wrong rather than unfinished
+(L-050's case just got stronger), and roll is the classic sim-sickness signal —
+if it ever needs mitigation the honest form is a damped *fraction* of hull roll,
+never a level horizon. Deliberately **not** added to `MEMORY.md` § 6: the file
+sits at 299 of its 300 lines, and a cab with no gimbal is principle 7 (*honest
+world, real machine*) applied rather than a new fact — the index entry now
+points at both cameras.
 
 ## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
 
@@ -918,58 +965,3 @@ landing on the cel ramp's dark band, with the ridge as the boundary — cel
 shading working. Lifted the sky fill so the shade side reads as slope rather
 than hole. The lesson is the one from the probe: an isolating experiment beats
 three plausible hypotheses, and I should have run it first.
-
-## 2026-08-23 — the rack is a pipeline, and NAV-1 drives
-
-Cards: closed [L-007] [L-017] · [L-015] retargeted · arbitration model replaced
-
-**The rack stopped being a priority stack and became a pipeline**, on a
-proposal that turned out to be strictly better than what was settled. Each
-module takes the signal from the module above, folds in its own intent by its
-**verb**, and passes it down to an actuator terminal at the bottom of the rail.
-
-That reframing dissolved three open questions in one move. Per-actuator
-granularity stops needing a mechanism — a module transforms what it cares about
-and passes the rest through. Suppress-versus-inhibit stops needing two entry
-kinds — rung 3's forklift constraint is just `clamp(input, envelope)`, an
-ordinary stage. And suppression itself survives as the verb `SET`, so nothing
-built was lost. Three problems, one model: usually the sign you have found the
-right shape rather than a cleverer one.
-
-Verbs are **SET, CAP, ADD, AMP**, and the three-letter rule is the good part.
-It makes a fifth verb typographically awkward on purpose — a complexity budget
-that enforces itself, aimed squarely at the node-graph-by-accretion danger. The
-verb is a property of the module and switchable on it; every module also has a
-disable toggle, and **a disabled module is a pass-through, not a hole**.
-
-`CAP` produced a mechanic nobody designed: a lever at rest caps to zero, so
-parking the levers above a CAP module stops the machine whatever is driving it.
-A dead-man's throttle, falling out of the verb rather than being a special case.
-Pinned by a test.
-
-**NAV-1 exists** and considers bearing and distance to the pin and nothing
-else — the honesty is the design, not a limitation. Its heading error comes
-from a dot and a cross product rather than `atan2`, because a transcendental
-there would close a loop straight back into sim state; rule 2 doing real work
-rather than being decoration. The sign was derived and pinned by tests before
-running it, having shipped a mirrored control once already.
-
-**Attribution had to be rethought and came out better.** Under a pipeline there
-is no owner to name — everyone shaped the signal — so instead of a banner
-naming a winner, the chain is shown stage by stage down to the terminal:
-`PILOT [SET] +2.20/+2.20 ↓ NAV-1 [CAP] +1.79/+2.20 ↓ TERMINAL`. That is the
-multi-layer inspectability pillar landing where it counts, and it reads the
-same live or in replay.
-
-Built the rail as a working panel rather than the full DIN-rail treatment:
-order, verb and enable all functional, reordering by arrows rather than drag.
-L-015 is retargeted to the drag-and-styling work, which is worth designing once
-there is more than one thing to drag. Each slot carries its module's
-one-sentence statement of what it considers, which turned out to be the most
-valuable thing on it.
-
-Grounding note, since the question was asked before building: what the rack was
-*needed* for was never the rail — it was the second module. A rack with one
-entry is furniture. Building NAV first was right, and it immediately paid: the
-props and terrain added last session became the things a blind autopilot drives
-into.

@@ -17,6 +17,7 @@ import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.
 import { PROP_BOX, type Prop } from "../world/props.ts";
 import { sampleTerrain, type Terrain } from "../world/terrain.ts";
 import type { Pin } from "../world/waypoints.ts";
+import { cabCameraRotation } from "./camera.ts";
 import { ink, inked, terrainMaterial, toon } from "./toon.ts";
 
 /**
@@ -294,7 +295,6 @@ export function createViewport(
   let orbit = 2.4;
   let elevation = 0.35;
   const eye = new THREE.Vector3();
-  const aim = new THREE.Vector3();
   // Wheel spin is integrated from snapshot time, not wall time, so a replay
   // turns them exactly as the live run did.
   let lastSimSeconds: number | undefined;
@@ -399,19 +399,15 @@ export function createViewport(
           if (Math.abs(tilt) < 1e-3) tilt = 0;
         }
 
-        // The eye rides the hull, so the cab pitches and rolls with the machine.
+        // The eye rides the hull, so the cab pitches and rolls with the
+        // machine. Both halves of that are the hull's: the seat is at a fixed
+        // point in the machine, and the head is at a fixed *attitude* in it —
+        // a pan and a tilt in machine space, so "look left" means left of the
+        // machine's own heading, and a hull leaning 20° puts the horizon 20°
+        // across the glass. See render/camera.ts for why this is not `lookAt`.
         eye.set(EYE.x, EYE.y, EYE.z).applyMatrix4(machine.matrixWorld);
-        // Aim swings in machine space: "look left" means left of the machine's
-        // own heading, not of the world.
-        const cp = Math.cos(pan);
-        const sp = Math.sin(pan);
-        const ct = Math.cos(tilt);
-        const st = Math.sin(tilt);
-        aim
-          .set(EYE.x - sp * ct * 20, EYE.y + st * 20, EYE.z + cp * ct * 20)
-          .applyMatrix4(machine.matrixWorld);
         camera.position.copy(eye);
-        camera.lookAt(aim);
+        cabCameraRotation(machine.quaternion, pan, tilt, camera.quaternion);
       } else {
         const dist = 13;
         const cx = px + Math.sin(orbit) * Math.cos(elevation) * dist;

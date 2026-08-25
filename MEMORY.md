@@ -12,7 +12,7 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 |---|---|
 | `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
-| `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
+| `docs/design/cockpit.md` | panel budget, occlusion, placement, and both cameras |
 | `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
 | `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
 | `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
