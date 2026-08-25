@@ -93,13 +93,54 @@ export interface LedgerEvent extends Stamped {
   readonly line: DamageEvent;
 }
 
-export type SimEvent = ImpactEvent | HullEvent | LedgerEvent;
+/**
+ * A marker was reached. The first thing on this channel that is *good news*.
+ *
+ * It is an event and not a state for the usual reason — arriving happens at one
+ * tick and is over — but also for a sharper one: the goal state on the snapshot
+ * is sampled at 10 Hz by readers, and at 2.2 m/s a machine crosses the whole
+ * reach radius in seven seconds, so a state alone could not tell a cue *when*
+ * it happened to within a frame. `docs/design/sound.md` is the consumer.
+ */
+export interface WaypointEvent extends Stamped {
+  readonly kind: "waypoint";
+  /** Index into the route. */
+  readonly pin: number;
+  /** Pins reached including this one, and how many there are. */
+  readonly count: number;
+  readonly total: number;
+}
+
+/**
+ * The exercise settled: every marker reached, or a citizen involved.
+ *
+ * Emitted once per run. It is the **successful stop-condition** the loop never
+ * had — the ledger could only ever say how badly it went — and it is the thing
+ * three surfaces hang off: the debrief opens, the overlay stops counting, and
+ * the rig says something.
+ */
+export interface OutcomeEvent extends Stamped {
+  readonly kind: "outcome";
+  readonly outcome: "success" | "failed";
+  /** Pins reached at the moment it settled, of how many. */
+  readonly count: number;
+  readonly total: number;
+}
+
+export type SimEvent =
+  | ImpactEvent
+  | HullEvent
+  | LedgerEvent
+  | WaypointEvent
+  | OutcomeEvent;
 
 /** An event as the sim emits it. The recorder stamps the rest. */
 export type Emission =
   | Omit<ImpactEvent, "seq" | "tick">
   | Omit<HullEvent, "seq" | "tick">
-  | Omit<LedgerEvent, "seq" | "tick">;
+  | Omit<LedgerEvent, "seq" | "tick">
+  | Omit<WaypointEvent, "seq" | "tick">
+  | Omit<OutcomeEvent, "seq" | "tick">;
 
 /**
  * How many recent events the channel holds.

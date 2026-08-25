@@ -26,7 +26,12 @@ import {
 } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import type { SimEvent } from "../core/events.ts";
-import type { Shake, Snapshot, TrackState } from "../core/snapshot.ts";
+import {
+  NO_EXERCISE,
+  type Shake,
+  type Snapshot,
+  type TrackState,
+} from "../core/snapshot.ts";
 import { G, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { PropKind } from "../world/props.ts";
 
@@ -57,6 +62,24 @@ function track(over: Partial<TrackState>): TrackState {
     surface: over.surface ?? commanded - slip,
   };
 }
+
+/** A marker reached, on the channel, at a tick. */
+const mark = (
+  tick: number,
+  pin: number,
+  count: number,
+  total: number,
+  seq: number,
+): SimEvent => ({ kind: "waypoint", seq, tick, pin, count, total });
+
+/** The exercise settling, either way. */
+const settle = (
+  tick: number,
+  outcome: "success" | "failed",
+  count: number,
+  total: number,
+  seq: number,
+): SimEvent => ({ kind: "outcome", seq, tick, outcome, count, total });
 
 /** An impact, on the channel, at a tick. */
 const hit = (tick: number, what: PropKind, joules: number, seq: number): SimEvent => ({
@@ -152,6 +175,7 @@ function frameOf(
     stages: [chassisStage(maker), ...fitted],
     props: [],
     route: [],
+    goal: NO_EXERCISE,
     damage: [],
     bill: 0,
     // The reader takes what it has not seen, so handing it the whole scene's
@@ -432,7 +456,7 @@ export const SCENES: readonly Scene[] = [
   },
   {
     name: "everything-at-once",
-    note: "the mix's worst case, and the reason there is a limiter: rutted ground, the horn down, a pipe stack at speed and the master alarming, all inside a second. If anything clips, it clips here.",
+    note: "the mix's worst case, and the reason there is a limiter: rutted ground, the horn down, a pipe stack at speed, the master alarming, and the rig calling the exercise complete over the top of all of it, inside a second and a half. If anything clips, it clips here.",
     seconds: 6,
     frame: (t) => ({
       snapshot: both(
@@ -442,6 +466,12 @@ export const SCENES: readonly Scene[] = [
           hit(150, "pipes", 550, 1),
           hit(156, "barrier", 46, 2),
           hit(162, "cone", 12, 3),
+          // The rig, arriving in the middle of the worst moment the machine can
+          // have. It ducks under the horn like everything else on the bed, and
+          // it is the newest thing that can land on an already-full frame — so
+          // the scene that exists to catch summed transients has to include it.
+          mark(168, 3, 4, 5, 4),
+          settle(210, "success", 5, 5, 5),
         ],
         undefined,
         shakeAt(
@@ -483,6 +513,40 @@ export const SCENES: readonly Scene[] = [
       // scene measures is the *panel* and not the buzzer sitting on top of it.
       alarm: t >= 5.2 && t <= 5.5 ? WARN : NOMINAL,
     }),
+  },
+  {
+    name: "checkpoint",
+    note: "a machine at work, and the rig marking two markers and then the end of the exercise. The only voice in the cab that is not the machine, a manufacturer or the site — and the only one made of intervals. It has to arrive over a working drivetrain without shouting: listen for whether you could take your eyes off the ground and still know what happened.",
+    seconds: 6,
+    frame: (t) => {
+      const events = [
+        mark(60, 0, 1, 3, 1),
+        mark(150, 1, 2, 3, 2),
+        mark(240, 2, 3, 3, 3),
+        settle(240, "success", 3, 3, 4),
+      ];
+      return {
+        snapshot: both(t, { commanded: MAX_TRACK_SPEED * 0.7, traction: 0.4 }, events),
+        alarm: NOMINAL,
+      };
+    },
+  },
+  {
+    name: "exercise-failed",
+    note: "the same instrument saying the opposite thing: a scooter *nudged* at 30 J, then the rig's two notes going the other way. The bang is deliberately small — the point is that barely touching somebody's property is still categorical failure, and it keeps the scene's peak the cue's rather than the impact's, so the number can see the thing the scene is about. The buzzer is not part of it: the machine is fine, the exercise is not, and they must not be the same noise.",
+    seconds: 5,
+    frame: (t) => {
+      const events = [hit(60, "scooter", 30, 1), settle(96, "failed", 1, 3, 2)];
+      // A crawl, not a charge. 30 J is what half a tonne of machine at 0.8 m/s
+      // puts into a 90 kg scooter, which is the manoeuvring speed anybody would
+      // actually be at when they clip one — and it leaves the bed quiet enough
+      // that the scene's peak is the cue rather than the drive note. A scene
+      // whose number cannot see its own subject is not a check (META).
+      return {
+        snapshot: both(t, { commanded: MAX_TRACK_SPEED * 0.25, traction: 0.3 }, events),
+        alarm: NOMINAL,
+      };
+    },
   },
   {
     name: "caution",

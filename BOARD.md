@@ -26,8 +26,33 @@ Card format:
 ## ready
 
 Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
-1 over the rack as the build surface. The verdict, its voice and the dash are
-built; what remains is more to break, replay, and the path to the conflict.
+1 over the rack as the build surface. The verdict, its voice, the dash and now
+the exercises are built; what remains is more to break, replay, and the path to
+the conflict.
+
+### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
+- **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
+  guidance to zero — the dead-man's throttle, and the acceptance scenario in one
+  slot. It is also the first thing a new operator meets: they flip the switch,
+  nothing moves, and nothing on any surface distinguishes *this is arbitration
+  working* from *this is broken*. Do not fix it by changing the rack default;
+  the fix is that the machine can be *read*. Candidates: the rack's stage chain
+  already shows `NAV-1 [CAP] +0.00/+0.00` and nobody looks at the debug column;
+  the NAV cell's lamp is lit while the module is contributing nothing.
+- **done-when:** somebody who flips NAV on with the levers parked can tell, from
+  the cab and without being told, that their thumbs are the reason.
+- **needs:** L-018 (this is the same conflict, met earlier)
+
+### [L-067] The exercise is over and the rig has nothing to say next
+- **what:** the debrief offers NEXT · E-02 after a success and that is the whole
+  of the progression. Nothing remembers what you finished, nothing carries a run
+  forward, and re-opening the schedule shows every exercise identically whether
+  you have driven it or not. It wants the smallest honest thing — a record of
+  *completed*, on the schedule, per exercise — and explicitly **not** a gate:
+  every exercise stays available from the first session.
+- **done-when:** the schedule shows what has been completed and in what time, and
+  it survives a reload.
+- **needs:** L-012 (persistence is where a record of a run belongs)
 
 ### [L-049] Themes, authored independently — the agentic round
 - **what:** one author per manufacturer, each given only its own `LORE.md`
@@ -296,6 +321,16 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-065] Exercises — one marker, then all of them — **closed**
+A site plus an objective, on one verb: `Exercise` is world data, `Goal` is on
+the snapshot, and the ladder is the *ground* rather than the task — E-01 is the
+same generator at `relief: 0.3` with its one pin in a forward cone, E-03 is the
+full site. The loop's third beat can say **yes** for the first time: a schedule
+before you sit down, an objective strip that is the rig's rather than fitted
+kit, split times and an outcome band in the debrief, and the rig's first three
+noises. `ObjectiveKind` was written and deleted. The open site is on the
+schedule so v0's sandbox could not be repealed by adding exercises.
+
 ### [L-050] Pods on arms, and the view that recentres — **closed**
 The whole cab sweeps, 1:1 with the look: pods, cage, levers and dash are one
 rigid object and the head is the only hinge. Placement moved into cage space and
@@ -380,8 +415,3 @@ verdict, RESUME and RESET SIMULATOR; auto-opens on a citizen. RESET rebuilds the
 world by re-keying the sim effect, resetting the rack in place so modules do not
 duplicate — the canvas is reused for the new renderer.
 
-### [L-008] Inline edit — draggable instruments — **closed**
-Instruments move by a titlebar, free to place but refused if they leave the
-glass or overlap another; they snap back to the last legal spot. All three rules
-(free move, no-overlap, in-bounds) verified in the browser. The scope for L-025
-(a real glass budget) is now visible.

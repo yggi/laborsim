@@ -54,8 +54,16 @@ import {
 /** How fast a track can change speed. The drivetrain is not instant. */
 const TRACK_ACCEL = 2.6;
 
-/** Track-on-ground friction. The one tuned number in this file. */
-const MU = 0.95;
+/**
+ * Track-on-ground friction. The one tuned number in this file.
+ *
+ * Exported because the climb limit falls straight out of it — `atan(MU)`, 43.5°
+ * — and an exercise that grades its ground has to be checkable against the
+ * angle the machine can actually take. `tests/mission.test.ts` holds the first
+ * site to below it and the last one above it, which is the whole of what
+ * "gentler slopes" means as an assertion rather than as an adjective.
+ */
+export const MU = 0.95;
 
 const SAMPLES_PER_TRACK: number = 6;
 /** How far above the track bottom a sample ray starts, and how far it reaches. */

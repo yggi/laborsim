@@ -72,7 +72,10 @@ function tractionClass(track: TrackState): string {
 <style>
   .telemetry {
     position: fixed;
-    top: calc(env(safe-area-inset-top) + 10px);
+    /* Below the rig's objective strip, which owns the top-left corner now. The
+       debug chain is the thing that moves, because the objective is something a
+       player reads and this is something a developer reads. */
+    top: calc(env(safe-area-inset-top) + 78px);
     left: 12px;
     font: 10px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.06em;

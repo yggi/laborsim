@@ -41,7 +41,7 @@ import {
   WARN,
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
-import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
+import { NO_EXERCISE, type Snapshot, type TrackState } from "../src/core/snapshot.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
 import { createAutonav } from "../src/modules/autonav.ts";
 
@@ -173,6 +173,7 @@ describe("the masters are derived, never hand-wired", () => {
         stages: [],
         props: [],
         route: [],
+        goal: NO_EXERCISE,
         damage: [
           {
             tick: 0,
@@ -236,6 +237,7 @@ describe("the tells point at an instrument that can show the thing", () => {
       stages: [],
       props: [],
       route: [],
+      goal: NO_EXERCISE,
       damage: [],
       bill: 0,
       events: [],

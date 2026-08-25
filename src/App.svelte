@@ -33,9 +33,12 @@ import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
+import Briefing from "./ui/Briefing.svelte";
+import Objective from "./ui/Objective.svelte";
 import RunReport from "./ui/RunReport.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
 import Toasts from "./ui/Toasts.svelte";
+import { type Exercise, exerciseById, FIRST_EXERCISE } from "./world/exercises.ts";
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
@@ -84,8 +87,33 @@ let report = $state(false);
 let estop = $state(false);
 /** Enabled-state of each module before the E-stop, so release can restore it. */
 let preEstop: Record<string, boolean> = {};
-/** So the report auto-opens once on a citizen, not every frame. */
-let citizenSeen = false;
+/** So the report auto-opens once when the exercise settles, not every frame. */
+let outcomeSeen = false;
+
+/**
+ * Which exercise is on the rig, and whether anybody has sat down yet.
+ *
+ * The schedule is the first thing you see, and going back to it is the only way
+ * to change what is being asked of you — an exercise is not a setting you flip
+ * mid-drive. Reading `exercise` inside the sim effect is what makes choosing one
+ * rebuild the world, exactly as RESET does.
+ */
+let exercise = $state<Exercise>(FIRST_EXERCISE);
+/** What is selected on the schedule, which is not yet what is on the rig. */
+let picked = $state(FIRST_EXERCISE.id);
+let briefing = $state(true);
+/**
+ * The briefing, mirrored for the render loop.
+ *
+ * The loop runs outside any reactive scope, and the clock must not advance
+ * while somebody is reading their orders — a run whose elapsed time started
+ * before the operator had touched anything would be a clock measuring reading
+ * speed. Same shape, and the same reason, as `hornLevel` below.
+ */
+let held = true;
+$effect(() => {
+  held = briefing;
+});
 
 /** Measured off the dash, so levers and toasts sit clear of a panel whose
  *  height changes as components are fitted and cells appear. */
@@ -316,9 +344,29 @@ function resetSim() {
   leverR = 0;
   rackOpen = false;
   mode = "cab";
-  citizenSeen = false;
+  outcomeSeen = false;
   acked = NOMINAL;
   runId++;
+}
+
+/** Back to the schedule, with the current exercise selected on it. */
+function openSchedule() {
+  picked = exercise.id;
+  briefing = true;
+  report = false;
+}
+
+/**
+ * Sit down and start. Always a fresh run, even for the exercise already loaded:
+ * BEGIN means begin, and handing somebody a half-driven site because they
+ * happened to re-pick the same row would be the rig losing track of what a run
+ * is.
+ */
+function begin(next: Exercise = exerciseById(picked) ?? FIRST_EXERCISE) {
+  exercise = next;
+  picked = next.id;
+  briefing = false;
+  resetSim();
 }
 
 /**
@@ -358,19 +406,34 @@ function mindTheRoad(offsetX: number) {
   if (tip) notify(pilot.maker, wordmark, tip);
 }
 
-// Auto-open the debrief the moment a citizen is involved: it is categorical
-// failure, and the rig does not let that scroll past.
+/**
+ * Auto-open the debrief the moment the exercise settles — either way.
+ *
+ * It used to watch the damage list for a citizen, which was the only ending
+ * there was. Now there are two and they are one fact on the snapshot, so this
+ * watches the fact: a citizen still opens the folder, because a failed exercise
+ * is exactly what a citizen produces, and finishing opens it too.
+ *
+ * **Opening the folder is not stopping the machine.** Nothing here touches the
+ * drive: the levers keep carrying what they were carrying and the sim keeps
+ * stepping behind the scrim, the same bargain the chase camera makes. A rig
+ * that yanked control at the finish line would be a rig deciding when you are
+ * done with the site (L-038).
+ */
 $effect(() => {
-  if (latest?.damage.some((d) => d.category === "citizen asset") && !citizenSeen) {
-    citizenSeen = true;
+  if (latest && latest.goal.outcome !== "running" && !outcomeSeen) {
+    outcomeSeen = true;
     report = true;
   }
 });
 
 $effect(() => {
   // Reading runId here makes RESET SIMULATOR rebuild the whole world: the effect
-  // re-runs, cleaning up the old sim and building a new one.
+  // re-runs, cleaning up the old sim and building a new one. Reading the
+  // exercise makes choosing one do the same — a different site, a different
+  // route, a different objective, all of it rebuilt rather than patched.
   runId;
+  const brief = exercise;
   let frame = 0;
   let disposed = false;
   let cleanup = () => {};
@@ -383,7 +446,7 @@ $effect(() => {
     // then re-add the components below.
     rack.splice(0, rack.length, pilot);
 
-    const world = createWorld({ modules: rack });
+    const world = createWorld({ exercise: brief, modules: rack });
     // NAV needs the pose of the machine it is driving, so it is built once the
     // world exists and pushed onto the rail below the pilot. Nothing keeps a
     // reference to it: its instrument reads the snapshot and commands through
@@ -469,7 +532,11 @@ $effect(() => {
       const elapsed = Math.min((now - last) / 1000, 0.25);
       last = now;
 
-      const { steps } = clock.advance(elapsed);
+      // Held while the schedule is open: the site is built and standing there,
+      // and the exercise has not started. Time is fed to the clock rather than
+      // to a flag, so nothing downstream needs to know there is such a thing as
+      // a menu — a paused frame is simply a frame that owed no steps.
+      const { steps } = clock.advance(held ? 0 : elapsed);
       for (let i = 0; i < steps; i++) world.step();
 
       current = world.snapshot();
@@ -563,6 +630,13 @@ $effect(() => {
   {#if showDebug}
     <Telemetry snapshot={latest} showChain={!rackOpen} />
   {/if}
+
+  <!-- The rig's strip: what was asked for and how far through it you are. It is
+       the training system's overlay, not fitted kit, so it costs no glass and it
+       does not sweep with the cab — and it is the one thing on screen that is
+       still there in the chase view, because the exercise does not stop when you
+       take your hands off. Out of sight in the cabinet, like the toasts. -->
+  <Objective snapshot={latest} hidden={rackOpen} />
 
   <!-- The live voice: the rig narrating as it happens, in the same register as
        the end-of-run report. Stacks, then fades; a citizen latches. Manufacturer
@@ -675,6 +749,24 @@ $effect(() => {
       estopped={estop}
       onReset={resetSim}
       onResume={resumeRun}
+      onSchedule={openSchedule}
+      onNext={(id) => begin(exerciseById(id) ?? exercise)}
+    />
+  {/if}
+
+  <!-- The schedule, over everything. It is the first screen of the session and
+       the only way to change what is being asked of you; BEGIN is also the
+       gesture that wakes the sound, which a browser requires and the fiction
+       wanted anyway (`ui/Briefing.svelte`). -->
+  {#if briefing}
+    <Briefing
+      selected={picked}
+      onselect={(next) => {
+        picked = next.id;
+        click();
+      }}
+      onbegin={() => begin()}
+      oncancel={runId > 0 ? () => (briefing = false) : undefined}
     />
   {/if}
 </div>

@@ -1,10 +1,12 @@
-# Missions — exploratory
+# Missions — steps 1–2 built, the rest exploratory
 
-**Not v0, not settled.** v0 stays sandbox (`MEMORY.md` § 3). This file records a
-direction that arrived from actually playing the thing, because it is coherent
-enough to steer decisions and would be expensive to rediscover.
+The scoring half is **not v0 and not settled**; v0 stays sandbox
+(`MEMORY.md` § 3), and the open site is on the schedule to keep it that way.
+What *is* built (L-065) is the first two steps of the progression below and the
+machinery underneath them: exercises, goal track-keeping, a successful stop
+condition, and a debrief that can say yes.
 
-Source: play session, 2026-08-23.
+Source: play session, 2026-08-23. Built 2026-08-25.
 
 ---
 
@@ -15,13 +17,59 @@ trading the axes against each other rather than maximising one.
 
 **A progression that extends cleanly from one verb:**
 
-1. reach a target point
-2. reach several waypoints, in order
+1. reach a target point ✅
+2. reach several waypoints, in order ✅ (order-free — see below)
 3. use a tool at a location
 4. collect something
 5. move X to Y
 
-Each step reuses the last one's machinery. Step 1 is buildable on rung 1 today.
+Each step reuses the last one's machinery. Step 1 was buildable on rung 1 and is.
+
+### What steps 1–2 turned out to be
+
+**One verb, not two.** "Reach a target point" and "reach several waypoints" are
+the same sentence with a different number of pins, so there is no objective kind
+and no enum — an `Exercise` carries a `RouteSpec` and the ladder is `count: 1`
+then `count: 3` then `count: 5`. An `ObjectiveKind` was written and deleted. Each
+of steps 3–5 *is* a new verb and will cost one; none of them is this one in a hat.
+
+**Order-free.** A route is drawn in order and NAV-1 walks it in order, but the
+objective does not require it. The operator is not obliged to take the route the
+survey drew, and a pair of levers has no way to be told to. The split times in
+the debrief record the order you actually took, which is the interesting half
+anyway.
+
+**The ladder is the ground, not the task.** The first exercise is the same
+terrain generator turned down — `relief: 0.3` — so its steepest grade is 18°
+against a 43.5° climb limit, and it is climbable everywhere. A trainee who
+cannot get up a hill must be finding out something about their driving, never
+something about the hill. `tests/mission.test.ts` holds that as an angle rather
+than as an adjective.
+
+**"You can already see the flag" is a cone.** The first route confines its one
+pin to `z > 0, |x| ≤ 0.34·z` — a cone about the machine's start heading — so it
+opens on a marker you are facing. A first exercise you can fail by facing the
+wrong way teaches the wrong thing.
+
+**The verdict got a second axis.** The damage ledger's only verdict was a bill,
+which is to say the loop's third beat could only ever be negative. `Goal` on the
+snapshot is the other half: `running` / `success` / `failed`, settled once, with
+a tick on it. Failure is still exactly one thing — a citizen involved — and it
+outranks completion on the same step.
+
+**The rig got a voice**, narrowly and for the first time: see
+`docs/design/sound.md`. Nothing else could announce a marker.
+
+### What is deliberately still missing
+
+- **No score.** Nothing is ranked, nothing is starred, and the axes below are
+  not computed. The exercise is passed or not passed.
+- **No gate.** Every exercise is on the schedule from the first session. A
+  curriculum that locked its own later entries would be the rig withholding a
+  site, and v0 is sandbox.
+- **No time limit and no par time.** The clock is recorded because it is the
+  substrate of the time axis below; it costs nothing to record and it commits to
+  nothing.
 
 ## Scoring, in three axes
 
@@ -80,6 +128,14 @@ drawn in the right place.
 
 - **What counts as "operator interaction"?** Lever changes? Seconds hands-on?
   Number of distinct inputs? It is the load-bearing metric and it is undefined.
+- **Turning NAV-1 on is not, by itself, enough to finish an exercise**, and that
+  is the dead-man's throttle working exactly as designed: NAV sits below the
+  pilot with verb `CAP`, so a parked lever caps guidance to zero. Driving is
+  therefore *levers*, or *levers and NAV together* — never NAV alone. It is the
+  best thing about the rack and it is also the first thing a trainee meets, with
+  nothing telling them which of the two they are looking at. Carded as L-066;
+  the answer is a rack decision, not an exercise one, so no exercise here
+  quietly repeals it.
 - Does a verified-across-environments run need *identical* wiring, or identical
   wiring *and* identical gains?
 - Does failing verification cost anything, or is it free to retry? Refusing a

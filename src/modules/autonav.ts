@@ -21,8 +21,17 @@ import type { Waypoint } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import { clamp, type Quat, rotate, vec } from "../core/vec.ts";
 
-/** How close counts as arrived. Generous: it is not a precision instrument. */
-const ARRIVED = 6;
+/**
+ * How close counts as arrived. Generous: it is not a precision instrument.
+ *
+ * Exported because it has to stay **at or below** the rig's own `PIN_REACH`
+ * (`core/spec.ts`): NAV-1 giving up on a pin before the rig credits it would
+ * make an exercise no autopilot can finish. The two numbers are separate on
+ * purpose — one is a module's opinion about its own route, the other is the
+ * training system's about your objective, and NAV-1 knows nothing about
+ * exercises. `tests/mission.test.ts` holds the inequality.
+ */
+export const ARRIVED = 6;
 
 /** How hard it leans on the differential to correct heading. */
 const STEER_GAIN = 1.35;
