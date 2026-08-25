@@ -1,16 +1,29 @@
 /**
- * Who built the thing in the slot, and everything about how their kit presents
- * itself: colours, marks, the words they use, and the things they say to you.
+ * Who built the thing, and everything about how their kit presents itself:
+ * colours, marks, the words they use, the things they say to you — and what
+ * they sound like.
  *
- * Moved here from `src/ui/` when the cockpit stopped being a set of panels and
- * became a registry of components (`docs/design/components.md`). `src/ui/` is
- * the application shell; this is the cab and what is bolted into it.
+ * It has moved twice, and the second move is the interesting one. It was in
+ * `src/ui/`, then in `src/cockpit/` when the cockpit became a registry of
+ * components. Now **two renderers read it**: the cab draws a plate in a maker's
+ * colours and the audio engine voices a machine in its maker's sound
+ * (`sound.ts`). A house belongs to neither of them — `cockpit/` holds what the
+ * manufacturers *made*, and this is who they *are* — so it sits above both,
+ * where the cab and the ear can each read it without importing the other.
+ *
+ * One house per maker, not one table per surface. Colours, words and sound
+ * keyed separately by the same name would be three places to edit a
+ * manufacturer into existence and three places for it to drift, which is the
+ * defect the component registry was contracted out of (`cockpit/parts.ts`). It
+ * is also what L-049 hands a blind author: **one object is one manufacturer.**
  *
  * The rail is a rack of equipment bought from different manufacturers, and it
  * should read that way. It is cosmetic, and it is doing real work — a uniform
  * grid of identical rows reads as a menu the game drew, and a mixed rack reads
  * as hardware somebody bolted in.
  */
+
+import type { SoundHouse } from "./sound.ts";
 
 export type Layout =
   /** Wordmark beside a wide label, meters to the right. Utilitarian OEM kit. */
@@ -76,6 +89,11 @@ export interface MakerStyle {
   readonly plateText: string;
   readonly lexicon: Lexicon;
   readonly voice: Voice;
+  /**
+   * What this maker's machines sound like. Timbre and rate only — never level,
+   * and never what a quantity means. See `sound.ts` for the whole argument.
+   */
+  readonly sound: SoundHouse;
 }
 
 const MAKERS: Record<string, MakerStyle> = {
@@ -103,6 +121,30 @@ const MAKERS: Record<string, MakerStyle> = {
         "NO ONE IS COMING TO HELP YOU",
       ],
     },
+    // A diesel from three generations ago, and it is the reference the other two
+    // are heard against: lumpy, detuned by wear, and it sags hard when you ask
+    // it for something. Every number here was the whole engine before houses
+    // existed, which is why nothing about the machine changed when they did.
+    sound: {
+      drive: {
+        wave: "sawtooth",
+        idleHz: 56,
+        spanHz: 52,
+        droopHz: 12,
+        airHz: 15,
+        // Worn, and it has never been balanced. You can hear the beat at idle.
+        detune: 14,
+        // One firing per two turns, cut deep: a big slow lump of an engine.
+        beats: 0.5,
+        beat: 0.34,
+        cutIdle: 340,
+        cutLoaded: 2600,
+        cutAir: 1500,
+        resonance: 3,
+      },
+      // A pressed-steel buzzer wired straight to the annunciator relay.
+      horn: { wave: "square", warnHz: 620, alarmHz: 990 },
+    },
   },
   // Navigation electronics. Lighter, newer, sold separately — and it looks it.
   "TOWA DENKI": {
@@ -124,6 +166,30 @@ const MAKERS: Record<string, MakerStyle> = {
         "PLEASE OBSERVE THE ROUTE AHEAD",
         "SENSOR PERFORMANCE MAY VARY BY SITE",
       ],
+    },
+    // Nothing on the machine is TOWA's yet, and the house is complete anyway —
+    // that is what makes the shape real rather than promised. A TOWA drive is
+    // electric: it holds its speed under load, so it barely droops, and there is
+    // no firing to hear. What you get instead is inverter whine, which is the
+    // same fact from the other side — smooth, high, and it tells you almost
+    // nothing about how hard the machine is working. Sold as refinement.
+    sound: {
+      drive: {
+        wave: "triangle",
+        idleHz: 96,
+        spanHz: 84,
+        droopHz: 3,
+        airHz: 22,
+        detune: 4,
+        beats: 1,
+        beat: 0.05,
+        cutIdle: 800,
+        cutLoaded: 3400,
+        cutAir: 2600,
+        resonance: 6,
+      },
+      // A moulded piezo sounder. Polite, and impossible to take seriously.
+      horn: { wave: "sine", warnHz: 700, alarmHz: 1180 },
     },
   },
   // Safety kit from a maker with lawyers. Orange, boxed, and slightly smug —
@@ -152,6 +218,29 @@ const MAKERS: Record<string, MakerStyle> = {
         "THE LIMIT IS THE LIMIT",
         "PRÜFZEICHEN 41-880 · DO NOT MODIFY",
       ],
+    },
+    // HANSA does not build chassis, and it gets a complete house regardless: a
+    // maker's parts have to be voiceable wherever they are bolted, and a table
+    // with a hole in it is a table that fails at the worst moment. Its character
+    // is the one it stamps on everything — hard, even, and precisely in tune.
+    sound: {
+      drive: {
+        wave: "square",
+        idleHz: 64,
+        spanHz: 46,
+        droopHz: 7,
+        airHz: 12,
+        // Balanced to a standard. Two cents, and there is a certificate for it.
+        detune: 2,
+        beats: 1,
+        beat: 0.22,
+        cutIdle: 500,
+        cutLoaded: 3000,
+        cutAir: 1900,
+        resonance: 4,
+      },
+      // Two tones a fifth apart, to a standard, as klaxons have been since 1954.
+      horn: { wave: "square", warnHz: 660, alarmHz: 880 },
     },
   },
 };

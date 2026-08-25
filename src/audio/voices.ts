@@ -23,12 +23,19 @@
  *   - **the grind carries slip** — how fast the track is sliding over ground it
  *     has stopped holding. You can be at 90% grip and perfectly quiet; the
  *     moment you go over, the grind is what arrives.
+ *
+ * **Every voice has an owner** (`makers/sound.ts`). The machine's voices take a
+ * `SoundHouse` — the chassis manufacturer's — and read their timbre and rates
+ * out of it, so the same arithmetic voices a KIBA and a TOWA differently. The
+ * *levels* stay here, because a maker that could turn itself up would.
+ * Impacts take no house at all: a pipe stack is steel whoever stacked it.
  */
 
 import { ALARM, type Condition, WARN } from "../control/bus.ts";
 import type { HullEvent, ImpactEvent } from "../core/events.ts";
 import type { TrackState } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import type { SoundHouse, Wave } from "../makers/sound.ts";
 import type { PropKind } from "../world/props.ts";
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -36,38 +43,48 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 /* -- the drive note -------------------------------------------------------- */
 
 /**
- * One track's drivetrain, as a sawtooth through a lowpass.
+ * One track's drivetrain: a pair of detuned oscillators through a lowpass, cut
+ * into pulses at the firing rate.
  *
- * A sawtooth rather than a sine, and a low fundamental rather than a
- * comfortable one, for a reason that is mobile-first rather than musical: a
- * phone speaker reproduces almost nothing below about 400 Hz, so a pure 60 Hz
- * rumble is *silent* on the device this game is built for. A sawtooth at 60 Hz
- * puts harmonics at 120, 180, 240 … and the phone renders the machine out of
- * those while a laptop and a pair of headphones render the fundamental too.
- * Same voice, and it survives the small speaker instead of relying on it.
+ * The waveform and every frequency below come from the chassis maker's house
+ * (`makers/sound.ts`), which is what makes the same arithmetic sound like two
+ * different machines. What does *not* come from the house is the mapping —
+ * `traction` to droop, effort to pitch — because that is the sim rendered, and
+ * it is the same inspectability claim the TRACTION head makes.
+ *
+ * Three things carry the depth, and each of them is one number in the house:
+ *
+ * - **two oscillators, `detune` cents apart.** Beating between them is most of
+ *   what separates a machine from a synthesiser playing a note. It is also
+ *   characterisation you can hear the age of: KIBA is fourteen cents out and
+ *   has never been balanced; HANSA is two, and there is a certificate for it.
+ * - **the firing pulse.** A diesel is not a tone, it is a series of bangs, and
+ *   the drone you recognise is the note amplitude-modulated at the firing rate.
+ *   `beats` sets that rate against the note, so the lump slows down with the
+ *   engine rather than drifting free of it.
+ * - **the filter**, which is where labouring lives, exactly as before.
  */
 export interface DriveVoice {
+  readonly wave: Wave;
   /** Fundamental, Hz. */
   readonly hz: number;
-  /** 0–1, before the master. */
+  /** 0–1, before the master. The steady part of the note. */
   readonly gain: number;
+  /**
+   * 0–1: how much of the note the firing pulse takes away and gives back. The
+   * two sum to `gain + pulse` at the top of a pulse and `gain - pulse` at the
+   * bottom, which is why the house is capped at half.
+   */
+  readonly pulse: number;
+  /** Pulses per second — the firing rate, riding on the note's own frequency. */
+  readonly pulseHz: number;
+  /** Cents between the two oscillators. */
+  readonly detune: number;
   /** Lowpass cutoff, Hz. This is where "labouring" lives. */
   readonly cutoff: number;
+  readonly resonance: number;
 }
 
-/** Turning over, doing nothing. The machine is never silent; it is running. */
-const IDLE_HZ = 56;
-/** What full track speed adds to it. */
-const SPAN_HZ = 52;
-/**
- * How far the note sags at full load.
- *
- * Rpm droop: an engine asked for more torque than it wants to give slows down.
- * It is the single most recognisable sound a working machine makes, and here it
- * is a direct rendering of `traction` — the same number the TRACTION head paints
- * its channels with.
- */
-const DROOP_HZ = 12;
 /**
  * How much louder a machine at full load is than the same machine coasting.
  *
@@ -81,44 +98,77 @@ const DROOP_HZ = 12;
  */
 const LOAD_LOUDER = 0.45;
 /**
- * What a track with **no ground** picks up.
- *
- * `traction` is `null` rather than 0 for a track in the air, because nothing
- * measured is not a low reading (`core/snapshot.ts`). The distinction survives
- * into the sound: an unloaded track does not go quiet, it runs away — higher
- * and thinner, which is what a machine clawing air actually does.
- */
-const AIR_HZ = 15;
-
-/**
  * The continuous voices are quiet on purpose, and it is a headroom decision
  * rather than a taste one.
  *
- * Measured on the bench: at twice these numbers the drive note alone peaked at
- * 0.66 and sat permanently inside the limiter, so a 140 kJ landing — the single
- * most violent thing rung 1 can produce — came out no louder than driving along.
- * The machine is a bed; the site is what happens on top of it, and the bed has
- * to leave room for it. A player who wants it louder has a volume control on
- * the side of their phone.
+ * Measured on the bench: at two and a half times these numbers the drive note
+ * alone peaked at 0.66 and sat permanently inside the limiter, so a 140 kJ
+ * landing — the single most violent thing rung 1 can produce — came out no
+ * louder than driving along. The machine is a bed; the site is what happens on
+ * top of it, and the bed has to leave room for it. A player who wants it louder
+ * has a volume control on the side of their phone.
+ *
+ * Trimmed a fifth when the note gained its twin and its firing pulse. Both
+ * raise the *crest* of a sound without raising its loudness — a beat is by
+ * definition the moments where two things line up — so at the old level
+ * `labouring` peaked at 0.63 against an unchanged RMS, which is headroom spent
+ * on nothing audible. At these numbers it peaks 0.48 and the impact scenes are
+ * where they were, which is the trade taken deliberately: a fifth of the bed's
+ * loudness bought the character, and the site kept its room.
  */
-const IDLE_GAIN = 0.05;
-const DRIVE_GAIN = 0.13;
+const IDLE_GAIN = 0.04;
+const DRIVE_GAIN = 0.104;
 
-/** Muffled at rest; hard and bright at the edge of the friction cone. */
-const CUT_IDLE = 340;
-const CUT_LOADED = 2600;
-/** A track spinning free is thin rather than muffled. Whine, not roar. */
-const CUT_AIR = 1500;
+/** The deepest a house may cut the note. At a half it reaches silence. */
+const MAX_BEAT = 0.5;
 
-export function driveVoice(track: TrackState): DriveVoice {
+export function driveVoice(track: TrackState, house: SoundHouse): DriveVoice {
+  const drive = house.drive;
   const effort = clamp01(Math.abs(track.commanded) / MAX_TRACK_SPEED);
+  // `traction` is `null` rather than 0 for a track in the air, because nothing
+  // measured is not a low reading (`core/snapshot.ts`). The distinction survives
+  // into the sound: an unloaded track does not go quiet, it runs away — higher
+  // and thinner, which is what a machine clawing air actually does.
   const airborne = track.traction === null;
   const load = clamp01(track.traction ?? 0);
 
+  const hz =
+    drive.idleHz +
+    effort * drive.spanHz -
+    load * drive.droopHz +
+    (airborne ? drive.airHz : 0);
+  const level =
+    (IDLE_GAIN + effort * (DRIVE_GAIN - IDLE_GAIN)) * (1 + LOAD_LOUDER * load);
+  const depth = clamp01(Math.min(drive.beat, MAX_BEAT));
+
+  /**
+   * What the pulse costs, given back.
+   *
+   * A square pulse of depth `d` about a base `g` spends half its time at `g+d`
+   * and half at `g−d`, so its mean square is `g² + d²` — a note cut into lumps
+   * is *quieter* than the same note held, by exactly `hypot(1−d, d)`. Measured
+   * before this line existed: adding the beat took `idle` from 0.037 RMS to
+   * 0.016 while the peak stayed put, which is not "more depth", it is "less
+   * machine". Dividing it back out makes the beat cost nothing but character,
+   * and it is why the test below asserts `hypot(gain, pulse)` rather than the
+   * sum: the sum is what an oscilloscope sees, and the ear hears the other one.
+   */
+  const crest = Math.hypot(1 - depth, depth);
+
   return {
-    hz: IDLE_HZ + effort * SPAN_HZ - load * DROOP_HZ + (airborne ? AIR_HZ : 0),
-    gain: (IDLE_GAIN + effort * (DRIVE_GAIN - IDLE_GAIN)) * (1 + LOAD_LOUDER * load),
-    cutoff: airborne ? CUT_AIR : CUT_IDLE + load * (CUT_LOADED - CUT_IDLE),
+    wave: drive.wave,
+    hz,
+    // The pulse is *taken out of* the note rather than added on top of it, so a
+    // lumpy house and a smooth one are the same loudness — the beat is
+    // character, and character is not a way to be louder.
+    gain: (level * (1 - depth)) / crest,
+    pulse: (level * depth) / crest,
+    pulseHz: hz * drive.beats,
+    detune: drive.detune,
+    cutoff: airborne
+      ? drive.cutAir
+      : drive.cutIdle + load * (drive.cutLoaded - drive.cutIdle),
+    resonance: drive.resonance,
   };
 }
 
@@ -297,13 +347,17 @@ export interface HornVoice {
   readonly gain: number;
   /** Pulses per second. Zero means silent. */
   readonly rate: number;
+  readonly wave: Wave;
 }
 
-const SILENT: HornVoice = { hz: 0, gain: 0, rate: 0 };
+const SILENT: HornVoice = { hz: 0, gain: 0, rate: 0, wave: "square" };
 
-export function hornVoice(unacknowledged: Condition): HornVoice {
-  if (unacknowledged >= ALARM) return { hz: 990, gain: 0.12, rate: 1 / 0.34 };
-  if (unacknowledged >= WARN) return { hz: 620, gain: 0.08, rate: 1 / 1.1 };
+export function hornVoice(unacknowledged: Condition, house: SoundHouse): HornVoice {
+  const horn = house.horn;
+  if (unacknowledged >= ALARM)
+    return { hz: horn.alarmHz, gain: 0.12, rate: 1 / 0.34, wave: horn.wave };
+  if (unacknowledged >= WARN)
+    return { hz: horn.warnHz, gain: 0.08, rate: 1 / 1.1, wave: horn.wave };
   return SILENT;
 }
 

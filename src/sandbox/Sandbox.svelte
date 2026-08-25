@@ -20,10 +20,10 @@
 
 import { chassisConditions, worst } from "../cockpit/annunciator.ts";
 import DashPanel from "../cockpit/DashPanel.svelte";
-import { styleOf } from "../cockpit/makers.ts";
 import { cellFor, podFor } from "../cockpit/parts.ts";
 import Rack from "../cockpit/Rack.svelte";
 import { inertControls } from "../control/controls.ts";
+import { styleOf } from "../makers/houses.ts";
 import { SPECIMENS } from "./fixtures.ts";
 
 /** Which specimen the rack and the loose cells are showing. */

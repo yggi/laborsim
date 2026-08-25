@@ -15,7 +15,15 @@
  * one condition still long enough to hear it, and a real run refuses to.
  */
 
-import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
+import {
+  ACTIVE,
+  ALARM,
+  CHASSIS,
+  type Condition,
+  NOMINAL,
+  type Stage,
+  WARN,
+} from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import type { SimEvent } from "../core/events.ts";
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
@@ -71,18 +79,40 @@ export interface Scene {
 }
 
 /**
+ * The chassis slot, which is how a scene says **whose machine this is**.
+ *
+ * The audio engine reads the maker off this stage and voices the machine from
+ * that house (`makers/sound.ts`), exactly as the dash reads it for the panel's
+ * colours. So a scene can put a machine from a manufacturer that does not build
+ * chassis yet on the bench, and hear what one would sound like — which is the
+ * only way to check that the house arrangement is real rather than promised.
+ */
+const chassisStage = (maker: string): Stage => ({
+  id: CHASSIS,
+  label: "PILOT",
+  maker,
+  verb: "SET",
+  enabled: true,
+  idle: false,
+  output: { left: 0, right: 0 },
+  condition: ACTIVE,
+  safety: false,
+});
+
+/**
  * Everything a scene needs and nothing it does not.
  *
- * A snapshot is a large record and a voice reads four fields of it. Rather than
- * fake the rest convincingly, this fills them with the emptiest honest value:
- * the bench is a listening surface, and a route or a bill on it would be a
- * detail nobody can hear pretending to matter.
+ * A snapshot is a large record and a voice reads a handful of fields of it.
+ * Rather than fake the rest convincingly, this fills them with the emptiest
+ * honest value: the bench is a listening surface, and a route or a bill on it
+ * would be a detail nobody can hear pretending to matter.
  */
 function frameOf(
   t: number,
   left: TrackState,
   right: TrackState,
   events: readonly SimEvent[] = [],
+  maker = "KIBA WORKS",
 ): Snapshot {
   const tick = Math.round(t / STEP_SECONDS);
   return {
@@ -98,7 +128,7 @@ function frameOf(
       pitch: 0,
       roll: 0,
     },
-    stages: [],
+    stages: [chassisStage(maker)],
     props: [],
     route: [],
     damage: [],
@@ -109,8 +139,18 @@ function frameOf(
   };
 }
 
-const both = (t: number, state: Partial<TrackState>, events?: readonly SimEvent[]) =>
-  frameOf(t, track(state), track(state), events);
+const both = (
+  t: number,
+  state: Partial<TrackState>,
+  events?: readonly SimEvent[],
+  maker?: string,
+) => frameOf(t, track(state), track(state), events, maker);
+
+/** The load ramp `labouring` runs, so two houses can be heard against it. */
+const labour = (t: number): Partial<TrackState> => ({
+  commanded: MAX_TRACK_SPEED,
+  traction: ramp(t, 1, 5, 0.1, 0.95),
+});
 
 export const SCENES: readonly Scene[] = [
   {
@@ -135,11 +175,14 @@ export const SCENES: readonly Scene[] = [
     name: "labouring",
     note: "L-040's done-when: same track speed throughout, load 10% → 95%. It has to harden and sag.",
     seconds: 6,
+    frame: (t) => ({ snapshot: both(t, labour(t)), alarm: NOMINAL }),
+  },
+  {
+    name: "labouring-towa",
+    note: "the same ramp on a TOWA chassis, which does not exist yet. Higher, smoother, and it barely sags — an electric drive holds its speed, and tells you far less about how hard it is working.",
+    seconds: 6,
     frame: (t) => ({
-      snapshot: both(t, {
-        commanded: MAX_TRACK_SPEED,
-        traction: ramp(t, 1, 5, 0.1, 0.95),
-      }),
+      snapshot: both(t, labour(t), [], "TOWA DENKI"),
       alarm: NOMINAL,
     }),
   },

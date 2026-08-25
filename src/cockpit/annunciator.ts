@@ -18,7 +18,7 @@
 
 import { ALARM, type Condition, NOMINAL, type Stage, WARN } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
-import { styleOf } from "./makers.ts";
+import { styleOf } from "../makers/houses.ts";
 
 /**
  * One thing the dash can light.

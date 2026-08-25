@@ -25,8 +25,8 @@
 
 import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
 import Draggable from "./Draggable.svelte";
-import { styleOf } from "./makers.ts";
 import { podFor } from "./parts.ts";
 
 const {

@@ -16,9 +16,10 @@
  *
  * Architecture rule 3: snapshot in, nothing out but a dismiss.
  */
-import { styleOf } from "../cockpit/makers.ts";
+
 import { createEventReader } from "../core/events.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
 import type { DamageEvent } from "../sim/damage.ts";
 
 /**

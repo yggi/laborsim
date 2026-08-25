@@ -15,13 +15,19 @@ import { type Annunciation, chassisConditions, worst } from "./cockpit/annunciat
 import DashPanel from "./cockpit/DashPanel.svelte";
 import Glass from "./cockpit/Glass.svelte";
 import Lever from "./cockpit/Lever.svelte";
-import { styleOf } from "./cockpit/makers.ts";
 import Rack from "./cockpit/Rack.svelte";
-import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
+import {
+  ACTIVE,
+  CHASSIS,
+  type Condition,
+  type Module,
+  NOMINAL,
+} from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
+import { styleOf } from "./makers/houses.ts";
 import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
@@ -45,7 +51,7 @@ let leverR = $state(0);
  * (`docs/design/components.md`).
  */
 const pilot: Module = {
-  id: "PILOT",
+  id: CHASSIS,
   label: "PILOT",
   maker: "KIBA WORKS",
   considers: "your two thumbs",

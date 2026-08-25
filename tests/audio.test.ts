@@ -26,6 +26,14 @@ import { ACTIVE, ALARM, NOMINAL, WARN } from "../src/control/bus.ts";
 import type { HullEvent, ImpactEvent } from "../src/core/events.ts";
 import type { TrackState } from "../src/core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
+import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
+
+/**
+ * The chassis OEM's house, which is what every machine in the game is voiced by
+ * today and what these numbers were tuned against. A voice is only meaningful
+ * next to the house it came out of, so every call names one.
+ */
+const KIBA = styleOf("KIBA WORKS").sound;
 
 const track = (over: Partial<TrackState> = {}): TrackState => ({
   commanded: 0,
@@ -55,11 +63,73 @@ const hullHit = (joules: number): HullEvent => ({
   jolt: 2,
 });
 
+/**
+ * Every voice in the game has an owner, and the machine's owner is the maker of
+ * its chassis (`makers/sound.ts`). These are the tests for the *shape* of that
+ * rather than for any one house: a hole in the table is a machine with no voice,
+ * and it would be found by a player rather than by a build.
+ */
+describe("a machine is voiced by the maker of its chassis", () => {
+  it("gives every maker a complete sound house", () => {
+    for (const name of MAKER_NAMES) {
+      const { drive, horn } = styleOf(name).sound;
+      expect(drive.idleHz, `${name} idle`).toBeGreaterThan(0);
+      expect(drive.spanHz, `${name} span`).toBeGreaterThan(0);
+      expect(horn.warnHz, `${name} warn`).toBeGreaterThan(0);
+      expect(horn.alarmHz, `${name} alarm`).toBeGreaterThan(0);
+      // A house may not cut its note to silence and back: past a half the
+      // pulse inverts the note instead of shaping it.
+      expect(drive.beat, `${name} beat`).toBeLessThanOrEqual(0.5);
+    }
+  });
+
+  it("gives an unmarked chassis the OEM's voice", () => {
+    // The same fallback the cab uses for an unmarked plate: an unknown maker
+    // reads as KIBA until the grey-market maker exists to claim the slot.
+    expect(styleOf("WHO?").sound).toBe(KIBA);
+  });
+
+  it("sounds like two different machines in two houses", () => {
+    // The point of the whole arrangement, asserted once. If a future house is
+    // written that happens to match KIBA on every axis, this fails and says so.
+    const towa = styleOf("TOWA DENKI").sound;
+    const at = (house: typeof KIBA) =>
+      driveVoice(track({ commanded: 1.2, traction: 0.5 }), house);
+    expect(at(towa).hz).not.toBeCloseTo(at(KIBA).hz, 1);
+    expect(at(towa).wave).not.toBe(at(KIBA).wave);
+    // TOWA's drive is electric: it holds its speed under load where the diesel
+    // sags, which is the most audible difference between the two.
+    const loaded = (house: typeof KIBA) =>
+      driveVoice(track({ commanded: 1.2, traction: 0.95 }), house).hz -
+      driveVoice(track({ commanded: 1.2, traction: 0 }), house).hz;
+    expect(loaded(towa)).toBeGreaterThan(loaded(KIBA));
+  });
+
+  it("keeps loudness out of the maker's hands", () => {
+    // A lumpy house and a smooth one must be the same size. `hypot` rather than
+    // the sum, because the pulse is a square: the note spends half its time at
+    // `gain + pulse` and half at `gain - pulse`, so what the ear gets is the
+    // root mean square of the two rather than their sum. Asserting the sum
+    // would let a house buy loudness by beating harder, which is the exact
+    // thing this rule exists to forbid.
+    const level = (name: string) => {
+      const voice = driveVoice(
+        track({ commanded: 1.2, traction: 0.5 }),
+        styleOf(name).sound,
+      );
+      return Math.hypot(voice.gain, voice.pulse);
+    };
+    for (const name of MAKER_NAMES) {
+      expect(level(name), `${name} level`).toBeCloseTo(level("KIBA WORKS"), 6);
+    }
+  });
+});
+
 describe("the drive note carries load", () => {
   it("rises with commanded track speed", () => {
-    const idle = driveVoice(track());
-    const half = driveVoice(track({ commanded: MAX_TRACK_SPEED / 2 }));
-    const full = driveVoice(track({ commanded: MAX_TRACK_SPEED }));
+    const idle = driveVoice(track(), KIBA);
+    const half = driveVoice(track({ commanded: MAX_TRACK_SPEED / 2 }), KIBA);
+    const full = driveVoice(track({ commanded: MAX_TRACK_SPEED }), KIBA);
     expect(half.hz).toBeGreaterThan(idle.hz);
     expect(full.hz).toBeGreaterThan(half.hz);
     expect(full.gain).toBeGreaterThan(idle.gain);
@@ -69,8 +139,8 @@ describe("the drive note carries load", () => {
     // Reverse is not quieter than forward. `commanded` is signed, and a voice
     // that forgot to take its magnitude would fall silent going backwards —
     // which is exactly when a reversing machine most needs to be audible.
-    const ahead = driveVoice(track({ commanded: MAX_TRACK_SPEED }));
-    const astern = driveVoice(track({ commanded: -MAX_TRACK_SPEED }));
+    const ahead = driveVoice(track({ commanded: MAX_TRACK_SPEED }), KIBA);
+    const astern = driveVoice(track({ commanded: -MAX_TRACK_SPEED }), KIBA);
     expect(astern).toEqual(ahead);
   });
 
@@ -78,8 +148,11 @@ describe("the drive note carries load", () => {
     // The card's done-when, as an assertion. Two machines at identical track
     // speed, one of them working: it has to be *audibly* different, in the
     // three ways a diesel actually differs.
-    const easy = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0.1 }));
-    const labouring = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0.9 }));
+    const easy = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0.1 }), KIBA);
+    const labouring = driveVoice(
+      track({ commanded: MAX_TRACK_SPEED, traction: 0.9 }),
+      KIBA,
+    );
     expect(labouring.cutoff).toBeGreaterThan(easy.cutoff * 2);
     expect(labouring.hz).toBeLessThan(easy.hz);
     // Loudness was added after the bench measured the first version: opening a
@@ -93,11 +166,15 @@ describe("the drive note carries load", () => {
     // `traction: null` means nothing measured, not a low reading — and the
     // distinction has to survive into the sound. Reading `null` as 0 would make
     // a track clawing air identical to a track sitting on frictionless ice.
-    const loaded = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0.5 }));
+    const loaded = driveVoice(
+      track({ commanded: MAX_TRACK_SPEED, traction: 0.5 }),
+      KIBA,
+    );
     const air = driveVoice(
       track({ commanded: MAX_TRACK_SPEED, traction: null, contacts: 0 }),
+      KIBA,
     );
-    const ice = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0 }));
+    const ice = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 0 }), KIBA);
     expect(air.hz).toBeGreaterThan(loaded.hz);
     expect(air.hz).toBeGreaterThan(ice.hz);
     expect(air.cutoff).not.toBe(ice.cutoff);
@@ -198,13 +275,13 @@ describe("an impact's voice follows how hard it was", () => {
 
 describe("the horn is the audible half of the master lamp", () => {
   it("says nothing until something is wrong", () => {
-    expect(isSilent(hornVoice(NOMINAL))).toBe(true);
-    expect(isSilent(hornVoice(ACTIVE))).toBe(true);
+    expect(isSilent(hornVoice(NOMINAL, KIBA))).toBe(true);
+    expect(isSilent(hornVoice(ACTIVE, KIBA))).toBe(true);
   });
 
   it("beats faster and higher for an alarm than for a caution", () => {
-    const caution = hornVoice(WARN);
-    const alarm = hornVoice(ALARM);
+    const caution = hornVoice(WARN, KIBA);
+    const alarm = hornVoice(ALARM, KIBA);
     expect(isSilent(caution)).toBe(false);
     expect(alarm.rate).toBeGreaterThan(caution.rate);
     expect(alarm.hz).toBeGreaterThan(caution.hz);
@@ -213,7 +290,7 @@ describe("the horn is the audible half of the master lamp", () => {
   it("beats at the lamp's own rates, so the two do not fight", () => {
     // `substrate.css` blinks at 1.1 s and 0.34 s. The duplication is deliberate
     // and flagged; this is the test that notices when one side moves.
-    expect(hornVoice(WARN).rate).toBeCloseTo(1 / 1.1, 6);
-    expect(hornVoice(ALARM).rate).toBeCloseTo(1 / 0.34, 6);
+    expect(hornVoice(WARN, KIBA).rate).toBeCloseTo(1 / 1.1, 6);
+    expect(hornVoice(ALARM, KIBA).rate).toBeCloseTo(1 / 0.34, 6);
   });
 });

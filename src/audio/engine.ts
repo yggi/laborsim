@@ -17,13 +17,22 @@
  * the run it recorded**, down to the grit — the noise is drawn from the seeded
  * generator in `core/rng.ts`, never from `Math.random`.
  *
+ * **Whose noise is it?** The machine's voices are the *chassis manufacturer's*,
+ * read off the recording exactly as the dash reads its panel colours — the
+ * chassis slot carries its maker, so a replay sounds like the machine it
+ * recorded and not like whatever is bolted in today. Nothing here names a
+ * manufacturer; it asks the snapshot and looks the house up
+ * (`makers/sound.ts`).
+ *
  * Architecture rule 3: snapshot in, nothing out. Nothing here can reach the sim.
  */
 
-import type { Condition } from "../control/bus.ts";
+import { type Condition, chassisOf } from "../control/bus.ts";
 import { createEventReader } from "../core/events.ts";
 import { makeRng } from "../core/rng.ts";
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
+import type { SoundHouse } from "../makers/sound.ts";
 import {
   driveVoice,
   grindVoice,
@@ -43,6 +52,29 @@ import {
  * gap instead of jumping when the next value lands.
  */
 const GLIDE = 0.05;
+
+/**
+ * How the note is split across its two oscillators.
+ *
+ * The twin sits **half** the main's level rather than beside it, and the pair is
+ * then scaled so their combined power matches one oscillator at the level the
+ * voice asked for. Both halves of that are measured rather than chosen.
+ *
+ * Adding the twin at full level doubled the peak of every driving scene on the
+ * bench (`labouring` went 0.354 → 0.662) at unchanged RMS: the pair sums in
+ * phase every beat, and what that eats is exactly the headroom an impact needs.
+ * Halving both was wrong in the other direction — peaks matched the old note and
+ * every RMS *halved*, because two detuned oscillators are only briefly in phase
+ * and spend the rest of the beat cancelling.
+ *
+ * So: power, not amplitude. Two mostly-incoherent sources add in power, which is
+ * what `hypot` is doing here, and it is the loudness that is preserved rather
+ * than the oscilloscope trace. The unequal split is the other half — a quieter
+ * twin still beats audibly against the main and costs far less peak than an
+ * equal pair, which is how anyone mixes a unison.
+ */
+const TWIN = 0.5;
+const UNISON = 1 / Math.hypot(1, TWIN);
 
 /** Seconds of noise in the shared buffer, looped. Long enough not to buzz. */
 const NOISE_SECONDS = 2;
@@ -99,7 +131,7 @@ function whiteNoise(context: BaseAudioContext): AudioBuffer {
  * of them is 600 events a second that mostly say the same thing as the last.
  */
 interface Side {
-  update(track: TrackState | undefined, at: number): void;
+  update(track: TrackState | undefined, house: SoundHouse, at: number): void;
   stop(): void;
 }
 
@@ -117,6 +149,22 @@ function createSide(
   driveGain.gain.value = 0;
   driveGain.connect(panner);
 
+  /**
+   * The firing pulse: a square LFO into the drive gain, so the note is *cut*
+   * rather than played. Its rate rides on the note's own frequency, which is
+   * what keeps the lump slowing down with the engine instead of drifting free
+   * of it — a drone whose beat does not track its pitch is a tremolo pedal.
+   */
+  const pulseDepth = context.createGain();
+  pulseDepth.gain.value = 0;
+  pulseDepth.connect(driveGain.gain);
+
+  const pulse = context.createOscillator();
+  pulse.type = "square";
+  pulse.frequency.value = 28;
+  pulse.connect(pulseDepth);
+  pulse.start();
+
   const driveFilter = context.createBiquadFilter();
   driveFilter.type = "lowpass";
   driveFilter.frequency.value = 340;
@@ -124,11 +172,27 @@ function createSide(
   driveFilter.Q.value = 3;
   driveFilter.connect(driveGain);
 
+  /**
+   * **Two oscillators, a few cents apart.** One is a synthesiser playing a note;
+   * two beating against each other is a machine. The detune is the maker's, and
+   * it is the cheapest audible statement of how well built the thing is.
+   */
   const drive = context.createOscillator();
   drive.type = "sawtooth";
   drive.frequency.value = 56;
   drive.connect(driveFilter);
   drive.start();
+
+  const twinGain = context.createGain();
+  twinGain.gain.value = TWIN;
+  twinGain.connect(driveFilter);
+
+  const twin = context.createOscillator();
+  twin.type = "sawtooth";
+  twin.frequency.value = 56;
+  twin.detune.value = 0;
+  twin.connect(twinGain);
+  twin.start();
 
   const grindGain = context.createGain();
   grindGain.gain.value = 0;
@@ -146,7 +210,18 @@ function createSide(
   noise.connect(grindFilter);
   noise.start();
 
-  const held = { hz: 56, gain: 0, cutoff: 340, grind: 0, grindCut: 600 };
+  const held = {
+    hz: 56,
+    gain: 0,
+    cutoff: 340,
+    grind: 0,
+    grindCut: 600,
+    pulse: 0,
+    pulseHz: 28,
+    detune: 0,
+    q: 3,
+    wave: "sawtooth" as OscillatorType,
+  };
 
   const chase = (param: AudioParam, target: number, at: number, last: number) => {
     if (Math.abs(target - last) < 1e-4) return last;
@@ -155,24 +230,40 @@ function createSide(
   };
 
   return {
-    update(track, at) {
+    update(track, house, at) {
       // No run, no machine: everything falls to silence rather than freezing on
       // its last value. A cockpit between exercises is a quiet one.
       if (!track) {
         held.gain = chase(driveGain.gain, 0, at, held.gain);
+        held.pulse = chase(pulseDepth.gain, 0, at, held.pulse);
         held.grind = chase(grindGain.gain, 0, at, held.grind);
         return;
       }
-      const voice = driveVoice(track);
+      const voice = driveVoice(track, house);
       const grind = grindVoice(track);
+      // The waveform is the one thing a house changes that is not a number, so
+      // it is set rather than chased. Swapping a chassis mid-run is not a thing
+      // the game does yet; when it is, this is already the right behaviour.
+      if (voice.wave !== held.wave) {
+        drive.type = voice.wave;
+        twin.type = voice.wave;
+        held.wave = voice.wave;
+      }
       held.hz = chase(drive.frequency, voice.hz, at, held.hz);
-      held.gain = chase(driveGain.gain, voice.gain, at, held.gain);
+      chase(twin.frequency, voice.hz, at, held.hz);
+      held.detune = chase(twin.detune, voice.detune, at, held.detune);
+      held.gain = chase(driveGain.gain, voice.gain * UNISON, at, held.gain);
+      held.pulse = chase(pulseDepth.gain, voice.pulse * UNISON, at, held.pulse);
+      held.pulseHz = chase(pulse.frequency, voice.pulseHz, at, held.pulseHz);
       held.cutoff = chase(driveFilter.frequency, voice.cutoff, at, held.cutoff);
+      held.q = chase(driveFilter.Q, voice.resonance, at, held.q);
       held.grind = chase(grindGain.gain, grind.gain, at, held.grind);
       held.grindCut = chase(grindFilter.frequency, grind.cutoff, at, held.grindCut);
     },
     stop() {
       drive.stop();
+      twin.stop();
+      pulse.stop();
       noise.stop();
     },
   };
@@ -318,6 +409,7 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   let hornBase = 0;
   let hornHz = 990;
   let hornRate = 1;
+  let hornWave: OscillatorType = "square";
   let disposed = false;
 
   return {
@@ -325,10 +417,15 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
       if (disposed) return;
       const now = at ?? context.currentTime;
 
-      left.update(snapshot?.machine.left, now);
-      right.update(snapshot?.machine.right, now);
+      // Whose machine is this? The chassis slot on the recording says, and an
+      // empty rack falls back to the OEM — the same fallback the cab uses for
+      // an unmarked plate (`makers/houses.ts`).
+      const house = styleOf(chassisOf(snapshot?.stages ?? [])?.maker ?? "").sound;
 
-      const alarm = hornVoice(unacknowledged);
+      left.update(snapshot?.machine.left, house, now);
+      right.update(snapshot?.machine.right, house, now);
+
+      const alarm = hornVoice(unacknowledged, house);
       const depth = isSilent(alarm) ? 0 : alarm.gain / 2;
       if (Math.abs(depth - hornBase) > 1e-4) {
         hornDepth.gain.setTargetAtTime(depth, now, GLIDE);
@@ -336,6 +433,10 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         hornBase = depth;
       }
       if (!isSilent(alarm)) {
+        if (alarm.wave !== hornWave) {
+          horn.type = alarm.wave;
+          hornWave = alarm.wave;
+        }
         if (alarm.hz !== hornHz) {
           horn.frequency.setValueAtTime(alarm.hz, now);
           hornHz = alarm.hz;

@@ -31,7 +31,6 @@ import {
   worst,
 } from "../src/cockpit/annunciator.ts";
 import { damp } from "../src/cockpit/damping.ts";
-import { MAKER_NAMES, styleOf } from "../src/cockpit/makers.ts";
 import { cellFor, podFor, REGISTERED } from "../src/cockpit/parts.ts";
 import {
   ACTIVE,
@@ -43,6 +42,7 @@ import {
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
 import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
+import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
 import { createAutonav } from "../src/modules/autonav.ts";
 
 const COCKPIT = new URL("../src/cockpit", import.meta.url).pathname;

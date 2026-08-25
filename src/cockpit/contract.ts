@@ -27,7 +27,7 @@
 import type { Stage } from "../control/bus.ts";
 import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
-import type { MakerStyle } from "./makers.ts";
+import type { MakerStyle } from "../makers/houses.ts";
 
 export interface PartProps {
   /** This component's slot, read off the snapshot. Never the live module. */

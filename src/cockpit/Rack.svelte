@@ -27,8 +27,8 @@ import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import { styleOf } from "../makers/houses.ts";
 import Decal from "./Decal.svelte";
-import { styleOf } from "./makers.ts";
 import { ampsFor, faceFor, fuseColour, unitsFor } from "./parts.ts";
 
 const {

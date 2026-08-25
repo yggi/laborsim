@@ -43,12 +43,12 @@
  * Architecture rule 3: reads a snapshot, reports intent up. Never the sim.
  */
 
-import { ALARM, type Condition, WARN } from "../control/bus.ts";
+import { ALARM, type Condition, chassisOf, WARN } from "../control/bus.ts";
 import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
 import { type Annunciation, isAlarm, isWarning } from "./annunciator.ts";
 import Meters from "./Meters.svelte";
-import { styleOf } from "./makers.ts";
 import NavUnit from "./NavUnit.svelte";
 import { cellFor } from "./parts.ts";
 
@@ -94,7 +94,7 @@ let {
 const stages = $derived(snapshot?.stages ?? []);
 
 /** The vehicle's manufacturer owns this panel. Read it off the chassis slot. */
-const chassis = $derived(stages.find((s) => s.id === "PILOT"));
+const chassis = $derived(chassisOf(stages));
 const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
 
 /**
