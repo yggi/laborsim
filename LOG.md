@@ -21,6 +21,43 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — the lever gets a gasket, and starts pivoting
+
+Cards: none. [L-051] narrowed again — the levers are hardware now and still
+have no maker.
+
+**A rod that changes length is not a lever.** The stick had a fixed foot and a
+grip that travelled the whole control, so the shaft stretched from 19 px to
+160 px across the throw — at full back the grip arrived at the deck with no
+shaft left under it, which is a telescope, not a lever. Three changes, and the
+third is the one that mattered:
+
+- **The foot moves.** A lever pivots under the deck, so the crossing point at
+  the floor travels too — a fifth as far as the grip, same direction. That
+  parallax is what says pivot. It slides in a **gasket**: a rubber slot cover
+  elongated along the throw, dark inside, with the shaft's cut end visible in it
+  so there is something to watch move.
+- **It leans.** A lever at the edge of the glass moves toward the vanishing
+  point as it goes away, so the left one leans right going forward and the right
+  one leans left. The component takes a `side` now; the rod is drawn as a
+  rotation about its foot, which is why its length is geometry rather than a
+  box's height.
+- **The drawn swing is a third of the drag.** The thumb keeps the full 196 px,
+  because a control wants a comfortable drag. The lever draws 44. Everything
+  above follows from separating those two numbers, and the collapse at full back
+  was entirely the cost of confusing them.
+
+Found by measuring, not by squinting: a foot crop kept looking like the gasket
+floated above the dash. Reading the actual pixel column said otherwise — the
+shaft ends exactly where the maths puts it and the gasket does tuck behind the
+panel; what was wrong was that the hole was barely wider than the shaft, so the
+rim never showed. The bench now shoots both levers at opposite ends of their
+throw in one frame, and crops the feet, because a gasket is 50 px of an 844 px
+screen and a full-frame shot of one is a smudge.
+
+Also fixed: `npm run cab -- app-lever` ran the whole app section and took no
+shots, because the section's gate only knew about the look shots.
+
 ## 2026-08-25 — the levers lose their box, and a hand that never let go
 
 Cards: none. [L-051] narrowed again. Merged branches cleaned up — see below.
@@ -932,50 +969,3 @@ One thing broke on the way: the terminal shared the per-slot `.meters` class,
 so restyling those into a 74px column made it three hundred pixels tall and
 pushed the cabinet furniture off the bottom. Shared class, two very different
 jobs.
-
-## 2026-08-24 — the panel, in detail
-
-Cards: [L-052] extended. A refinement pass on the same round, from a punch list.
-
-- **Two master lamps became one `ALARM`.** Off, yellow, red — and the *rhythm*
-  carries what the second lamp did: fast unacknowledged alarm, slow
-  unacknowledged caution, steady once pressed. Two lamps meant two things could
-  be lit at once saying the same thing, which is a dashboard talking to itself.
-- **Numbers read out in seven segments**, drawn rather than typeset. A webfont
-  was the obvious move; drawing the seven bars is better on three counts — the
-  unlit segments become *real* (and the ghost is what the eye reads as an LED,
-  more than the digit shapes are), it costs no font file against an unmeasured
-  mobile byte budget, and it is exactly what `instrument-rendering.md` says SVG
-  is for. The hour meter keeps mechanical drums, because that is what an hour
-  meter has.
-- **The rack standardises on 1U and 2U.** A rack is a standard and a standard
-  has a pitch; without one a maker can make its plate taller to get attention.
-  It bit immediately and correctly: TILT-GUARD at 2U had to give up its rating
-  line and one line of prose to keep its limit sliders. Tried first and rejected:
-  splitting the plate identity-left / settings-right, the way a real faceplate
-  with pots is arranged — it overlaps at 390px, because a bordered identity
-  block will not shrink below its own text.
-- **Brushed silver bezels.** The cream ones read as plastic, which is a
-  different decade.
-- **The cabinet got furniture** — a blurred wire loom and a fuse carrier with one
-  blown fuse. Not decoration: it is the thing that says you have your head under
-  the hood rather than in a menu. Fixed, never random, because a cockpit that
-  reshuffles between replays of one run makes the recording untrustworthy.
-- **The serial number is the world seed.** The rig stamps the machine and
-  generates the site in the same breath, so the number riveted in front of the
-  operator is the exercise they are about to be tested on, and two operators
-  comparing serials are comparing worlds. The seed now crosses the snapshot
-  boundary, which it should have done anyway — a recording that cannot rebuild
-  its own world is not a recording.
-- HANSA's cell became a **beacon**: a ribbed dome on a machined base, surface
-  mounted where everything else is let in. Its plate is its own override of the
-  panel convention — heavy border, warning mark cut in beside the name. The
-  invented DIN number came out; it was a mood, and the treatment carries it.
-
-The rule that came out of it: **every indicator carries its component's name.**
-A maker may style the plate however it likes and may not omit it.
-
-One process note worth keeping: two edits this round silently did nothing,
-because `str.replace` on a file the formatter had reflowed matches nothing and
-says so with silence. One of them turned the whole dash black. Scripted edits
-now assert that they matched.

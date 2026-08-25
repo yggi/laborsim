@@ -169,10 +169,30 @@ between the windscreen and the rack, so looking past it puts it overhead. It is
 one object at one height, and the dash and the rack together are one deck.
 
 The levers themselves are **sticks**, not sliders: a shaft up through a rubber
-boot, a moulded grip, and a machined mark at neutral. Same place, same throw,
+gasket, a moulded grip, and a machined mark at neutral. Same place, same throw,
 same dead zone — but principle 7 says the cab is the real thing you are sitting
-in, and a slider is a thing on a screen. Pulled back is drawn slightly larger,
-because pulled back is nearer your chest.
+in, and a slider is a thing on a screen.
+
+It **pivots**, and that took three things, none of them the obvious one:
+
+- **The foot moves too.** A lever turns about something under the deck, so the
+  point where the shaft crosses the floor travels as well — about a fifth as
+  far as the grip, in the same direction. That parallax between the two ends is
+  what says *pivot*; with the foot pinned it was a rod going up and down a hole.
+  The gasket it slides in is elongated along the throw, because a slot has a
+  direction and the direction is fore and aft.
+- **It leans toward the middle of the view.** A lever standing at the edge of
+  the glass moves toward the vanishing point as it goes away from you, so the
+  left one leans right as it goes forward and the right one leans left. Mirrored,
+  because the seat is between them.
+- **The drawn swing is much smaller than the drag.** The thumb still travels the
+  full height of the control, because a control wants a comfortable drag; the
+  lever draws about a third of that. Drawing the whole drag was what made the
+  shaft stretch like a telescope — at full back the grip arrived at the deck with
+  no shaft left under it. A 30 cm throw seen from the seat is not half a screen.
+
+Pulled back is also drawn slightly larger, because pulled back is nearer your
+chest.
 
 And they have **no housing**. They come up out of the dashboard and stand in the
 open in front of the glass, with their feet behind the panel — a box with a

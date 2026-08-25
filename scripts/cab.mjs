@@ -145,7 +145,20 @@ const LOOKS = [
   ["app-look-far-right", -520, 0],
 ];
 
-if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
+/** Every shot the app section can take — the gate has to know about all of
+ *  them, or `npm run cab -- app-lever` skips the whole section on its way to
+ *  looking for a shot it never reaches. */
+const APP_SHOTS = [
+  ...LOOKS.map(([name]) => name),
+  "app-arm",
+  "app-out-of-reach",
+  "app-refused",
+  "app-nag",
+  "app-lever",
+  "app-lever-foot",
+];
+
+if (!filter || APP_SHOTS.some((name) => name.includes(filter))) {
   await page.goto(`${base}/`, { waitUntil: "networkidle" });
   // Rapier initialises before anything is on screen; the canvas is the tell.
   await page.waitForSelector("canvas");
@@ -258,7 +271,7 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
   // comes back to centre and then holds its tongue for 45 s, so a session that
   // has already looked around five times has spent it — which is exactly what
   // happened when this shot came back empty and read as the nag being broken.
-  if (!filter || "app-nag".includes(filter)) {
+  if (!filter || "app-nag".includes(filter) || "app-lever".includes(filter)) {
     await page.goto(`${base}/`, { waitUntil: "networkidle" });
     await page.waitForSelector("canvas");
     await page.waitForTimeout(1500);
@@ -270,19 +283,32 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
     await page.screenshot({ path: `${OUT}app-nag.png` });
     written++;
 
-    // A lever pushed forward, held. Two things at once: the stick is where the
-    // throw says it is — the pointer maths reads the same box the shaft is
-    // drawn in — and the machine has started moving because of it.
-    const stick = await page.locator('[aria-label="L TRACK"]').boundingBox();
-    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height * 0.5);
-    await page.mouse.down();
-    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height * 0.14, {
-      steps: 5,
-    });
+    // Both levers, at opposite ends of their throw. One shot answers two
+    // questions: the stick is where the throw says it is (the pointer maths
+    // reads the same box the shaft is drawn in), and the **foot** has moved as
+    // well as the grip — which is what makes it a lever pivoting under the deck
+    // rather than a rod going up and down a hole.
+    const throwTo = async (label, t) => {
+      const b = await page.locator(`[aria-label="${label}"]`).boundingBox();
+      // The component's own mapping: 12% margin, 76% of span. t=1 is forward.
+      const to = b.y + b.height * (0.12 + (1 - t) * 0.76);
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.5);
+      await page.mouse.down();
+      await page.mouse.move(b.x + b.width / 2, to, { steps: 5 });
+      await page.mouse.up();
+      return b;
+    };
+    await throwTo("L TRACK", 1);
+    const back = await throwTo("R TRACK", 0);
     await page.waitForTimeout(600);
     await page.screenshot({ path: `${OUT}app-lever.png` });
-    await page.mouse.up();
-    written++;
+    // And a crop of both feet, where the detail is: a gasket is 50 px of an
+    // 844 px screen, and a full-frame shot of one is a smudge.
+    await page.screenshot({
+      path: `${OUT}app-lever-foot.png`,
+      clip: { x: 0, y: back.y + back.height - 110, width: VIEWPORT.width, height: 150 },
+    });
+    written += 2;
   }
 }
 

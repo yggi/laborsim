@@ -581,10 +581,15 @@ $effect(() => {
        reach them while you are reading (docs/design/cockpit.md). -->
   {#if mode === "cab" && !rackOpen}
     <div class="levers left">
-      <Lever label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} />
+      <Lever side="left" label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} />
     </div>
     <div class="levers right">
-      <Lever label="R TRACK" value={leverR} onchange={(v) => (leverR = v)} />
+      <Lever
+        side="right"
+        label="R TRACK"
+        value={leverR}
+        onchange={(v) => (leverR = v)}
+      />
     </div>
   {/if}
 
@@ -936,7 +941,7 @@ $effect(() => {
      the deck's — and above the cage, which it is bolted in front of. */
   .levers {
     position: fixed;
-    bottom: calc(var(--cab-dash-h) - 22px);
+    bottom: calc(var(--cab-dash-h) - 12px);
     z-index: 1;
     /* Bolted to the cab like everything else: look away and your hands go out
        of shot. You cannot find a touchscreen lever by feel, which is the cost
