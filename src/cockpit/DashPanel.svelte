@@ -42,59 +42,80 @@
  *
  * Architecture rule 3: reads a snapshot, reports intent up. Never the sim.
  */
-import {
-  type Annunciation,
-  chassisConditions,
-  isAlarm,
-  isWarning,
-  worst,
-} from "../cockpit/annunciator.ts";
-import { styleOf } from "../cockpit/makers.ts";
-import { cellFor } from "../cockpit/parts.ts";
-import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
+
+import { ALARM, type Condition, chassisOf, WARN } from "../control/bus.ts";
+import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
+import { type Annunciation, isAlarm, isWarning } from "./annunciator.ts";
 import Meters from "./Meters.svelte";
 import NavUnit from "./NavUnit.svelte";
+import { cellFor } from "./parts.ts";
 
 let {
   snapshot,
   rackOpen,
   estopped,
+  lamps,
+  master,
+  acked,
   height = $bindable(0),
   onOpenRack,
   onEstop,
-  onToggleModule,
+  onAck,
+  onHorn,
+  controls,
 }: {
   snapshot: Snapshot | undefined;
   rackOpen: boolean;
   estopped: boolean;
+  /**
+   * The chassis's own conditions, and the worst thing happening anywhere.
+   *
+   * Both used to be computed here. They moved up to the shell when the horn
+   * arrived, because the horn is the audible half of this lamp and a machine
+   * whose light and noise disagreed about its own condition would be two
+   * instruments wired to two facts. The lamp, the horn and — next — the beacon
+   * all read one.
+   */
+  lamps: readonly Annunciation[];
+  master: Condition;
+  /** The worst condition the pilot has seen and pressed. Owned by the shell. */
+  acked: Condition;
   /** Measured, so the levers and the toasts can sit clear of a panel that
    *  grows a row every time a component is fitted. */
   height?: number;
   onOpenRack: () => void;
   onEstop: () => void;
-  onToggleModule: (id: string) => void;
+  onAck: () => void;
+  /** Held, not toggled. A horn is a button you lean on. */
+  onHorn: (down: boolean) => void;
+  /** The one channel a part commands through. See `control/controls.ts`. */
+  controls: (id: string) => Controls;
 } = $props();
 
 const stages = $derived(snapshot?.stages ?? []);
 
+/** Mirrored so the button can look pressed. The horn itself is the shell's. */
+let honking = $state(false);
+function press(down: boolean) {
+  if (down === honking) return;
+  honking = down;
+  onHorn(down);
+}
+
 /** The vehicle's manufacturer owns this panel. Read it off the chassis slot. */
-const chassis = $derived(stages.find((s) => s.id === "PILOT"));
+const chassis = $derived(chassisOf(stages));
 const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
 
 /**
- * The chassis's own conditions. They get no legend row of their own — a strip of
+ * The chassis's own conditions get no legend row of their own — a strip of
  * SLIP/GND/¥ lamps was the dash explaining itself in words, which is exactly
  * what a panel does not do. They feed the master, and the ones that *have* a
  * gauge light a tell beside it.
  */
-const chassisLamps = $derived<readonly Annunciation[]>(
-  chassisConditions(snapshot, estopped),
-);
-
-const overall = $derived(
-  worst([...chassisLamps.map((a) => a.condition), ...stages.map((s) => s.condition)]),
-);
+const chassisLamps = $derived<readonly Annunciation[]>(lamps);
+const overall = $derived(master);
 
 /**
  * The tells — one small lamp beside the instrument that knows why — live on
@@ -111,12 +132,11 @@ const overall = $derived(
  * `acked` is the worst condition the pilot has seen and pressed. Anything worse
  * than that is new, and new things flash. Pressing catches up to the present;
  * conditions clearing winds it back down, which re-arms the flash for next time.
- * Nothing here silences anything — a steady lamp is still a lit lamp.
+ *
+ * Nothing here silences the *lamp* — a steady lamp is still a lit lamp. What it
+ * does silence is the horn, which is the whole bargain an annunciator panel
+ * offers: you may stop the noise, you may not stop being told.
  */
-let acked = $state<Condition>(NOMINAL);
-$effect(() => {
-  if (overall < acked) acked = overall;
-});
 const unacked = $derived(overall > acked);
 
 /**
@@ -183,7 +203,7 @@ const cells = $derived(
           class="master mfg-lamp"
           data-lit={alarmLit}
           data-flash={flash}
-          onclick={() => (acked = overall)}
+          onclick={onAck}
           aria-label="alarm, acknowledge"
           aria-pressed={!unacked}
         ></button>
@@ -205,6 +225,33 @@ const cells = $derived(
       </div>
     </div>
 
+    <!-- The horn. Not in the masters group and never in it: that group is what
+         the machine has to say about itself, and this is the one control on the
+         panel aimed at somebody *outside* the cab. It is also the only control
+         here whose entire output is sound.
+
+         Held rather than toggled, because a horn is a button you lean on — so
+         it takes pointer down and up rather than a click, and the keyboard gets
+         the same behaviour rather than a shortcut that latches. -->
+    <div class="inst">
+      <button
+        class="horn"
+        class:down={honking}
+        aria-label="horn"
+        aria-pressed={honking}
+        onpointerdown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          press(true);
+        }}
+        onpointerup={() => press(false)}
+        onpointercancel={() => press(false)}
+        onkeydown={(e) => (e.key === " " || e.key === "Enter") && press(true)}
+        onkeyup={(e) => (e.key === " " || e.key === "Enter") && press(false)}
+        onblur={() => press(false)}
+      ></button>
+      <span class="mfg-legend">HORN</span>
+    </div>
+
     <!-- The fitted components, behind a seam: a gap wider than the one between
          any two of the machine's own parts, so you can see at a glance which is
          which. It used to be `margin-left: auto`, which made the seam *all* the
@@ -218,7 +265,7 @@ const cells = $derived(
           <Cell
             stage={entry.stage}
             style={styleOf(entry.stage.maker)}
-            onToggle={() => onToggleModule(entry.stage.id)}
+            controls={controls(entry.stage.id)}
           />
         {/if}
       {/each}
@@ -351,6 +398,36 @@ const cells = $derived(
   .sn {
     color: #4c4840;
     letter-spacing: 0.12em;
+  }
+
+  /* -- the horn ----------------------------------------------------------- */
+  /* A rubber dome on a steel collar. Deliberately not red and not a mushroom:
+     it must not read as an emergency control, because leaning on it is a normal
+     part of driving and hitting the stop by mistake is not. */
+  .horn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    background:
+      radial-gradient(circle at 38% 30%, #6a7276 0 12%, transparent 55%),
+      radial-gradient(circle at 50% 62%, #23282a, #14181a 70%);
+    box-shadow:
+      inset 0 -2px 3px rgba(0, 0, 0, 0.75),
+      inset 0 2px 2px rgba(255, 255, 255, 0.14),
+      0 0 0 3px var(--mfg-bezel, #0d1012),
+      0 3px 5px rgba(0, 0, 0, 0.5);
+    transition: transform 0.05s ease;
+  }
+  /* It goes *in*, and the highlight goes with it. Nothing else moves. */
+  .horn.down {
+    transform: translateY(2px) scale(0.97);
+    box-shadow:
+      inset 0 -1px 2px rgba(0, 0, 0, 0.8),
+      inset 0 3px 6px rgba(0, 0, 0, 0.5),
+      0 0 0 3px var(--mfg-bezel, #0d1012);
   }
 
   /* -- the masters -------------------------------------------------------- */

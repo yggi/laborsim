@@ -6,8 +6,10 @@ Not plans, not open questions.
 **Gate: 1000 lines.** On overflow, cut the oldest year into `docs/log/<year>.md`
 and link it from the archive list below.
 
-Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to and
-including the determinism audit.
+Archives:
+- `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first deploy.
+- `docs/log/2026-mid.md` — the cab: the pipeline rack, the damage ledger, the
+  dash and the triptych.
 
 Entry format:
 
@@ -21,7 +23,7 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ## 2026-08-25 — the cab is one rigid object
 
-Cards: closed [L-050]. Opened: [L-057]. History trimmed to its gate: [L-037]
+Cards: closed [L-050]. Opened: [L-064]. History trimmed to its gate: [L-037]
 dropped, already narrated below.
 
 The card was ready and half of it was already built — the view has recentred
@@ -82,7 +84,7 @@ the cab moved by the same amount as `--look-x`. Reintroduced the bug to watch it
 fail (META) — it named `.levers` and exited 1.
 
 Not added to `MEMORY.md` again, and now it is a card: the file is at 299 of 300
-and two durable facts are parked in the spill files waiting for room. [L-057].
+and two durable facts are parked in the spill files waiting for room. [L-064].
 
 ## 2026-08-25 — the horizon rolls with the machine
 
@@ -130,6 +132,353 @@ never a level horizon. Deliberately **not** added to `MEMORY.md` § 6: the file
 sits at 299 of its 300 lines, and a cab with no gimbal is principle 7 (*honest
 world, real machine*) applied rather than a new fact — the index entry now
 points at both cameras.
+
+## 2026-08-25 — the event channel, and the machine's voice
+
+Cards: closed [L-040]. Opened: [L-060]. Threads closed: none. Evidence added to
+[L-057] and [L-046].
+
+**The contraction came first, and it was already earned.** Three files were
+keeping their own high-water mark into `snapshot.damage` and diffing it every
+frame — the live voice, the renderer repainting a write-off, and the debrief —
+and two of them carried a private hack to notice a RESET, because the list
+getting *shorter* was the only clue a run had restarted. Audio would have been
+the fourth. `src/core/events.ts` is the discrete half of the boundary: the sim
+stamps every happening with a monotonic `seq` into a bounded ring, a consumer
+keeps one number and one reader, and the rewind rule lives in one place instead
+of being reimplemented per list and per cause.
+
+The channel is the notification and the ledger stays the record. That split is
+why the ring can be bounded: nothing consuming it wants a thump it failed to
+play thirty seconds ago, and anything that needs the whole run still reads
+`snapshot.damage`.
+
+**Two things the ledger could not say now reach it.** `assessDamage` had always
+measured the joules delivered into every prop every step and thrown the number
+away unless it crossed a pricing threshold — so hitting an already-written-off
+cone was, to everything downstream, identical to missing it. And the machine's
+own collisions had no witness at all; they do now, thresholded on a **speed**
+rather than an energy, because the track model caps its impulses at `mu·N·dt` so
+0.16 m/s per step is all the drivetrain can shed however hard you brake.
+Anything past that was the world. L-038 wants that number.
+
+**Found by turning it on:** the untouched generated site emits one impact at
+tick 109 — a marker pole falling over on its own, 1.6 J, unbilled and until now
+invisible. Nothing is wrong; that is L-057, and the channel is the first thing
+in the codebase able to see it.
+
+**Then the voices** (`src/audio/`). Five, none of them sampled: the drive note
+carrying load, the grind carrying slip, impacts scaled by joules, the hull on
+its own scale, and the horn as the audible half of the master lamp. The
+arithmetic is in `voices.ts` with no WebAudio in it, and `engine.ts` is the only
+file that knows an oscillator exists — which is what lets the graph be built on
+an `OfflineAudioContext` exactly as on a live one.
+
+**Rejected: putting the mute on the dash.** A Labor's horn has no cut-out, which
+is the entire point of a horn, so a machine with a "make me quiet" switch would
+be a machine nobody would certify. Volume is the *rig's* control and sits with
+the camera, which is the other thing that belongs to the room rather than to the
+machine. The same reasoning settled where the acknowledgement lives: it moved
+out of `DashPanel` and into the shell, because the lamp and the horn have to be
+one fact and the beacon will be the third to read it.
+
+**The bench found three defects nothing else could have.** `npm run listen`
+renders every scene through the real graph in Chromium and prints peak, loudness
+and brightness at each end of it:
+
+1. Its own first brightness measure was blind. Zero-crossing rate is a standard
+   cheap proxy for spectral centroid and it does **not move** when a filter
+   opens on a periodic waveform — a lowpassed sawtooth crosses zero twice a
+   cycle at 340 Hz and at 2600 Hz alike. It reported the entire `labouring`
+   sweep as six hertz. Replaced with the fraction of energy above 1500 Hz.
+2. The continuous voices were loud enough to sit permanently inside the limiter,
+   so a 140 kJ landing came out no louder than driving along. Halved, and the
+   limiter moved from −10 dB to −4.
+3. The strike's filter was tied to the ring pitch, which made the heaviest
+   impacts the dullest, because the heaviest things ring lowest. The ring is the
+   material and the strike is the energy; they are separate numbers now.
+
+A fourth fell out of (2): opening a sawtooth's filter can only ever move a few
+percent of its energy, so brightness alone was a cue visible in a spectrum and
+inaudible across a room. Load makes the machine **louder** as well now.
+
+**Two more found by reading the diff back adversarially**, both about lifetimes.
+The live voice was unmounted whenever the rack opened, so its reader rejoined the
+run at zero and re-voiced every line still on the channel the moment you closed
+the cabinet — a bug that predates the channel (the old high-water mark restarted
+at zero too) and was simply invisible while the whole damage list was in reach.
+It is hidden now, not destroyed: a subscription belongs to a consumer's lifetime.
+And the E-stop lights the master at ALARM *and* opens the debrief in one press,
+so the horn was blaring under somebody explaining what you had just done. The
+folder silences it. Both verified in the browser rather than in the stylesheet.
+
+---
+
+## 2026-08-25 — the horn, and a panel that clicks
+
+Cards: closed [L-063]. Threads: narrowed "does a component ship a voice?".
+
+**The machine had a horn and it was the wrong one.** What was called `horn` is
+the annunciator's **buzzer**: it sounds by itself, it is the audible half of the
+master lamp, and it stops when you acknowledge it — the machine talking *to
+you*. A truck horn is you talking to everyone else. They were sharing a name and
+a slot in the sound house, and separating them is most of the design.
+
+An air horn is a **chord**: two or three trumpets on one air line, tuned to an
+interval and blown together, which is why it is satisfying rather than merely
+loud. So a house declares a root and the ratios stacked on it — KIBA gets a
+major triad off 214 Hz, HANSA the two-tone fifth every European klaxon has used
+since the war, TOWA a moulded sounder an octave apart with no air in it at all,
+which carries about as far as a doorbell. The mechanism around the chord is the
+same on everybody's horn and lives in `voices.ts`: the trumpets are never quite
+in tune with each other, the diaphragms take a moment to speak and bend up into
+pitch, the valve chuffs before the note arrives, and the tank sags through the
+release. That last one is the *owp*.
+
+It is the only voice in the game that renders a **decision** rather than a
+simulated quantity, which is what earns it the loudest level on the machine —
+every other number in `voices.ts` leaves room for the site and this one takes
+the room. It also **ducks everything else** about 7 dB while it is down: three
+trumpets at arm's length are all you can hear.
+
+That duck arrived from a new bench scene rather than from taste.
+`everything-at-once` — rutted ground, the horn down, a pipe stack at speed and
+the master alarming, all inside a second — **clipped at 1.04 on its first run**,
+which is the scene's whole job, the limiter's justification being summed
+transients. With the duck and the horn's level set against it the worst case
+peaks 0.88 and the horn alone 0.81.
+
+**The panel is switchgear now.** Two events, because a real control is two: a
+**click** for the button bottoming out and a **clunk** for the contactor behind
+it letting go, a fraction later and much lower. The gap between them is the
+difference between a panel and a website, and it is the only way to hear that a
+switch did *not* do anything. KIBA is sprung steel with a fist-sized contactor
+behind it; TOWA is a membrane over a dome switch with a solid-state relay that
+makes no noise at all, which is either refinement or a machine that will not
+tell you what it did.
+
+The part worth keeping is **where it comes from**. Almost every switch on the
+machine is already on the recording — flipping a component off changes its slot
+on the snapshot — so the engine notices the change itself and plays it, exactly
+as the scene notices that a prop moved. Nothing was added to the event channel
+and nothing in the cockpit tells the ear it was pressed, and because it is on
+the recording **a replay clicks too**. Only cab furniture the machine does not
+record needs a direct channel: the cabinet latch, the acknowledgement, an
+instrument clamping home on its arm. The shell already owned every one of those
+callbacks, so `Audio.panel` was the whole of the plumbing.
+
+The camera and the volume stay **silent**, and that is a decision rather than an
+omission: they are the training rig's furniture, and the rig does not reach into
+the cab and make noises.
+
+**The panel was inaudible when it was finished, and the bench said so.** The
+`switchgear` scene measured *identical* to a scene with the panel's gain set to
+zero — five switch events firing correctly at the right moments, and not one of
+them loud enough to matter. Fourth time the same lesson has been paid for here:
+a click is a few milliseconds of filtered noise and almost all of it is thrown
+away by the filter that shapes it. At three times the level it peaks 0.33 where
+the same scene without the panel peaks 0.16.
+
+Two things that came out of chasing it:
+
+- **The null test is the check.** Setting the new voice's gain to zero and
+  re-rendering is what turned "it sounds fine to me" into a number. It took
+  about a minute and it was the only thing that would have caught this.
+- **RMS over a fifth of a scene cannot see a transient.** Four clicks move it by
+  a thousandth. For a scene about transients the honest column is the
+  whole-scene peak, and the file is there to be played.
+
+`Audio.render` takes a `CabState` — the acknowledgement and the horn — rather
+than a bare condition. Both are things the *hands* did and neither is on the
+recording: nothing on the site can hear a horn, because nothing on the site can
+hear. When a citizen can, the horn becomes a sim input and joins the recording
+where the levers are.
+
+192 tests, seventeen bench scenes, nothing clipping, and the cell toggles, the
+latch, the acknowledgement and the stop all checked in the browser with a live
+context.
+
+## 2026-08-25 — the machine gets a maker's voice, and three more of its own
+
+Cards: closed [L-061]. Opened: [L-062]. Threads: opened "does a component ship a
+voice?", closed "pods on arms" (it had crystallized into `components.md` and
+L-050 and was being kept in three places).
+
+**Sound got an owner.** A manufacturer was already three things — how its kit
+looks, what words it uses, what it says to you — and it is four now. The
+machine's drivetrain, running gear, loose fittings and horn are voiced by the
+house of whoever built the **chassis**, read off the chassis slot on the
+recording exactly as the dash reads its panel colours, so a replay sounds like
+the machine it recorded. Nothing in `src/audio/` names a manufacturer.
+
+The other two owners were written down because they are the ones that get got
+wrong later: a **component** is voiced by its own maker rather than by the
+chassis, and the **site** is voiced by materials and belongs to nobody. A pipe
+stack is steel whoever stacked it.
+
+**The house moved out of the cockpit** to `src/makers/`. `cockpit/` holds what
+the manufacturers made; a house is who they are, and it now has two readers. One
+house per maker rather than one table per surface — three places to edit a
+manufacturer into existence is three places for it to drift, and it is also what
+L-049 hands a blind author: one object is one manufacturer.
+
+**A house may set timbre and rate; it may not set level**, and it may not decide
+what a quantity means. That is the rack-unit rule in another medium — a maker
+cannot make its plate taller to get more attention, so it cannot make its machine
+louder either.
+
+All three houses are complete, including HANSA, which does not build chassis. The
+bench renders a TOWA chassis that does not exist, and the result was better than
+the argument for it: TOWA's drive is electric, so against the same load ramp KIBA
+hardens 17% → 23% brightness while TOWA sits flat at 12% → 11%. **A TOWA machine
+hides its own labour from you.** Refinement as a trade rather than an upgrade,
+and it fell out of characterising an electric drive honestly rather than being
+designed in.
+
+**Depth, and four voices.** The drone got a detuned twin and a firing pulse; the
+machine got a **chain** (one knock per track plate at `commanded / GROUSER_PITCH`
+— the rate the renderer already turns the belt at, so you hear what you see and
+a racing belt under a stationary machine makes slip audible), a **squeak** (a
+dry bearing under load at a crawl), and a **rattle** (the cab, answering to the
+hull rather than to the drivetrain — the only voice that renders the *ground*).
+Impacts stopped being identical: the wobble is drawn from `seq`, so a line of
+cones is eight different cones and a replay still hits them the same way twice.
+
+**Everything above was measured into place, and nearly everything was wrong
+first.** The bench earned its keep four times over:
+
+- The twin at full level doubled every driving peak at unchanged RMS. Halving it
+  matched the peaks and *halved* every RMS — two detuned oscillators are briefly
+  in phase and spend the rest of the beat cancelling, so they add in power and
+  not in amplitude. Same shape of bug in the pulse: a square-cut note is quieter
+  than a held one by `hypot(1−d, d)`, and `idle` fell 0.037 → 0.016 RMS at an
+  unchanged peak until that was divided back out.
+- The squeak and the rattle were both written at "sensible" levels and were both
+  inaudible, for the third time in this file's history: **a filtered voice's
+  level is not what you hear, its bandwidth is.** The strike was a bandpass once
+  and made a 140 kJ landing quieter than a cone. They are set nine and ten times
+  the drive note's level and are *not* nine times as loud.
+- The rattle keyed off the accelerometer reading, and no function of a reading
+  can tell "standing still" from "in free fall" — they read 1 g and 0 g, and
+  both are silent. What shakes a toolbox is the floor changing under it, so the
+  sim publishes **jerk** as well, differenced at the fixed step. A machine
+  flying off a bank is now quiet, and arrives loudly.
+- The `rough-ground` scene measured identically to smooth ground twice: first
+  built out of sines, which is a wobble and not a ride; then out of sharp spikes
+  in continuous time, which the 60 Hz bench sampled straight past. The sim is
+  itself a 60 Hz signal, and a probe over the real site says what it looks like —
+  median jerk 4 m/s³ at full ahead, ninetieth percentile 416, tail to 5000 —
+  so the scene now draws one reading per frame from a curve fitted to that.
+
+`MachineState` gained an accelerometer (`shake`: surge, heave, sway, and the
+jerk between two readings). Nothing shows it, and it is a real measurement a
+G-meter could read tomorrow, which is the test of whether a quantity was
+published honestly. `GROUSERS`/`GROUSER_PITCH` and gravity moved into
+`core/spec.ts`, where the picture, the physics and the sound read one number.
+
+Rejected: a **suspension** voice, which is what "clanking suspension" would
+literally want. Suspension travel is not simulated, and a voice with nothing
+behind it is a sound effect wearing a simulation's clothes. The nearest honest
+quantity is a track's `contacts` rising and falling, and the reason that was not
+used instead is that no scene can vary it over time yet — so it would have
+shipped unheard. Carded as L-062.
+
+The architecture test caught `Math.hypot` in the jerk calculation: it is not
+required to be correctly rounded and the value crosses to a renderer a replay
+has to reproduce. Rewritten with `sqrt`, which is.
+
+183 tests (169 before), thirteen bench scenes, nothing clipping, and six seconds
+of real driving in the browser with the live context and no errors.
+
+## 2026-08-25 — the pod joins the registry, and the seam moves
+
+Cards: closed [L-059]. Opened: [L-057], [L-058]. Threads closed: "props seem to
+float".
+
+**The triptych was two-thirds built.** `parts.ts` registered a component's plate
+and its cell; the pod — the instrument on the glass, the part that costs you view
+— was hand-wired into `App.svelte` as a branch per component, a named position
+variable per component, a title spelled out as a string, and a live `Autonav`
+reference held so the route scope could call `setTarget`. Fitting a component
+with an instrument therefore meant editing the application shell, which is the
+exact defect the registry was built to kill. L-049 has been sitting in `ready`
+asking three blind authors for a maker's plate, cell **and pod**, with nowhere
+for the third one to go.
+
+**One packet per component, not one table per part.** Cells, faces, rack units
+and fuse ratings each had their own `Record` keyed by the same id. They are one
+`Packet` now: what you unpack when you buy the kit, what an author is asked to
+produce, and the single place a component is registered. Unregistered kit still
+gets the base-case cell and now explicitly *no* pod — a dash missing a component
+is lying, but the registry may not invent an instrument on a maker's behalf.
+
+**One contract for all three postures.** Every part is handed the slot it is
+drawn from and the style it is drawn in. Both pods were doing that work
+themselves — `stages.find(s => s.id === "NAV")` and a hardcoded
+`styleOf("TOWA DENKI")` — so neither could be drawn for anything but itself, and
+no maker could re-skin its own instrument. Greps now fail if a part asks for
+either.
+
+**Commands cross back through one channel.** `Controls` is `toggle` and
+`setParam`, handed to a part exactly as its stage is, and inert for a component
+that is not in the live rack — which is what a replay gets. NAV-1's target was
+the last control reachable only by holding the module, so it became what it
+always was: a bounded number with a name and a unit. `setTarget` is gone. The
+visible cost is a TARGET slider on NAV-1's faceplate, and that is the honest
+consequence — the scope is a faster way to do what the plate does, not a second
+wire into the module.
+
+Rejected on the way: giving `FaceProps` a `controls` for symmetry. A face has
+nothing to command — settings are the slot's business — and a container before
+its contents is furniture (META).
+
+**The seam moved.** `MEMORY.md` § 11 claimed `cockpit/` held the instruments and
+`ui/` the shell; in fact every instrument lived in `ui/` while its own
+primitives sat in `cockpit/`. The line is now **the machine against the rig**:
+manufacturers' work in `cockpit/`, the training system's work — debrief, live
+voice, debug telemetry, shell — in `ui/`. Eight files moved; three stayed, now
+for a reason.
+
+That exposed two scanners scoped by accident, which is the `META.md` lesson
+about the `:global` ban landing where nothing was watching. Both style bans now
+scan all of `src/`; the `--mfg-` rule became **two namespaces and no more**
+(`--mfg-` a maker's token, `--cab-` the machine's own structure), because Svelte
+scopes classes and not custom properties. And the half that bites: every
+property something *reads* must be defined, unless it is a `--mfg-` offer with a
+fallback — renaming `--dash-h` had already left a stale `var(--dash-h, 128px)`
+in the toasts, which reads as working.
+
+Bookkeeping, all of it forced rather than chosen: `MEMORY.md` hit 309 and lost
+its § 9 Rapier paragraph to `docs/design/stack.md`, where the same text already
+was, and its coding conventions to a new `docs/design/conventions.md` — each one
+now carries the bug that earned it, which the four-bullet version had lost.
+`META.md` hit 152, so *look at the numbers* and *ask what ran before your first
+observation* merged into **suspect the probe before the system** — they are the
+same lesson and the second one is the harder instance — and *one fact, one
+place* left for `conventions.md`, where both its incidents live. `LOG.md` hit
+1055 and the cab's fortnight went to `docs/log/2026-mid.md`.
+
+**Measured the "props float" thread instead of arguing about it.** The rest gap
+under a settled prop is **1 mm at the median** (n=102, lowest oriented corner
+against the terrain sample beneath it), so the float is not a gap and never was:
+what is left is the ground seam, which is rendering, and is now L-058.
+
+The probe found something much worse on the way, and three wrong turns getting
+there. First reading said poles were being *launched* — flipped over and moved
+40 cm in a single step — which is impossible, and was: `createWorld` runs 120
+settle steps before anything is observable, so "after one step" was never the
+spawn state. Second, the obvious cause — furniture placed by sampling the ground
+under its *centre*, so a 2.4 m barrier on a 15° bank is born 32 cm inside the
+hill — was fixed, measured, and **made it worse**: standing a box on the highest
+point of its own footprint drops it onto one corner, and cones toppled 10 → 23.
+Reverted. What is actually happening is the boring answer: everything stands for
+ten steps and then falls over, because a 3 m pole with a 0.16 m base cannot
+stand on 20° noise. **Seventeen of eighteen marker poles, sixteen of
+twenty-two barriers and ten of forty-five cones are lying flat before the
+exercise begins**, inside the settle window where nobody could see them. Carded
+as L-057; the fix is footing in the site generator, not a number in the sim, and
+the comment in `world.ts` that called this "a small settling twitch" now says
+what it really is.
 
 ## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
 
@@ -329,6 +678,21 @@ number read the other way up, it falls toward zero as you get into trouble, and
 "no ground" becomes zero margin rather than zero use — the overload disappears
 by construction. A bigger change to the face than to the sim. Carded as part of
 [L-055].
+
+## Cards pushed out of `BOARD.md` history
+
+The board keeps ten; older closed cards land here, in date order.
+
+### [L-036] TILT-GUARD — the first safety component — **closed** (2026-08-24)
+Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
+Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
+signal's range and turn the machine around — a safety module causing the crash
+it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
+sines come straight out of the quaternion and stay bit-portable. Ships enabled
+and deliberately timid (25°/18° against a 43.5° climb limit), so the first
+lesson is that your own machine is what stopped you.
+
+---
 
 ## 2026-08-24 — the panel stops talking
 
@@ -599,378 +963,3 @@ in one second, because the `github-pages` environment only accepts the default
 branch. Nothing pushed here has been publishable, which is why the live site is
 still this morning's. Needs one settings change or a merge; recorded so the next
 session does not re-diagnose it.
-
-## 2026-08-24 — the triptych: plate, cell, pod
-
-Cards: [L-048] closed. Opened [L-049] [L-050] [L-051].
-
-A component is now one thing seen from three postures — a **plate** in the rack
-(hands), a **cell** on the dash (periphery), a **pod** on the glass (eyes) — and
-only the plate is mandatory. Its manufacturer decides the rest; the player never
-moves a part between surfaces, which is what keeps the panel budget honest.
-
-The idea that made it a mechanic rather than a layout system was **three
-currencies**: a chassis component costs nothing and brings the cockpit, a
-capability component costs *glass*, and a safety component costs *capability* —
-it strands you on an incline instead of blocking your view. So TILT-GUARD
-shipping no pod is not a discount, it is a different bill.
-
-Started by spilling, because MEMORY was at exactly 300 and NOTES at exactly 100
-— both at their gates, so anything this round crystallized would have overflowed.
-The diegetic frame went to `docs/design/training-frame.md`, which also settled
-something that had been implicit: the frame covers the world and the rig and
-never the cab, and **L.A.B.O.R. certifies and bills while a manufacturer sells
-and warns**. That split turned out to be load-bearing an hour later.
-
-The refactor that pays regardless of the theming: **severity crosses the
-snapshot boundary as a number** (0..3). `DashPanel` had been reaching into
-TILT-GUARD's private readout to light a lamp, which meant every new component
-was an edit to the dash. Now MASTER WARNING and MASTER ALARM derive over the
-whole machine and nothing is wired to a named module. A number rather than a
-word specifically so the *word* stays a theme decision — HANSA says `STÖRUNG`
-where KIBA says `STOP`, and a theme decision has no business in sim state.
-
-`src/cockpit/` finally exists, which the repo map reserved on day one. It holds
-the registry, the makers and the annunciator; modules still declare only what
-they publish, so rule 1 never came under pressure.
-
-**The dash became the seam.** It no longer fades when the rack opens — it
-travels, bottom of the view to top of it, because that is where it physically
-sits between the windscreen and the cabinet. Dash and rack are one deck now.
-Falling out of that: the levers go with the glass, since looking down puts your
-hands in the cabinet. The bus keeps carrying what they last held.
-
-ATT-0 moved from the glass onto the panel, replacing the incline bubble.
-This overruled `cockpit.md`, and the consequence beat the motivation: **the bare
-cage now has completely clear glass**, so the first component you fit is the
-first view you lose. L-025 has a zero to price against for the first time.
-
-Rejected, with reasons:
-
-- **A budget for the indicator row.** Proposed rack-unit-style cells competing
-  for dash space. Cut on the grounds that fighting for space on three fronts
-  (glass, rack, dash) is one front too many. Cells just work, float left, wrap.
-  Better call than mine.
-- **Making a bypassed guard quiet.** A disabled safety module stands at WARN
-  until it goes back in, rather than reporting nominal. Four lines in `runRack`
-  that make the pop-the-hood bargain structural instead of remembered.
-- **Naming a component's condition in words on the alarm strip.** There is no
-  honest word: TILT-GUARD taking the drivetrain to zero is not a *fault*, the
-  module is working exactly as designed. The strip carries the component's name
-  and the colour carries the severity.
-- **The ignition key.** `aria-hidden` decoration duplicating the ident, on a
-  panel where everything else reads a real simulated quantity. The hour meter
-  does its job and reads `simSeconds`.
-
-Slip finally got a face — centre-zero, per track, because the sign is the
-diagnosis and the difference between the sides is the thing. It is rung 1's
-teaching quantity and it had been living on the debug line and one lamp.
-
-**The sandbox is the other half of the round.** `sandbox.html` renders every
-component in every state at phone width from hand-built snapshots, with no
-Rapier and no renderer, and `npm run shots` screenshots it and fails on a page
-error. It earned its cost within the hour: the dash was authored blind, looked
-right in code, and the first screenshot showed the whole instrument cluster
-scrolled off at 390px leaving nothing but a speedometer. Two more bugs came out
-of the same loop — the strip naming a bypassed HANSA guard in KIBA's word, and
-a fixture that exercised no GND condition.
-
-Three tests were bite-checked by reintroducing the bugs and watching them fail,
-per the method rule. Conformance for the coming themes is by **accessible name**
-rather than CSS review, plus greps for `:global` and for unprefixed custom
-properties — the `.bar` collision cost a faceplate once, and independent authors
-make that likelier rather than less.
-
-Pods-on-arms was designed and then deliberately **split off** rather than built:
-it needs look angle in the DOM without Svelte reactivity, placement moved from
-screen space into cage space, and the recentring QoL, which is three decisions
-wearing one hat.
-
-The experiment itself is **pre-registered** in `docs/design/theming.md` — the
-conditions under which the blind-author round counts as a failure are written
-down before it runs, so `META.md` gets whichever entry it earns.
-
-## 2026-08-24 — the dash, the voice, the debrief, and a world
-
-Cards: [L-043] [L-044] [L-029] [L-008] closed · LORE.md written
-
-Four UI pieces the user asked to see, plus world-building.
-
-**L-043 — the industrial dash.** The rack's closed face is now a live control
-panel styled on a Caterpillar generator dash (the reference the user sent):
-yellow sheet steel, hazard trim, white-bezel needle gauges built from a new
-reusable `Gauge.svelte`, an incline bubble, annunciator lamps, a master alarm,
-an ignition key, and a red E-STOP. The layout lesson: at 412 px the full panel
-is wider than the glass, so the **critical controls are pinned to a fixed right
-column** (E-STOP, rack latch) while the instrument strip scrolls — a real
-industrial pattern, and it means OPEN RACK is never off-screen.
-
-**L-044 — the live voice.** Damage lines arrive as stacking toasts that fade;
-citizens latch. Replaces the always-on ledger corner. Survives a reset by
-watching the damage list shrink.
-
-**L-029 — the debrief + RESET.** Itemised scrollable modal in the L.A.B.O.R.
-register with a closing verdict ("you also accomplished nothing"). RESET rebuilds
-the world by **re-keying the sim `$effect`** on a `runId` — the cleanest reset
-available — and resets the rack *in place* so the pushed modules do not
-duplicate. Verified the canvas is reused for the new renderer without a black
-frame.
-
-**L-008 — draggable instruments.** Titlebar drag, with the cockpit's rules
-enforced: wholly on the glass, never overlapping, snap back otherwise. All three
-verified in the browser. One good bug: the first drag test failed silently
-because the instruments' default positions sat *under* the camera control (z
-above them), which ate the pointerdown. Moving the defaults clear fixed it — and
-it is a preview of what the panel budget (L-025) will formalise.
-
-**LORE.md** — the world: the L.A.B.O.R. certification board (the ledger's
-voice), and the three manufacturers as *temperaments that predict how their kit
-fails* — KIBA (stubborn, manual, unkillable, no opinions), TOWA (clever sensors
-a Phantom Labor can lie to), HANSA (safety gear that is right and insufferable).
-The canon rule: a component without a failure mode that belongs to its maker is
-not finished.
-
-## 2026-08-24 — feel fixes, and a face for the cockpit
-
-Cards: [L-043] [L-046] [L-047] [L-044] opened · [L-029] [L-038] reshaped ·
-CLAUDE principle 7 added
-
-**Playtest feedback, acted on.** From a session where a twelve-year-old found
-the fun immediately (drive at the construction material) and then flipped the
-machine by bypassing TILT-GUARD:
-
-- *Flipped machine skated on ice.* The hull collider was friction 0 — right for
-  upright driving, where the track model owns all horizontal force, but it left
-  a wreck nothing to stop it. Gave the hull real friction with a Max combine
-  rule; it is inert during normal driving (0.42 m belly clearance) and bites
-  only on its back or bellied. A wreck shoved at 5 m/s now stops in a few
-  seconds. Verified in Node.
-- *The grouser belt ran backwards.* Its ground-contact run travelled forward
-  under a machine driving forward, disagreeing with its own sprockets. A track's
-  bottom plates move rearward. One-line sign flip; the wheels were the correct
-  reference.
-- *Grousers oversized*, count thinned, for legibility and a chunkier read.
-
-**The modules got physical.** Raised plates with lit top edges and drop shadows,
-glossy embossed keys and LEDs, and a feTurbulence film-grain overlay at
-soft-light — generated, not sampled. This is the first application of a new
-principle.
-
-**CLAUDE principle 7 — "honest world, real machine."** The world may look like a
-simulation (contour lines, a plotted route) because in the fiction it *is* one;
-the machine and cockpit may not. Spend fidelity asymmetrically. This is the
-user's "core idea," and it decides design arguments, so it earned a place in the
-contract rather than a doc.
-
-**Crystallized from a design dump** (`docs/design/cockpit.md`, `damage.md`):
-
-- The rack cover becomes **the machine's status panel** — a live strip (fuel,
-  oil, engine key, MASTER-ALARM) with a latch that opens the rack. It is where
-  the live voice will stack. Themeable per chassis, giving the cockpit identity
-  (L-043).
-- The ledger has **two faces**: live stacking notifications (L-044) and an
-  end-of-run scrollable modal with RESET SIMULATOR (L-029), which is also the
-  game's first screen.
-- **Reset is always manual**, triggered by wreck / unrecoverable-flip /
-  citizen-harm (deferred to NPCs who dodge) / operator (L-038).
-- The **lemon**: symptoms (smoke, oil, warning lights, rough note) ship as
-  feedback before the expensive drive-degradation physics.
-
-Still open: props seem to **float** — not diagnosed, measure the rest gap first.
-
-## 2026-08-24 — the world can be broken
-
-Cards: [L-031] closed · [L-041] opened · [L-039] [L-029] reshaped
-
-**Damage is measured in joules absorbed**, not in hit points. That is the load-
-bearing decision and it comes straight from the inspectability pillar: energy is
-a quantity the machine already has and can be shown. "The cone took 15 J and it
-is rated for 5" is a diagnosis; "the cone lost 40 HP" is a number we made up.
-
-Every breakable is now a **dynamic body**, so hitting things scatters them —
-the visceral half, and it cost one word (`dynamic()` instead of `fixed()`) plus
-`CoefficientCombineRule.Max` so props get friction against ground the track
-model deliberately left frictionless. Lines carry price, energy, speed, **and
-what was driving and what was bypassed**.
-
-**Rejected: Rapier's contact-force events.** They exist and were probed. A
-solver force magnitude is not a quantity the player can be shown, and it cannot
-explain a prop hit by another prop. Energy can do both.
-
-**Three bugs, all worth writing down.**
-
-- *The site billed itself ¥55,690 before the machine had moved.* Dynamic props
-  spawned overlapping and shoved each other apart hard enough to self-destruct.
-  Fixed with spawn separation and a settling phase at construction.
-- *Then it billed itself ¥9,540.* Anything already sliding integrates the energy
-  gravity feeds it until it writes itself off. Fixed by requiring a body to have
-  been **at rest** to be hit. The cost, stated in the code: a prop hit again
-  while still moving is not billed for the second hit, so the ledger
-  under-counts — the right way round for something accusing the player.
-- *A cone rated at 22 J was indestructible.* A heavy machine cannot put more
-  than ½·m·v² into a light object, and 6 kg at 2.2 m/s is 15 J. Every toughness
-  is now a fraction of what the drivetrain can actually deliver into that mass.
-
-**The nastiest one was a green test.** The first "drives into a cone" test
-passed, and failed when the damage code was disabled — both signals green. It
-had never hit anything: `world.step()` re-runs the rack and overwrote the test's
-`drive` with an empty rack's HALT, and what it detected was the spawn bug. Now
-in META as *a test can pass by measuring the bug*.
-
-**Panel rendering, discussed and settled** — `docs/design/instrument-rendering.md`.
-Stay in the DOM: tokens for structure, inline SVG for character. Rejected a UI
-library (adds weight, makes industrial kit look like a web app), canvas
-textures and 3D geometry (hit-testing becomes ours, and mobile frame time is
-still unmeasured), and `CSS3DRenderer` — it can anchor real DOM to a three.js
-camera, but there is no shared depth buffer, so DOM cannot be occluded by WebGL.
-For a cockpit whose subject *is* occlusion, that is the wrong tool. Rendering
-DOM into a WebGL texture is not possible at all; do not go looking.
-
-Also: maker marks and silkscreen ratings per manufacturer, and an
-**undercarriage** — the 0.42 m belly clearance is real, and with nothing drawn
-in it the tracks read as detached, which is exactly how the first roll-over
-screenshot looked.
-
-## 2026-08-23 — TILT-GUARD, and the rack becomes equipment
-
-Cards: [L-036] [L-037] closed · [L-039] [L-038] [L-040] opened · [L-035]
-demoted · [L-008] [L-015] reworded
-
-**v0's build surface is the rack — confirmed**, and with it the shape of edit
-mode: **inline, in the cab, while it runs.** Instruments moved around the glass;
-modules swapped, reordered and reconfigured in the rack. No separate build
-screen in v0. The NOTES thread closed into `MEMORY.md` § 3.
-
-**TILT-GUARD** — the first safety component, and the second honestly stupid one.
-Caps drive on hull pitch and roll; limits are two sliders on its faceplate.
-
-- Verb **AMP**, and the reasoning is the interesting part. `CAP` clamps a
-  positive intent into the arriving signal's *magnitude*, so a reversing machine
-  would come out going forward — the safety module causing the crash it exists
-  to prevent. `AMP` scales what arrived and keeps the sign. Both directions are
-  under test, and reverting the verb makes the test fail.
-- Attitude comes out of the quaternion as **sines**, not through `asin` — pure
-  arithmetic, so rule 2 holds without an exemption. The one exemption is the
-  degrees→sine conversion of the slider value, quantized to 1e-6 exactly as
-  `makeRampTerrain` does.
-- It ships **enabled** and deliberately timid: 25° pitch against a 43.5° climb
-  limit. Discovering that the thing which stopped you halfway up a hill is your
-  own machine being careful — and then finding its LED — is the best first
-  lesson rung 1 has.
-
-**Module settings** are now a thing modules can have: bounded numbers with
-units, on the faceplate. Explicitly *not* gains — the parameter model cannot
-express one, which is the gain-tuning trap (NOTES) being closed off by
-construction rather than by discipline.
-
-**The rack is a server rack**, not a DIN rail: ears, screws, and a house style
-per manufacturer — KIBA WORKS (chassis yellow), TOWA DENKI (navigation, centred)
-and HANSA REGELTECHNIK (safety, orange, boxed). Cosmetic, and it does real work:
-you find the orange plate, not the third row down.
-
-Also: **ATT-0**, a combined compass/attitude head, the one instrument the bare
-chassis ships. TILT-GUARD's two banded gauges, whose red/amber/green *are* its
-limits rather than a mood. The rack toggle became a **control-panel cover** at
-the seam it opens. The camera became an **item in the instrument column** rather
-than chrome. Tracks are belts wrapped round their wheels instead of boxes — the
-collider stays a box, deliberately, and the mismatch is documented where it is.
-Terrain is steeper.
-
-**One bug worth the entry.** The PILOT faceplate rendered 7 px tall with lint,
-types and 71 tests green. Two rounds of re-reading the stylesheet found nothing;
-one `getComputedStyle` dump found it instantly — the KIBA layout class was named
-`bar` and collided with the meter's `.bar` in the same scoped stylesheet. In
-META as *ask the browser what it computed*.
-
-## 2026-08-23 — META.md, and a fresh look at the critical path
-
-Cards: none closed · board reordered · [L-031] [L-032] [L-033] [L-034] [L-035]
-opened · [L-019] split and demoted · [L-006] [L-021] demoted
-
-**`META.md` — a fifth surface.** Method lessons, each tied to the incident that
-earned it, in four sections (diagnosis, verification, design, bookkeeping). Gate
-150. The rule that keeps it honest: an entry that loses its incident has
-probably stopped being true, because an abstract rule nobody paid for is advice.
-Registered in `CLAUDE.md`'s read and write order. Two stale lines in `CLAUDE.md`
-went with it — the "four surfaces" count, and "no stack is committed yet", which
-had been false since L-013.
-
-**The critical-path review** — `docs/design/roadmap.md`. Four findings drove the
-reordering:
-
-- *Nothing has consequences.* The damage ledger is named in `MEMORY.md` § 3.1 as
-  the core feedback mechanism and does not exist in any form. Everything else is
-  tuning a loop with a missing beat.
-- *The acceptance scenario is already half-built.* Levers and NAV-1 under `CAP`
-  **are** two components fighting over one actuator. So L-018 is not "build the
-  scenario", it is "make it legible" — a smaller, better-defined card.
-- *The ten-minute clause is an onboarding requirement* that no card owned. Now
-  L-033.
-- *L-019 bundled two different things.* Same-engine record/playback is cheap and
-  needed now; cross-browser bit-determinism is expensive, unverifiable in this
-  sandbox (Chromium only, and Node is V8 too), and needed only by missions. Split
-  into L-032 (ready) and L-019 (backlog).
-
-**Rejected: build mode as part assembly in v0.** It drags four non-small cards
-in before the loop closes once. The rack is already a build surface — order,
-verb, enable — so "back to build with a reason" can mean *move NAV-1 below the
-levers*. Recorded as a NOTES thread rather than as MEMORY, because it is a
-recommendation awaiting confirmation, and it is the call that decides whether v0
-finishes. L-006 and L-021 went to backlog behind it.
-
-Also opened L-034: mobile-first is a hard pillar and no frame has ever been
-timed on a phone, with ink shells doubling every mesh. Folded the two overlapping
-NOTES budget threads into one, since bytes, frames and world size are one
-question.
-
-## 2026-08-23 — the dark area was the contour code
-
-Cards: none closed · [L-025] narrowed
-
-**Found it, on the fourth attempt.** The dark slab across the site was the
-contour shader, and the tell was one I should have used first: it appeared
-exactly when `terrainMaterial` landed, and survived every lighting change.
-
-The mechanism is worth writing down. Contours are drawn where the distance to
-the nearest contour multiple, divided by that value's screen-space derivative,
-is under about a pixel. On **perfectly flat ground both terms vanish**: the
-derivative goes to zero *and* the distance goes to zero, if the ground happens
-to sit exactly on a multiple. The graded starting pad is at exactly 0 m, which
-is a multiple of both the 1 m and 5 m spacings — so the entire pad passed the
-line test at once and rendered as one enormous contour line, darkened twice.
-
-Fixed by gating contours on relief, which is also cartographically right: flat
-ground has no contours. Three earlier diagnoses — shadow frustum, hill shading,
-ramp darkness — were all wrong, and each was disproved by an experiment I
-should have run before proposing the next hypothesis. The isolating test
-(`receiveShadow = false`) took one build and settled the shadow question
-permanently; I ran it third instead of first.
-
-**Track grousers** now travel at commanded speed on both runs of the belt, so
-slip is something you *see* — plates racing under a machine that is not moving —
-rather than a number you read. Left and right run independently.
-
-**The rack became a posture rather than a panel.** Looking down slides the
-viewport up until only a strip of windscreen remains, and the rack fills the
-rest. You have dropped your eyes from the glass to the cabinet between your
-knees, the machine keeps running, and reconfiguring on the move costs exactly
-what it should. That makes hot-patching (L-026) a posture rather than a menu.
-
-**Strength meters** on every module slot and both actuator terminals, filled by
-fraction of drivetrain capacity and coloured for direction. The numbers are
-demoted to debug telemetry: a number is something you read, a bar is something
-you notice, and that difference matters when your attention is on the ground.
-
-**NAV-1 ships a route scope**, the machine's first mandatory instrument, and it
-already occludes the windscreen — the panel budget biting for the first time.
-Deliberately not a map: no terrain, no obstacles, just the route and where you
-are on it, nose-up. It shows exactly what the module knows, because an
-instrument that drew the ground would be lying about the component behind it,
-and the player would blame the autopilot for something the *panel* implied it
-could see. Pins are selectable, which is the pilot's one lever on the autopilot
-short of switching it off.
-
-To wire that without breaking rule 3, modules gained a `readout()` of plain
-numbers that travels inside their stage. Instruments read it from the snapshot
-rather than holding a live module, so the boundary holds and the same
-instrument code will drive a replay.

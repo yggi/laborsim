@@ -29,15 +29,6 @@ Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
 1 over the rack as the build surface. The verdict, its voice and the dash are
 built; what remains is more to break, replay, and the path to the conflict.
 
-### [L-040] The machine symphony — synthesised sound
-- **what:** engine-generated audio from the quantities the sim already
-  publishes — track speed, slip, contacts, impact energy — plus the alarms, which
-  now exist and are mute. Never sampled: a clip is a black box triggered by an
-  event, a synth voice is another rendering of a simulated quantity.
-- **done-when:** a machine labouring at 90% grip sounds like it, an impact's
-  voice follows how hard it was, and an unacknowledged master alarm is audible.
-- **needs:** L-031
-
 ### [L-049] Themes, authored independently — the agentic round
 - **what:** one author per manufacturer, each given only its own `LORE.md`
   entry, `components.md`, `theming.md` and the KIBA reference — blind to the
@@ -104,6 +95,53 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
+### [L-062] The running gear has no suspension
+- **what:** the chain clanks and the cab rattles, and between them is a knock
+  nothing renders: the bogies taking a rut. It was refused rather than invented,
+  because suspension travel is not simulated and a voice with no quantity behind
+  it is a sound effect wearing a simulation's clothes. The nearest honest
+  quantity already exists — a track's `contacts` rising and falling as its six
+  samples find and lose ground — and the reason it was not used is that no bench
+  scene can vary it over time yet, so it would ship unheard.
+- **done-when:** riding over a rut knocks on the side that took it, from a
+  quantity the sim publishes, with a scene that shows it.
+
+### [L-057] The site stands up
+- **what:** most of the furniture falls over on its own. Measured on the default
+  seed, inside `createWorld`'s 120 settle steps where nothing can see it:
+  everything is upright for ten steps, and by step 120 seventeen of eighteen
+  marker poles, sixteen of twenty-two barriers and ten of forty-five cones are
+  flat. Nothing is wrong with the physics — a 3 m pole with a 0.16 m base cannot
+  stand on 20° noise. The fix is **footing**: grade the ground under a work area,
+  or place kit only where it can stand, or give the tall things a base. Rejected
+  already: placing a box on the highest point of its own footprint, which drops
+  it onto one corner and toppled 13 more cones.
+  Now audible as well as measurable: the event channel reports one impact at
+  tick 109 on the default seed, which is a pole hitting the ground. It is 1.6 J
+  and comes out as a tick rather than a bang, so nothing needs muting — but the
+  site making a noise before the operator has touched anything is the clearest
+  possible statement of the problem.
+- **done-when:** an untouched site is still standing when the exercise begins,
+  and the first line in the ledger came from the machine, and an untouched site
+  is silent.
+- **needs:** NOTES thread "the site is hard to crash into on purpose"
+
+### [L-060] Impacts you can hear the side of
+- **what:** an impact's voice is centred. It knows where it happened — the event
+  carries a world position — and hearing that you clipped something on your left
+  is a real cue on a machine you steer with two independent tracks. Wants the
+  hull pose, a body-frame transform, and a decision about what "left" means when
+  the camera is behind the machine rather than in it.
+- **done-when:** clipping a cone on one side is audibly on that side, in the cab,
+  and the chase camera does not lie about which side it was.
+
+### [L-058] The ground seam
+- **what:** props read as hovering, and it is not a gap: the rest gap under a
+  settled prop is **1 mm at the median** (n=102). So this is rendering — a
+  contact shadow, or the toon material flattening the seam where a box meets the
+  ground, or both. Measure the drawn seam, not the physics.
+- **done-when:** a prop at a phone's size reads as sitting on the ground.
+
 ### [L-056] The glass in landscape — cage, viewport and perspective
 - **what:** the panel reflows in both orientations now; the cab around it does
   not. The deck's travel is in `dvh` and the rack takes 74 of them, which is a
@@ -116,8 +154,8 @@ built; what remains is more to break, replay, and the path to the conflict.
   same instruments, no clipped cage and no geometry that only works at one
   aspect ratio.
 
-### [L-057] MEMORY.md is one line from its gate — spill a section
-- **what:** 299 of 300 lines, and two durable facts are now parked in spill files
+### [L-064] MEMORY.md is one line from its gate — spill a section
+- **what:** 299 of 300 lines, and durable facts are now parked in spill files
   because there is no room for their index-level statement (the cab has no
   gimbal; the cab is one rigid object). § 6 is the fattest section and the
   obvious candidate. Trim on purpose, not under pressure (META).
@@ -168,7 +206,9 @@ built; what remains is more to break, replay, and the path to the conflict.
 ### [L-046] External lights and beacons
 - **what:** headlights/spotlight, a red brake light, rotating warning beacons on
   the machine — feedback in the chase view and plain eye-candy. Wire them to sim
-  state (braking, alarm) so they mean something, not just decoration.
+  state (braking, alarm) so they mean something, not just decoration. Cheaper
+  now: the master condition and its acknowledgement live in the shell, so the
+  beacon is the third consumer of a fact rather than a fourth derivation of it.
 - **done-when:** the beacon turns under a master-alarm and the brake light comes
   on when you reverse the tracks against motion.
 
@@ -266,6 +306,32 @@ write per frame on `:root`, read as `translate` (never `transform`, which
 carries transitions). `voice.tips` got its consumer. Found by looking: the
 recentring ease was per *frame*, so the neck was twice as slow at 30 fps.
 
+### [L-063] The horn, and the panel that clicks — **closed**
+The old `horn` was the annunciator's **buzzer** — the machine talking to you —
+and it had the name of the thing it was not. It is `alarm` now, and the horn is
+a horn: a chord of two or three trumpets on one air line, never quite in tune
+with each other, with the valve chuffing before the note and the tank sagging
+after it. It is the loudest thing the machine can do on purpose and the only
+voice that renders a **decision**, and it ducks everything else 7 dB while it is
+down. On the panel it is a rubber dome, held rather than toggled, outside the
+masters group. The panel became switchgear: a **click** for the button and a
+**clunk** for the contactor, in the voice of whoever built the kit — and almost
+all of it is heard off the *snapshot*, so a replay clicks too. Found by a new
+`everything-at-once` scene: the mix clipped at 1.04 before the duck existed.
+
+### [L-061] A machine is voiced by whoever built it — **closed**
+Sound gets an owner. A manufacturer's house is colours, words **and sound**, in
+one object at `src/makers/` above both renderers; the machine's voices are its
+**chassis maker's**, read off the recording, and the site's belong to materials.
+A house sets timbre and rate, never level. Depth on the drone (a detuned twin
+and a firing pulse, both measured into place against the headroom an impact
+needs), and three voices that were not there: the **chain**, one knock per track
+plate at the rate the renderer turns the belt; the **squeak**, which belongs to
+a heavy crawl and is gone by working speed; and the **rattle**, keyed to the
+hull's jerk, which is the only voice that renders the ground. `MachineState`
+gained an accelerometer. Rejected: a suspension voice (L-062), because nothing
+simulates suspension travel.
+
 ### [L-055] GRIP and SLIP become one head — **closed**
 TRACTION: the plan view, nose up, a channel per track. Channel colour is the
 fraction of the friction cone in use, channel length is the contact patch, the
@@ -318,23 +384,3 @@ Instruments move by a titlebar, free to place but refused if they leave the
 glass or overlap another; they snap back to the last legal spot. All three rules
 (free move, no-overlap, in-bounds) verified in the browser. The scope for L-025
 (a real glass budget) is now visible.
-
-### [L-031] Damage model — the world can be broken — **closed**
-Breakable furniture is dynamic and scatters; damage is **joules absorbed**, not
-hit points, so it is a quantity the player can be shown. Lines carry what was
-driving and what was bypassed. Two bugs paid for: props spawned overlapping and
-destroyed each other (¥55,690 before the machine moved), and energy fed to
-anything already sliding got integrated until it wrote itself off. Rejected:
-Rapier's contact-force events — a solver force magnitude is not inspectable and
-energy is. Learned: toughness must be a fraction of ½·m·v², or a cone rated at
-22 J is indestructible by a 6.2 t machine.
-
-### [L-036] TILT-GUARD — the first safety component — **closed**
-Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
-Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
-signal's range and turn the machine around — a safety module causing the crash
-it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
-sines come straight out of the quaternion and stay bit-portable. Ships enabled
-and deliberately timid (25°/18° against a 43.5° climb limit), so the first
-lesson is that your own machine is what stopped you.
-

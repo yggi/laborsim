@@ -31,8 +31,7 @@ import {
   worst,
 } from "../src/cockpit/annunciator.ts";
 import { damp } from "../src/cockpit/damping.ts";
-import { MAKER_NAMES, styleOf } from "../src/cockpit/makers.ts";
-import { cellFor, REGISTERED } from "../src/cockpit/parts.ts";
+import { cellFor, podFor, REGISTERED } from "../src/cockpit/parts.ts";
 import {
   ACTIVE,
   ALARM,
@@ -41,19 +40,25 @@ import {
   runRack,
   WARN,
 } from "../src/control/bus.ts";
+import { createControls, inertControls } from "../src/control/controls.ts";
 import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
+import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
+import { createAutonav } from "../src/modules/autonav.ts";
 
 const COCKPIT = new URL("../src/cockpit", import.meta.url).pathname;
 /**
- * The `:global` ban covers the cab, not just the contract.
+ * The style bans scan **everything that renders**, not the careful half.
  *
- * It used to scan `src/cockpit/` alone, which is exactly the directory whose
+ * They used to scan `src/cockpit/` alone, which is exactly the directory whose
  * author is already thinking about the rule — and the first `:global` written
- * after the ban went in was written in `src/ui/Rack.svelte`, to size a decal,
- * where nothing was watching. A conformance test that only checks the careful
- * half of the codebase is a test that will pass while the invariant dies.
+ * after the ban went in was written in the rack, to size a decal, where nothing
+ * was watching. Widened once to `src/cockpit/` plus `src/ui/`, which was the
+ * same mistake with a longer list: the two directories are a seam between the
+ * *machine* and the *rig*, and a stylesheet does not care which side it is on.
+ * A conformance test that checks a subset chosen by accident is a test that will
+ * pass while the invariant dies. So: all of `src/`.
  */
-const CAB = [COCKPIT, new URL("../src/ui", import.meta.url).pathname];
+const SRC = [new URL("../src", import.meta.url).pathname];
 
 function filesUnder(dir: string): string[] {
   let found: string[] = [];
@@ -67,6 +72,9 @@ function filesUnder(dir: string): string[] {
 
 const cellSources = () =>
   filesUnder(join(COCKPIT, "cells")).filter((f) => f.endsWith(".svelte"));
+
+const podSources = () =>
+  filesUnder(join(COCKPIT, "pods")).filter((f) => f.endsWith(".svelte"));
 
 const module = (over: Partial<Module> = {}): Module => ({
   id: "X",
@@ -160,9 +168,11 @@ describe("the masters are derived, never hand-wired", () => {
           speed: 0,
           pitch: 0,
           roll: 0,
+          shake: { surge: 0, heave: 9.81, sway: 0, jerk: 0 },
         },
         stages: [],
         props: [],
+        route: [],
         damage: [
           {
             tick: 0,
@@ -181,6 +191,7 @@ describe("the masters are derived, never hand-wired", () => {
           },
         ],
         bill: 3000,
+        events: [],
       },
       false,
     );
@@ -220,11 +231,14 @@ describe("the tells point at an instrument that can show the thing", () => {
         speed: 0,
         pitch: 0,
         roll: 0,
+        shake: { surge: 0, heave: 9.81, sway: 0, jerk: 0 },
       },
       stages: [],
       props: [],
+      route: [],
       damage: [],
       bill: 0,
+      events: [],
     };
   };
 
@@ -301,6 +315,164 @@ describe("the registry", () => {
     expect(REGISTERED).toContain("PILOT");
     expect(cellFor("PILOT")).toBeNull();
   });
+
+  /**
+   * The base case runs the other way for glass. An unknown component still gets
+   * a cell, because a dash with a component missing from it is lying — but it
+   * gets **no pod**, because a pod is view you paid for and the registry cannot
+   * invent an instrument on a maker's behalf.
+   */
+  it("gives an unregistered component no instrument at all", () => {
+    expect(podFor("SOMETHING-NEW")).toBeUndefined();
+  });
+
+  it("costs nothing in glass to fit the chassis", () => {
+    expect(podFor("PILOT")).toBeUndefined();
+  });
+
+  it("ships the capability component's instrument with it", () => {
+    // NAV-1 pays for itself in view: fitted means fitted, never toggled.
+    expect(podFor("NAV")).toBeTruthy();
+  });
+});
+
+/**
+ * The parts contract. A component is one thing seen from three postures, and
+ * every posture is handed **the slot it is drawn from and the style it is drawn
+ * in** — nothing goes looking for either.
+ *
+ * These are greps for a reason. The pods were written first, before the contract
+ * existed, and each one had quietly grown its own way of answering the same two
+ * questions: `snapshot.stages.find(s => s.id === "NAV")` for the slot and
+ * `styleOf("TOWA DENKI")` for the style, hardcoded, in the instrument. Both work
+ * and both are wrong — a part that names itself cannot be shown for anything
+ * else, and a part that names its maker cannot be re-skinned by the maker.
+ */
+describe("the parts contract — one shape for three postures", () => {
+  it("keeps every instrument in the registry's reach", () => {
+    // If a pod is not under `pods/`, it is not something the registry can hand
+    // out — which is exactly how the last one ended up wired into the shell.
+    expect(podSources().length).toBeGreaterThan(0);
+  });
+
+  it("hands a part its house style; a part never asks for one", () => {
+    for (const file of [...podSources(), ...cellSources()]) {
+      expect(
+        readFileSync(file, "utf8"),
+        `${file} resolves its own maker; style arrives in props`,
+      ).not.toMatch(/styleOf\s*\(/);
+    }
+  });
+
+  it("hands a part its slot; a part never goes looking for one", () => {
+    for (const file of [...podSources(), ...cellSources()]) {
+      expect(
+        readFileSync(file, "utf8"),
+        `${file} finds itself on the snapshot; the stage arrives in props`,
+      ).not.toMatch(/stages\s*[.?]/);
+    }
+  });
+
+  /**
+   * A cell has no budget and nothing to configure — that is the deal that lets
+   * the indicator row exist at all (`docs/design/components.md`). It gets the
+   * same `Controls` as everything else, so the rule that it must not reach the
+   * settings has to be a test rather than a type.
+   */
+  it("keeps settings off the cells, which have no room to fight for", () => {
+    for (const file of cellSources()) {
+      expect(
+        readFileSync(file, "utf8"),
+        `${file} configures its module from the dash; settings live on the plate`,
+      ).not.toMatch(/setParam/);
+    }
+  });
+});
+
+/**
+ * The other direction. State leaves the sim as a snapshot; commands come back
+ * through here and nowhere else, which is what lets the same instrument code
+ * drive a live cockpit and a replay (`src/control/controls.ts`).
+ */
+describe("commands cross back through one channel", () => {
+  const rackOf = (...over: Partial<Module>[]) =>
+    over.map((o, i) => module({ id: `M${i}`, ...o }));
+
+  it("switches a component off, and says so", () => {
+    const rack = rackOf({ enabled: true });
+    let changed = 0;
+    const controls = createControls(rack, { onChange: () => changed++ });
+    controls("M0").toggle();
+    expect(rack[0]?.enabled).toBe(false);
+    expect(changed).toBe(1);
+  });
+
+  it("does nothing at all for a component that is not fitted", () => {
+    // The replay case: the instrument is drawn from a recording of a machine
+    // that is not in front of you. Its handles must be harmless, not absent.
+    const rack = rackOf({ enabled: true });
+    const controls = createControls(rack, {});
+    expect(() => controls("GONE").toggle()).not.toThrow();
+    expect(() => controls("GONE").setParam("anything", 3)).not.toThrow();
+    expect(rack[0]?.enabled).toBe(true);
+  });
+
+  it("looks the slot up again on every call, because the rack is mutated", () => {
+    const rack = rackOf({ enabled: true });
+    const controls = createControls(rack, {});
+    const handle = controls("LATER");
+    rack.push(module({ id: "LATER", enabled: true }));
+    handle.toggle();
+    expect(rack[1]?.enabled).toBe(false);
+  });
+
+  it("fires the warranty hook on a deliberate bypass, and only then", () => {
+    const rack = rackOf({ safety: true, enabled: true });
+    const bypassed: string[] = [];
+    const controls = createControls(rack, { onBypass: (m) => bypassed.push(m.id) });
+    controls("M0").toggle();
+    expect(bypassed).toEqual(["M0"]);
+    // Putting the guard back is not a bypass, and neither is switching off
+    // ordinary kit. Nobody's warranty is void for using the machine.
+    controls("M0").toggle();
+    expect(bypassed).toEqual(["M0"]);
+  });
+
+  it("leaves an E-stop nobody's fault, because it disables before it asks", () => {
+    // An emergency stop disables every module in the rack, so by the time any
+    // cell could call `toggle` there is nothing enabled to bypass.
+    const rack = rackOf({ safety: true, enabled: true });
+    const bypassed: string[] = [];
+    const controls = createControls(rack, { onBypass: (m) => bypassed.push(m.id) });
+    for (const m of rack) m.enabled = false;
+    controls("M0").toggle();
+    expect(bypassed).toEqual([]);
+  });
+
+  it("reaches a declared param and nothing else", () => {
+    const nav = createAutonav(
+      [
+        { x: 0, z: 10 },
+        { x: 10, z: 0 },
+        { x: 0, z: -10 },
+      ],
+      () => ({ x: 0, z: 0, rotation: { x: 0, y: 0, z: 0, w: 1 } }),
+    );
+    const controls = createControls([nav], {});
+    controls("NAV").setParam("target", 3);
+    expect(nav.target).toBe(2);
+    // The module's own `set` owns the bounds: a pin off the end of the route is
+    // refused there, not clamped here.
+    controls("NAV").setParam("target", 9);
+    expect(nav.target).toBe(2);
+    controls("NAV").setParam("gain", 0.5);
+    expect(nav.target).toBe(2);
+  });
+
+  it("gives a bench and a replay handles that do nothing", () => {
+    expect(() => inertControls().toggle()).not.toThrow();
+    expect(() => inertControls().setParam("target", 1)).not.toThrow();
+  });
 });
 
 describe("the theme contract — invariants every maker must honour", () => {
@@ -328,7 +500,7 @@ describe("the theme contract — invariants every maker must honour", () => {
    * a meter's `.bar` and collapsed a faceplate to 7px with everything green.
    */
   it("uses no :global anywhere in the cab", () => {
-    for (const dir of CAB) {
+    for (const dir of SRC) {
       for (const file of filesUnder(dir).filter((f) => f.endsWith(".svelte"))) {
         expect(readFileSync(file, "utf8"), `${file} must not use :global`).not.toMatch(
           /:global\s*\(/,
@@ -358,14 +530,61 @@ describe("the theme contract — invariants every maker must honour", () => {
     }
   });
 
-  it("prefixes every custom property it defines with --mfg-", () => {
-    for (const file of filesUnder(COCKPIT)) {
-      const source = readFileSync(file, "utf8");
-      // Definitions, not uses: `--x: value`, wherever it is written.
-      for (const [, name] of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
-        expect(name, `${file} defines ${name}, which is not namespaced`).toMatch(
-          /^--mfg-/,
-        );
+  /**
+   * Svelte scopes classes. It does **not** scope custom properties: one set on
+   * a slot inherits straight down into whatever a manufacturer bolted into it,
+   * so a bare `--u` on a rack slot and a bare `--u` in somebody's faceplate are
+   * one variable with two owners. That is the `bar` collision again, one layer
+   * down and harder to see, so every custom property carries a namespace:
+   *
+   *   `--mfg-` — a maker's token, inherited into its parts on purpose.
+   *   `--cab-` — the machine's own structure, and never a maker's to set.
+   *
+   * Two prefixes, no more, for the same reason there are four verbs.
+   */
+  /**
+   * The other half, and the half that bites. A `var()` with a fallback is a
+   * property that *works* when nothing defines it — so renaming `--dash-h` to
+   * `--cab-dash-h` left the toasts silently sitting 128px off the bottom, with
+   * types, lint and every test green, exactly the way a scripted edit that
+   * matched nothing once removed the dash's background (`META.md`).
+   *
+   * A `--mfg-` token is allowed to go undefined: a maker's component offers
+   * them to whatever it is bolted into, and the fallback *is* the offer.
+   * Everything else must be defined somewhere in `src/` by the time it is read.
+   */
+  it("defines every property something reads, unless it is a maker's offer", () => {
+    const defined = new Set<string>();
+    const used = new Map<string, string>();
+    for (const dir of SRC) {
+      for (const file of filesUnder(dir)) {
+        const source = readFileSync(file, "utf8");
+        for (const match of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
+          if (match[1]) defined.add(match[1]);
+        }
+        for (const match of source.matchAll(/var\(\s*(--[a-z][\w-]*)/g)) {
+          // A maker's token may go undefined: the fallback is the offer.
+          if (match[1] && !match[1].startsWith("--mfg-")) used.set(match[1], file);
+        }
+      }
+    }
+    for (const [name, file] of used) {
+      expect(defined, `${file} reads ${name}, which nothing in src/ defines`).toContain(
+        name,
+      );
+    }
+  });
+
+  it("namespaces every custom property it defines", () => {
+    for (const dir of SRC) {
+      for (const file of filesUnder(dir)) {
+        const source = readFileSync(file, "utf8");
+        // Definitions, not uses: `--x: value`, wherever it is written.
+        for (const [, name] of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
+          expect(name, `${file} defines ${name}, which is not namespaced`).toMatch(
+            /^--(mfg|cab)-/,
+          );
+        }
       }
     }
   });
@@ -383,7 +602,7 @@ describe("the theme contract — invariants every maker must honour", () => {
       const name = file.split("/").pop() ?? file;
       if (safetyCells.has(name)) {
         expect(source, `${name} is safety kit and must carry no toggle`).not.toMatch(
-          /onToggle\s*\}|onclick=\{onToggle\}/,
+          /controls\.toggle/,
         );
       } else {
         expect(source, `${name} must expose an enable control by name`).toMatch(

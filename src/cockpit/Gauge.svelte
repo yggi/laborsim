@@ -18,7 +18,7 @@
  *
  * Architecture rule 3: pure presentation, no snapshot, no sim.
  */
-import Seg from "../cockpit/Seg.svelte";
+import Seg from "./Seg.svelte";
 
 const {
   label,

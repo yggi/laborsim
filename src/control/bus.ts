@@ -159,6 +159,22 @@ export interface Stage {
   readonly safety: boolean;
 }
 
+/**
+ * The id the **chassis component** takes: the machine itself, in the rack.
+ *
+ * The chassis is a slot like any other and it is also the one that brings the
+ * cab, the glass, the dashboard and the noise — so two renderers need to find
+ * it on a recording and ask *who built this machine*. The dash did it by
+ * hand-written id to pick the panel's colours; the audio engine needs the same
+ * answer to pick the machine's voice. Written twice, it is a fact with two
+ * owners and one typo away from a cab styled by one maker and voiced by another.
+ */
+export const CHASSIS = "PILOT";
+
+/** The chassis slot on a recording, if the machine had one fitted. */
+export const chassisOf = (stages: readonly Stage[]): Stage | undefined =>
+  stages.find((stage) => stage.id === CHASSIS);
+
 export interface BusResult {
   readonly command: TrackCommand;
   readonly stages: readonly Stage[];

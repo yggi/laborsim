@@ -13,6 +13,26 @@ export const TRACK = { length: 3.4, width: 0.55, height: 0.5 };
 export const GAUGE = 1.78;
 
 /**
+ * Track plates, and the distance between two of them.
+ *
+ * Oversized on purpose: chunky plates read as *tracks* at a glance and at a
+ * distance, and fewer fatter ones beat many thin ones for legibility. That was
+ * a drawing decision until the machine got a voice, and now it is also an
+ * audible one — **the chain clanks once per plate**, so the rate you hear is
+ * `commanded / GROUSER_PITCH`, which is exactly the rate you watch the belt
+ * turn at. One fact: change it and the sound and the picture move together.
+ */
+export const GROUSERS = 11;
+export const GROUSER_PITCH = TRACK.length / GROUSERS;
+
+/**
+ * Gravity, m/s². The world's, not the machine's — it lives here because three
+ * places need the same number: the physics world, the track model's normal
+ * load, and the accelerometer that tells the cab how hard it is being shaken.
+ */
+export const G = 9.81;
+
+/**
  * Which side of the machine is which, in body space.
  *
  * The machine's forward is +Z and its up is +Y, and in a right-handed frame

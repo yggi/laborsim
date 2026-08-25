@@ -69,7 +69,7 @@ Now the slot supplies both rails, identically for everyone:
   with the fuse pulled.
 
 A module owns its **style** and its **face** — an optional interface that is
-genuinely its own (`src/cockpit/face.ts`). Most have none; a plate with an
+genuinely its own (`src/cockpit/contract.ts`). Most have none; a plate with an
 identity and two limit sliders is a complete plate. NAV-1 has one, because TOWA
 cannot help itself.
 

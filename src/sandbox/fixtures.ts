@@ -24,7 +24,8 @@ import {
   type Verb,
   WARN,
 } from "../control/bus.ts";
-import type { Snapshot } from "../core/snapshot.ts";
+import type { Snapshot, Waypoint } from "../core/snapshot.ts";
+import { G } from "../core/spec.ts";
 
 /**
  * A track state that cannot be built inconsistent: no contact means no traction
@@ -72,6 +73,22 @@ export function stage(spec: StageSpec): Stage {
     safety: spec.safety ?? false,
   };
 }
+
+/**
+ * A route to plot. Fixed rather than generated: the scope is being *looked at*,
+ * and a bench whose picture changes between runs is a bench you cannot compare
+ * a screenshot against.
+ */
+const ROUTE: readonly Waypoint[] = [
+  { x: 0, z: 62 },
+  { x: 54, z: 30 },
+  { x: 61, z: -28 },
+  { x: 4, z: -58 },
+  { x: -49, z: -34 },
+  { x: -63, z: 18 },
+  { x: -30, z: 55 },
+  { x: -8, z: 24 },
+];
 
 /** The rack every fixture starts from: chassis, guidance, guard. */
 export const PILOT = stage({
@@ -144,9 +161,13 @@ export function snapshotOf(
       speed: over.speed ?? 0,
       pitch: over.pitch ?? 0,
       roll: over.roll ?? 0,
+      // Standing on the ground: an accelerometer reads 1 g up and nothing else.
+      // The panel shows none of this yet; the cab's rattle hears it.
+      shake: { surge: 0, heave: G, sway: 0, jerk: 0 },
     },
     stages,
     props: [],
+    route: ROUTE,
     damage: over.citizen
       ? [
           {
@@ -167,6 +188,9 @@ export function snapshotOf(
         ]
       : [],
     bill: over.bill ?? 0,
+    // A specimen is a state held still to be looked at. Nothing on the bench
+    // reacts to events, and a frozen moment has no recent past.
+    events: [],
   };
 }
 

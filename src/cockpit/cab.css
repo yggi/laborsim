@@ -1,0 +1,26 @@
+/*
+ * The cab's own tokens — the ones that belong to the vehicle rather than to a
+ * manufacturer.
+ *
+ * `substrate.css` is the physics of a *panel* and everything in it is prefixed
+ * `mfg-`, because a maker is what varies there. This is the other kind: facts
+ * about the cab you are sitting in, which no maker gets to redefine. Prefixed
+ * `cab-`, and declared here so that every reader has a value before the first
+ * frame — a `var()` with no definition is invalid at computed-value time, and
+ * an instrument that jumps into place on frame two is a defect nobody would
+ * think to look for.
+ *
+ * Loaded once, globally, from `main.ts`.
+ */
+
+:root {
+  /*
+   * Where the cab has swept to, because the pilot's head has turned (L-050).
+   * Written imperatively by the render loop, once a frame, on this element —
+   * never through Svelte reactivity (architecture rule 3). Everything bolted to
+   * the machine reads it as a `translate`; the training rig's own controls do
+   * not, because they are not in the cab.
+   */
+  --cab-look-x: 0px;
+  --cab-look-y: 0px;
+}

@@ -10,24 +10,31 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
+import { type Audio, createLiveAudio } from "./audio/engine.ts";
+import { type Annunciation, chassisConditions, worst } from "./cockpit/annunciator.ts";
 import { BEAM, PILLAR } from "./cockpit/cage.ts";
-import { styleOf } from "./cockpit/makers.ts";
-import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
+import DashPanel from "./cockpit/DashPanel.svelte";
+import Glass from "./cockpit/Glass.svelte";
+import Lever from "./cockpit/Lever.svelte";
+import Rack from "./cockpit/Rack.svelte";
+import {
+  ACTIVE,
+  CHASSIS,
+  type Condition,
+  type Module,
+  NOMINAL,
+} from "./control/bus.ts";
+import { createControls } from "./control/controls.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
-import { type Autonav, createAutonav } from "./modules/autonav.ts";
+import { styleOf } from "./makers/houses.ts";
+import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
-import DashPanel from "./ui/DashPanel.svelte";
-import Draggable from "./ui/Draggable.svelte";
-import Lever from "./ui/Lever.svelte";
-import NavRadar from "./ui/NavRadar.svelte";
-import Rack from "./ui/Rack.svelte";
 import RunReport from "./ui/RunReport.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
-import TiltGauges from "./ui/TiltGauges.svelte";
 import Toasts from "./ui/Toasts.svelte";
 
 let canvas: HTMLCanvasElement;
@@ -45,7 +52,7 @@ let leverR = $state(0);
  * (`docs/design/components.md`).
  */
 const pilot: Module = {
-  id: "PILOT",
+  id: CHASSIS,
   label: "PILOT",
   maker: "KIBA WORKS",
   considers: "your two thumbs",
@@ -67,8 +74,6 @@ const pilot: Module = {
  */
 const rack: Module[] = $state([pilot]);
 let rackOpen = $state(false);
-let nav = $state<Autonav | undefined>(undefined);
-let route = $state<readonly { x: number; z: number }[]>([]);
 let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
 let showDebug = $state(true);
@@ -86,6 +91,110 @@ let citizenSeen = false;
  *  height changes as components are fitted and cells appear. */
 let dashHeight = $state(96);
 
+/**
+ * How worried the machine is, and how much of that the pilot has pressed.
+ *
+ * It lives here rather than on the dash because it now has **three** consumers:
+ * the master lamp, the horn, and the beacon behind it (L-046). A machine whose
+ * light and noise disagreed about its own condition would be two instruments
+ * wired to two facts — so they are wired to one, and the panel is handed the
+ * answer rather than working it out again.
+ */
+let acked = $state<Condition>(NOMINAL);
+const lamps = $derived<readonly Annunciation[]>(chassisConditions(latest, estop));
+const master = $derived(
+  worst([
+    ...lamps.map((a) => a.condition),
+    ...(latest?.stages ?? []).map((s) => s.condition),
+  ]),
+);
+// A condition clearing winds the acknowledgement back down, which re-arms both
+// the flash and the horn for next time.
+$effect(() => {
+  if (master < acked) acked = master;
+});
+
+/**
+ * The horn's input, mirrored into a plain variable.
+ *
+ * The render loop runs in a `requestAnimationFrame` callback, which is outside
+ * any reactive scope — reading a rune from in there would be an untracked read
+ * that happens to work. Mirroring it in an effect keeps the loop reading a
+ * plain number and keeps the sim effect from re-racking the exercise every time
+ * a lamp changes colour.
+ */
+let hornLevel = NOMINAL as Condition;
+/** The horn is down. A cab state, not sim state — nothing can hear it yet. */
+let honking = $state(false);
+$effect(() => {
+  // Silent while the folder is open. Hitting the stop lights the master at
+  // ALARM and opens the debrief in the same press, and a horn blaring under
+  // somebody explaining what you just did is the rig talking over itself.
+  hornLevel = !report && master > acked ? master : NOMINAL;
+});
+
+/**
+ * The rig's volume, not the machine's.
+ *
+ * A Labor's horn has no cut-out — that is what a horn is for — so this is not a
+ * dash control and does not live on the panel. It is the training rig's own
+ * knob, and it sits with the camera, which is the other control that belongs to
+ * the room rather than to the machine (`docs/design/training-frame.md`).
+ */
+let sound = $state(true);
+let audio: Audio | undefined;
+
+/**
+ * The cab's own switchgear, for the few controls the machine does not record.
+ *
+ * Almost every switch is already audible without anyone asking: flipping a
+ * component off changes its slot on the snapshot and the engine hears that by
+ * itself, which is why a replay clicks in all the right places. What is left is
+ * furniture — the cabinet latch, the acknowledgement, an instrument clamping
+ * home — and it is voiced by the maker whose furniture it is, which is the
+ * chassis maker for everything bolted to the cab.
+ *
+ * The camera and the volume are deliberately **silent**: they belong to the
+ * training rig rather than to the machine, and the rig does not reach into the
+ * cab and make noises (`docs/design/training-frame.md`).
+ */
+const CAB_MAKER = "KIBA WORKS";
+const click = (maker = CAB_MAKER) => audio?.panel("click", maker);
+const clunk = (maker = CAB_MAKER) => audio?.panel("clunk", maker);
+
+function toggleSound() {
+  sound = !sound;
+  audio?.setVolume(sound ? 1 : 0);
+}
+
+/**
+ * The machine's voice, built once and kept across a RESET.
+ *
+ * Deliberately *not* inside the sim effect: an `AudioContext` is an expensive,
+ * limited resource and re-racking the exercise is not a reason to throw one
+ * away. It costs nothing to keep, because the engine reads the event channel
+ * like everything else — a rewind is a new run to it, and nothing from the old
+ * one is played.
+ *
+ * A browser will not let a page make noise before the player has touched it, so
+ * the context starts suspended and the first gesture anywhere wakes it. That is
+ * not a workaround to be embarrassed about: a rig that started talking before
+ * you had touched anything would be the rig being rude.
+ */
+$effect(() => {
+  const live = createLiveAudio();
+  audio = live.audio;
+  const wake = () => live.resume();
+  addEventListener("pointerdown", wake);
+  addEventListener("keydown", wake);
+  return () => {
+    removeEventListener("pointerdown", wake);
+    removeEventListener("keydown", wake);
+    audio = undefined;
+    live.dispose();
+  };
+});
+
 let setViewMode: (m: CameraMode) => void = () => {};
 let recentreView: () => void = () => {};
 
@@ -94,6 +203,9 @@ let recentreView: () => void = () => {};
 function toggleRack() {
   rackOpen = !rackOpen;
   recentreView();
+  // A cabinet door, not a switch: the latch is the heaviest thing on the panel
+  // and it is the same sound going both ways.
+  clunk();
 }
 
 /**
@@ -125,24 +237,24 @@ function notify(maker: string, head: string, body: string) {
 }
 
 /**
- * Toggle a component from its dashboard cell.
+ * The handles every part of every component commands through — the cells on the
+ * dash, the pods on the glass, and whatever is fitted next. The shell owns them
+ * because the shell owns the live rack; nothing downstream of here ever sees a
+ * module (`src/control/controls.ts`).
  *
  * Popping the hood: switching off **safety** kit is a deliberate act, so the
- * maker says so and the run report will remember. The guard against firing this
- * on an emergency stop is the `estop` check — an E-stop disables every module in
+ * maker says so and the run report will remember. The `estop` check is why it is
+ * a hook rather than a rule in the channel — an E-stop disables every module in
  * the rack, and nobody's warranty is void because you hit the big red button.
  */
-function toggleModule(id: string) {
-  const mod = rack.find((m) => m.id === id);
-  if (!mod) return;
-  const bypassing = mod.enabled && mod.safety === true && !estop;
-  mod.enabled = !mod.enabled;
-  if (bypassing) {
+const controls = createControls(rack, {
+  onBypass(mod) {
+    if (estop) return;
     const [head, body] = styleOf(mod.maker).voice.warranty;
     notify(mod.maker, head, body);
-  }
-  rackVersion++;
-}
+  },
+  onChange: () => rackVersion++,
+});
 
 function setView(next: CameraMode) {
   mode = next;
@@ -185,6 +297,10 @@ function setEstop(next: boolean) {
  * already in, and a latched stop is not a toggle.
  */
 function hitEstop() {
+  // The mushroom itself. Every module it disables clunks on its own, off the
+  // snapshot, so hitting the stop is one deliberate clack followed by the whole
+  // bank letting go — which is what a stop actually sounds like.
+  clunk();
   setEstop(true);
   report = true;
 }
@@ -205,11 +321,9 @@ function resetSim() {
   rackOpen = false;
   mode = "cab";
   citizenSeen = false;
+  acked = NOMINAL;
   runId++;
 }
-
-/** Is a module with this id in the rack? Its instrument is fitted if so. */
-const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
 
 /**
  * "Keep your eyes on the road", in the chassis maker's own words.
@@ -248,19 +362,6 @@ function mindTheRoad(offsetX: number) {
   if (tip) notify(pilot.maker, wordmark, tip);
 }
 
-/** Pod placements on the glass — draggable, and remembered per session. They
- *  start down the right, clear of the camera control at the very top.
- *
- *  ATT-0 is no longer among them: heading and attitude moved to the dash, so a
- *  bare chassis now starts with **clear glass** and the first component you fit
- *  is the first view you lose. */
-/** The widest instrument currently fitted, measured in the browser. It only
- *  decides how the first frame looks: an arm settles a pod that does not fit. */
-const POD_W = 124;
-const rightX = (typeof window === "undefined" ? 390 : innerWidth) - PILLAR - POD_W;
-let navPos = $state({ x: rightX, y: BEAM + 24 });
-let tiltPos = $state({ x: rightX, y: BEAM + 198 });
-
 // Auto-open the debrief the moment a citizen is involved: it is categorical
 // failure, and the rig does not let that scroll past.
 $effect(() => {
@@ -288,18 +389,19 @@ $effect(() => {
 
     const world = createWorld({ modules: rack });
     // NAV needs the pose of the machine it is driving, so it is built once the
-    // world exists and pushed onto the rail below the pilot.
-    route = world.waypoints;
-    const autonav = createAutonav(
-      world.waypoints,
-      () => {
-        const t = world.machine.body.translation();
-        return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
-      },
-      { verb: "CAP", enabled: false },
+    // world exists and pushed onto the rail below the pilot. Nothing keeps a
+    // reference to it: its instrument reads the snapshot and commands through
+    // the same handles as everything else.
+    rack.push(
+      createAutonav(
+        world.waypoints,
+        () => {
+          const t = world.machine.body.translation();
+          return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
+        },
+        { verb: "CAP", enabled: false },
+      ),
     );
-    nav = autonav;
-    rack.push(autonav);
 
     // TILT-GUARD sits at the bottom of the rail, below everything: it is the
     // last thing between the rack and the tracks, which is where a safety
@@ -367,14 +469,18 @@ $effect(() => {
         latest = current;
       }
       viewport.render(current);
+      // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
+      // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
+      // after you watched it land is heard as a second event.
+      audio?.render(current, { alarm: hornLevel, horn: honking });
 
       // The cab sweeps with the head. **One DOM write a frame, on one element**,
       // and the compositor moves the cage, the pods, the levers and the dash
       // between them — per-instrument reactivity at 60 Hz is the shape
       // architecture rule 3 exists to prevent (`docs/design/components.md`).
       const head = viewport.head();
-      root.style.setProperty("--look-x", `${head.x}px`);
-      root.style.setProperty("--look-y", `${head.y}px`);
+      root.style.setProperty("--cab-look-x", `${head.x}px`);
+      root.style.setProperty("--cab-look-y", `${head.y}px`);
       mindTheRoad(head.x);
     };
     frame = requestAnimationFrame(tick);
@@ -386,8 +492,8 @@ $effect(() => {
       canvas.removeEventListener("pointermove", drag);
       canvas.removeEventListener("pointerup", up);
       canvas.removeEventListener("pointercancel", up);
-      root.style.removeProperty("--look-x");
-      root.style.removeProperty("--look-y");
+      root.style.removeProperty("--cab-look-x");
+      root.style.removeProperty("--cab-look-y");
       viewport.dispose();
       world.free();
     };
@@ -404,7 +510,7 @@ $effect(() => {
      measured dash height to everything that has to sit clear of it. -->
 <div
   class="shell"
-  style="--dash-h: {dashHeight}px; --cage-pillar: {PILLAR}px; --cage-beam: {BEAM}px"
+  style="--cab-dash-h: {dashHeight}px; --cab-pillar: {PILLAR}px; --cab-beam: {BEAM}px"
 >
   <!-- Looking down at the rack slides the whole viewport up: a strip of glass
        stays visible at the top, and the machine keeps running while you read. -->
@@ -434,10 +540,12 @@ $effect(() => {
   <!-- The live voice: the rig narrating as it happens, in the same register as
        the end-of-run report. Stacks, then fades; a citizen latches. Manufacturer
        notices ride the same channel in their own colours — a warranty notice is
-       not a verdict, and you must be able to tell whose opinion you are reading. -->
-  {#if !rackOpen}
-    <Toasts snapshot={latest} {notices} />
-  {/if}
+       not a verdict, and you must be able to tell whose opinion you are reading.
+
+       Hidden while you are in the rack, never unmounted: a subscription belongs
+       to a consumer's lifetime, and rebuilding this mid-run made it re-voice
+       every line still on the channel the moment you closed the cabinet. -->
+  <Toasts snapshot={latest} {notices} hidden={rackOpen} />
 
   <!-- The levers go with the glass. Looking down at the rack puts your hands in
        the cabinet, not on the controls — the same bargain as the chase view,
@@ -453,48 +561,39 @@ $effect(() => {
     </div>
   {/if}
 
-  <!-- The camera is a fixed control, top-right: choosing the view is a thing you
-       do with the equipment, and in chase it is the only equipment you keep. -->
+  <!-- The rig's own controls, fixed top-right: the view you are given, and how
+       loud the room is. Neither belongs to the machine — a Labor's horn has no
+       cut-out and its cab has no camera — so neither is on the dash. In chase
+       this is the only equipment you keep. -->
   <div class="camera item">
     {#each ["cab", "chase"] as const as option (option)}
       <button class:on={mode === option} onclick={() => setView(option)}>
         {option === "cab" ? "CAB" : "CHASE"}
       </button>
     {/each}
+    <button class:on={sound} onclick={toggleSound} aria-pressed={sound}>
+      {sound ? "SND" : "MUTE"}
+    </button>
   </div>
 
   <!--
     Fitted pods, draggable on the glass by their titlebars (L-008). Each one is a
-    piece of view you gave up; the budget that prices that is L-025, and this is
-    the pile it will price. They must stay wholly on the glass and clear of each
-    other — the Draggable refuses a drop that breaks either rule.
+    piece of view you gave up; the budget that prices that is L-025, and the
+    glass is the pile it will price.
 
-    A pod is optional and its maker decides whether one exists at all. NAV-1 is a
+    Which components have one is the registry's business, not the shell's — a
+    pod is optional and its maker decides whether it exists at all. NAV-1 is a
     capability component and pays in glass; TILT-GUARD is a safety component and
-    pays in capability instead, so its gauges are here by choice rather than as
-    the price of fitting it.
+    pays in capability instead, so its gauges are there by choice rather than as
+    the price of fitting it. This file knows neither of those things.
   -->
   {#if mode === "cab" && !rackOpen}
-    {#if nav}
-      <Draggable
-        title="NAV-1"
-        bottomKeepOut={dashHeight + 12}
-        bind:x={navPos.x}
-        bind:y={navPos.y}
-      >
-        <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
-      </Draggable>
-    {/if}
-    {#if fitted("TILT")}
-      <Draggable
-        title="TILT-GUARD"
-        bottomKeepOut={dashHeight + 12}
-        bind:x={tiltPos.x}
-        bind:y={tiltPos.y}
-      >
-        <TiltGauges snapshot={latest} />
-      </Draggable>
-    {/if}
+    <Glass
+      snapshot={latest}
+      {controls}
+      bottomKeepOut={dashHeight + 12}
+      onSettle={(maker) => clunk(maker)}
+    />
   {/if}
 
   <!--
@@ -512,10 +611,18 @@ $effect(() => {
         snapshot={latest}
         {rackOpen}
         estopped={estop}
+        {lamps}
+        {master}
+        {acked}
         bind:height={dashHeight}
         onOpenRack={toggleRack}
         onEstop={hitEstop}
-        onToggleModule={toggleModule}
+        onAck={() => {
+          acked = master;
+          click();
+        }}
+        onHorn={(down) => (honking = down)}
+        {controls}
       />
       {#if rackOpen}
         {#key rackVersion}
@@ -572,7 +679,7 @@ $effect(() => {
        sweeps exactly as the pods and the dash do (L-050). `translate` rather
        than `transform`, so it composes with the skew on the pillars below and
        is never dragged into somebody else's transition. */
-    translate: var(--look-x, 0px) var(--look-y, 0px);
+    translate: var(--cab-look-x, 0px) var(--cab-look-y, 0px);
   }
   /* Painted steel, lit from above-left like every other surface in here. */
   .cage .beam,
@@ -603,14 +710,14 @@ $effect(() => {
     top: 0;
     /* One fact, one place: the frame you can see and the frame a pod's arm is
        measured against are the same numbers (`src/cockpit/cage.ts`). */
-    height: var(--cage-beam);
+    height: var(--cab-beam);
     border-bottom: 1px solid #0a0d0e;
   }
   /* The pillars lean in toward the roof, the way a cab's actually do. */
   .cage .pillar {
     top: 0;
     bottom: 0;
-    width: var(--cage-pillar);
+    width: var(--cab-pillar);
     border-right: 1px solid #0a0d0e;
   }
   .cage .pillar.left {
@@ -628,7 +735,7 @@ $effect(() => {
   /* Welded gussets where the pillar meets the beam. */
   .cage .gusset {
     position: absolute;
-    top: var(--cage-beam);
+    top: var(--cab-beam);
     width: 30px;
     height: 30px;
     background: linear-gradient(160deg, #262b2e, #151a1d);
@@ -660,7 +767,7 @@ $effect(() => {
       inset 0 0 120px rgba(0, 0, 0, 0.55);
   }
 
-  /* Lays nothing out; it only publishes `--dash-h` to everything that has to
+  /* Lays nothing out; it only publishes `--cab-dash-h` to everything that has to
      sit clear of a panel whose height changes as components are fitted. */
   .shell {
     display: contents;
@@ -685,13 +792,13 @@ $effect(() => {
     z-index: 2;
     display: flex;
     flex-direction: column;
-    transform: translateY(calc(100dvh - var(--dash-h)));
+    transform: translateY(calc(100dvh - var(--cab-dash-h)));
     transition: transform 0.28s ease;
     /* The deck travels between postures on `transform`, with a transition. The
        sweep is a *separate* property on purpose: a value rewritten every frame
        must never be fed through a 0.28s ease, or the dash lags behind the cage
        it is welded to. */
-    translate: var(--look-x, 0px) var(--look-y, 0px);
+    translate: var(--cab-look-x, 0px) var(--cab-look-y, 0px);
   }
   .deck.up {
     height: 74dvh;
@@ -707,12 +814,12 @@ $effect(() => {
      which owns the very bottom of the glass. */
   .levers {
     position: fixed;
-    bottom: calc(var(--dash-h) + 14px);
+    bottom: calc(var(--cab-dash-h) + 14px);
     z-index: 3;
     /* Bolted to the cab like everything else: look away and your hands go out
        of shot. You cannot find a touchscreen lever by feel, which is the cost
        of a glance and the reason the view comes back on its own. */
-    translate: var(--look-x, 0px) var(--look-y, 0px);
+    translate: var(--cab-look-x, 0px) var(--cab-look-y, 0px);
   }
   .levers.left {
     left: 14px;

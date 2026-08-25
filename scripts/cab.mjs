@@ -171,8 +171,8 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
       const style = getComputedStyle(document.documentElement);
       return {
         look: {
-          x: Number.parseFloat(style.getPropertyValue("--look-x")),
-          y: Number.parseFloat(style.getPropertyValue("--look-y")),
+          x: Number.parseFloat(style.getPropertyValue("--cab-look-x")),
+          y: Number.parseFloat(style.getPropertyValue("--cab-look-y")),
         },
         parts: list.map((selector) => {
           const r = document.querySelector(selector)?.getBoundingClientRect();

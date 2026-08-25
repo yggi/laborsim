@@ -5,10 +5,10 @@
  *
  * It is **on an arm** (L-050), and that is what decides where it may go. A drop
  * is refused by the cab's own structure — the pillars, the beam, the dash and
- * how far the arm reaches (`src/cockpit/cage.ts`) — and by the one rule that is
- * about the pilot rather than the hardware: instruments must **not overlap**,
- * because occlusion is a budget you spend on purpose, not a mess you make by
- * accident. A refused drop **snaps back** to where it last legally sat.
+ * how far the arm reaches (`./cage.ts`) — and by the one rule that is about the
+ * pilot rather than the hardware: instruments must **not overlap**, because
+ * occlusion is a budget you spend on purpose, not a mess you make by accident.
+ * A refused drop **snaps back** to where it last legally sat.
  *
  * Position is in **cage space**, so `x` and `y` mean the same thing whichever
  * way the head is turned: the sweep is a separate `translate` on this element,
@@ -29,34 +29,47 @@ import {
   type Glass,
   PILLAR,
   REACH,
-} from "../cockpit/cage.ts";
+} from "./cage.ts";
 
 let {
   title,
-  x = $bindable(),
-  y = $bindable(),
+  startX,
+  startY,
   bottomKeepOut = 150,
+  onplace,
   children,
 }: {
   title: string;
-  x: number;
-  y: number;
+  /** Where it hangs before anyone has moved it. Read once, at mount. */
+  startX: number;
+  startY: number;
   /**
    * How much glass the dash is occupying along the bottom. Passed in rather
    * than assumed, because the panel grows as components are fitted — each one
    * bolts another cell onto the indicator row.
    */
   bottomKeepOut?: number;
+  /**
+   * Where it came to rest. **Only ever called with a legal spot** — a refused
+   * drop snaps back and says nothing, so an owner recording placements cannot
+   * record one that breaks the rules. That is why the live position is owned
+   * here rather than bound outward: mid-drag it is routinely illegal, and the
+   * only interesting moment is the one it survives.
+   */
+  onplace?: (x: number, y: number) => void;
   children: Snippet;
 } = $props();
+
+// Seeded from the props once, and `untrack` says so out loud: nothing outside
+// moves a fitted instrument — the pilot does, with a thumb — so following the
+// props afterwards would mean a re-render could shove one out from under a
+// finger. The owner hears about the landing through `onplace`.
+let x = $state(untrack(() => startX));
+let y = $state(untrack(() => startY));
 
 let el: HTMLDivElement;
 let dragging = $state(false);
 let snapping = $state(false);
-let startX = 0;
-let startY = 0;
-let originX = 0;
-let originY = 0;
 
 /** The pod's own size, measured rather than declared — a component's maker
  *  decides how big its instrument is, and the arm has to hold whatever it is. */
@@ -91,6 +104,9 @@ const clamp = (v: number, lo: number, hi: number) =>
  * fitted, and a phone gets turned sideways. So the arm settles rather than the
  * caller guessing — nothing is ever left hanging off the glass, and a default
  * position only has to be roughly right.
+ *
+ * Silently: `onplace` is the sound of a *drop* landing, and a clamp taking up
+ * slack on a rotation is not something the pilot did.
  */
 function settle() {
   x = clamp(x, PILLAR, glass.width - PILLAR - w);
@@ -108,12 +124,17 @@ $effect(() => {
   void [w, h, glass];
   untrack(settle);
 });
+/** Where the pointer went down, and where the box was when it did. */
+let grabX = 0;
+let grabY = 0;
+let originX = 0;
+let originY = 0;
 
 function grab(e: PointerEvent) {
   dragging = true;
   snapping = false;
-  startX = e.clientX;
-  startY = e.clientY;
+  grabX = e.clientX;
+  grabY = e.clientY;
   originX = x;
   originY = y;
   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -121,8 +142,8 @@ function grab(e: PointerEvent) {
 
 function move(e: PointerEvent) {
   if (!dragging) return;
-  x = originX + (e.clientX - startX);
-  y = originY + (e.clientY - startY);
+  x = originX + (e.clientX - grabX);
+  y = originY + (e.clientY - grabY);
 }
 
 /** Is the pod, as currently placed, on its arm and clear of the others? */
@@ -143,15 +164,17 @@ function release(e: PointerEvent) {
   if (!dragging) return;
   dragging = false;
   (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-  if (!legal()) {
-    // Refused: ease back to the last place it legally sat.
-    snapping = true;
-    x = originX;
-    y = originY;
-    setTimeout(() => {
-      snapping = false;
-    }, 200);
+  if (legal()) {
+    onplace?.(x, y);
+    return;
   }
+  // Refused: ease back to the last place it legally sat, and tell nobody.
+  snapping = true;
+  x = originX;
+  y = originY;
+  setTimeout(() => {
+    snapping = false;
+  }, 200);
 }
 </script>
 
@@ -202,7 +225,7 @@ function release(e: PointerEvent) {
     /* The sweep. `translate` rather than a second `transform`, because the
        placement transform above carries a snap-back transition and a value
        rewritten every frame must not be transitioned into. */
-    translate: var(--look-x, 0px) var(--look-y, 0px);
+    translate: var(--cab-look-x, 0px) var(--cab-look-y, 0px);
   }
   .drag.dragging {
     z-index: 6;

@@ -8,14 +8,18 @@
  * and stays until you dismiss it, because categorical failure does not scroll
  * quietly off the screen.
  *
- * It reads new lines off the snapshot's damage list and turns each into a
- * notice. It never touches the sim, and it survives a reset (the run's damage
- * list shrinking back to empty) by noticing the count fell.
+ * It reads ledger lines off the **event channel** and turns each into a notice.
+ * It used to diff the snapshot's damage list against a high-water mark it kept
+ * itself, and to detect a RESET by noticing that list had got shorter — one
+ * consumer's private reimplementation of a subscription. `src/core/events.ts`
+ * owns both halves now, and this file keeps no position of its own.
  *
  * Architecture rule 3: snapshot in, nothing out but a dismiss.
  */
-import { styleOf } from "../cockpit/makers.ts";
+
+import { createEventReader } from "../core/events.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { styleOf } from "../makers/houses.ts";
 import type { DamageEvent } from "../sim/damage.ts";
 
 /**
@@ -37,7 +41,24 @@ interface Notice {
 const {
   snapshot,
   notices = [],
-}: { snapshot: Snapshot | undefined; notices?: readonly Notice[] } = $props();
+  hidden = false,
+}: {
+  snapshot: Snapshot | undefined;
+  notices?: readonly Notice[];
+  /**
+   * Out of sight, still running.
+   *
+   * Looking down at the rack has to hide these — they sit above the deck — but
+   * it must not *unmount* them, which is what it used to do. A subscription
+   * belongs to a consumer's lifetime, so a consumer that is destroyed and
+   * rebuilt mid-run rejoins with no idea what it has already voiced, and every
+   * line still on the channel arrives a second time the moment you close the
+   * cabinet. Hiding costs a `display: none`; the timers keep running, so a
+   * notice you could not see because you were in the rack expires on schedule
+   * rather than queueing up to shout at you afterwards.
+   */
+  hidden?: boolean;
+} = $props();
 
 /** How long a routine notice lingers before it fades, ms. */
 const LINGER = 5200;
@@ -49,10 +70,9 @@ interface Toast {
 }
 
 let toasts = $state<Toast[]>([]);
-/** Lines already voiced. Plain, not reactive — it is a high-water mark. */
-let seen = 0;
 let nextId = 0;
 const timers = new Map<number, ReturnType<typeof setTimeout>>();
+const ledger = createEventReader();
 
 function drop(id: number) {
   toasts = toasts.filter((t) => t.id !== id);
@@ -64,20 +84,19 @@ function drop(id: number) {
 }
 
 $effect(() => {
-  const damage = snapshot?.damage ?? [];
+  const { events, rewound } = ledger.take(snapshot);
 
-  // A reset re-racks the exercise: the list shrinks back toward empty. Forget
-  // what we voiced and clear the board.
-  if (damage.length < seen) {
-    seen = 0;
-    for (const id of timers.keys()) clearTimeout(timers.get(id));
+  // A reset re-racks the exercise. Whatever is on the board belongs to a run
+  // that no longer exists.
+  if (rewound) {
+    for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
     toasts = [];
   }
 
-  for (let i = seen; i < damage.length; i++) {
-    const line = damage[i];
-    if (!line) continue;
+  for (const event of events) {
+    if (event.kind !== "ledger") continue;
+    const line = event.line;
     const latched = line.category === "citizen asset";
     const id = nextId++;
     toasts = [...toasts, { id, line, latched }];
@@ -87,7 +106,6 @@ $effect(() => {
         setTimeout(() => drop(id), LINGER),
       );
   }
-  seen = damage.length;
 });
 
 const yen = (n: number) => `−¥${n.toLocaleString("en-US")}`;
@@ -99,7 +117,7 @@ function why(line: DamageEvent): string {
 }
 </script>
 
-<div class="toasts">
+<div class="toasts" class:hidden>
   <!-- The manufacturer's channel, above the ledger's and in its own livery. -->
   {#each notices as notice (notice.id)}
     {@const style = styleOf(notice.maker)}
@@ -146,13 +164,18 @@ function why(line: DamageEvent): string {
   .toasts {
     position: fixed;
     left: 12px;
-    bottom: calc(var(--dash-h, 128px) + 14px);
+    bottom: calc(var(--cab-dash-h, 128px) + 14px);
     z-index: 3;
     display: flex;
     flex-direction: column;
     gap: 6px;
     width: min(300px, calc(100vw - 24px));
     pointer-events: none;
+  }
+  /* In the rack, out of sight. Still mounted, still counting down — see the
+     `hidden` prop above for why unmounting was the wrong way to do this. */
+  .toasts.hidden {
+    display: none;
   }
   .toast {
     background: rgba(16, 19, 21, 0.94);

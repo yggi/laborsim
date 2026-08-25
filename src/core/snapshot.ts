@@ -1,5 +1,6 @@
 import type { Stage } from "../control/bus.ts";
 import type { DamageEvent } from "../sim/damage.ts";
+import type { SimEvent } from "./events.ts";
 
 /**
  * Architecture rule 3: state crosses from sim to UI in one direction, through
@@ -47,6 +48,58 @@ export interface TrackState {
   readonly traction: number | null;
 }
 
+/**
+ * A pin on the route, in world metres.
+ *
+ * It lives in the kernel because three layers need the same two numbers and none
+ * of them should own it: the world generates the pins, NAV-1 follows them, and
+ * the cockpit draws them. It used to be declared on NAV-1, which made the world
+ * import from a rack module to describe its own terrain furniture.
+ */
+export interface Waypoint {
+  readonly x: number;
+  readonly z: number;
+}
+
+/**
+ * What an accelerometer bolted to the hull reads, in the body frame, m/s².
+ *
+ * **Proper acceleration, not `dv/dt`.** The difference is the whole usefulness
+ * of it: an accelerometer at rest reads a steady 1 g upward, because the ground
+ * is pushing it, and one in free fall reads *zero*, because nothing is. So the
+ * quantity is already "how hard is this thing being shaken" rather than "how
+ * fast is it going" — a machine flying off a bank is weightless and quiet, and
+ * a machine landing at the bottom is not, which is what the cab has to sound
+ * like.
+ *
+ * Ship axes, in the machine's own frame: `surge` along its nose (+Z),
+ * `heave` up (+Y), `sway` to its left (+X, see `spec.ts`). Nothing shows this
+ * yet — the first consumer is the rattle in the cab — but it is one snapshot
+ * field away from being a G-meter on the glass, which is the test of whether a
+ * simulated quantity was published honestly.
+ */
+export interface Shake {
+  readonly surge: number;
+  readonly heave: number;
+  readonly sway: number;
+  /**
+   * How fast that reading is **changing**, m/s³, over one step.
+   *
+   * The reading itself cannot answer the question a rattling cab asks. A toolbox
+   * on the floor is quiet at rest, because the floor holds it; it is also quiet
+   * in free fall, because it is falling with the floor. Both are steady states,
+   * and they read 1 g and 0 g — so no function of the reading alone can call
+   * them both silent. What shakes something loose is the floor *changing* under
+   * it faster than friction can carry it along, which is this.
+   *
+   * Physically it is jerk, and it is why a machine flying off a bank goes
+   * quiet: it left the ground at one instant (loud), floats (silent), and
+   * arrives (very loud). It is computed at the fixed step rather than
+   * differenced by a renderer, so a phone dropping frames hears the same ride.
+   */
+  readonly jerk: number;
+}
+
 export interface MachineState {
   readonly pose: BodyPose;
   readonly left: TrackState;
@@ -56,6 +109,7 @@ export interface MachineState {
   /** Radians. Derived for display only — see the note below. */
   readonly pitch: number;
   readonly roll: number;
+  readonly shake: Shake;
 }
 
 /**
@@ -96,10 +150,30 @@ export interface Snapshot {
   readonly stages: readonly Stage[];
   /** Props that moved this step. Empty on an undisturbed site. */
   readonly props: readonly PropPose[];
+  /**
+   * The route the site was laid out with, unchanging for the run.
+   *
+   * It is here rather than handed to the instrument that draws it, because a
+   * recording that cannot draw the route it was following is not a recording —
+   * and because a pod holding world data it was passed at build time is a pod
+   * that cannot be replayed. The array is the world's, by reference: it costs
+   * nothing to carry and it is never rebuilt.
+   */
+  readonly route: readonly Waypoint[];
   /** The ledger so far, oldest line first. */
   readonly damage: readonly DamageEvent[];
   /** Total billed, yen. */
   readonly bill: number;
+  /**
+   * The recent past as **events** rather than as state — impacts, hull jolts,
+   * ledger lines — oldest first, each stamped with a monotonic `seq`.
+   *
+   * The rest of this interface is a state sampled at a moment, which is the
+   * right shape for anything an instrument shows and the wrong shape for
+   * anything that *happens*. Read it with a `createEventReader`, never by
+   * diffing: `src/core/events.ts` says why.
+   */
+  readonly events: readonly SimEvent[];
 }
 
 /**

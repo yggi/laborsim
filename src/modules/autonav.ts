@@ -17,6 +17,7 @@
  */
 
 import type { Module, TrackCommand, Verb } from "../control/bus.ts";
+import type { Waypoint } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import { clamp, type Quat, rotate, vec } from "../core/vec.ts";
 
@@ -26,10 +27,7 @@ const ARRIVED = 6;
 /** How hard it leans on the differential to correct heading. */
 const STEER_GAIN = 1.35;
 
-export interface Waypoint {
-  readonly x: number;
-  readonly z: number;
-}
+export type { Waypoint };
 
 export interface NavPose {
   readonly x: number;
@@ -38,10 +36,12 @@ export interface NavPose {
 }
 
 export interface Autonav extends Module {
-  /** Index of the pin it is currently heading for. */
+  /**
+   * Index of the pin it is currently heading for. Readable, because tests and
+   * instruments ask; settable only through the `target` param below, which is
+   * the one surface the cockpit can reach.
+   */
   readonly target: number;
-  /** Send it to a different pin. The pilot's one lever on the autopilot. */
-  setTarget(index: number): void;
   readonly waypoints: readonly Waypoint[];
 }
 
@@ -62,10 +62,38 @@ export function createAutonav(
     get target() {
       return target;
     },
-    setTarget(index: number) {
-      if (index >= 0 && index < waypoints.length) target = index;
-    },
     waypoints,
+    /**
+     * Which pin it is heading for, as a **declared setting** rather than as a
+     * method somebody in the cockpit has to know to call.
+     *
+     * It was the one control on the machine reachable only by holding the live
+     * module: the route scope was handed an `Autonav` so it could call
+     * `setTarget`, which meant the instrument could not be driven from a
+     * recording and the application shell had to keep a typed reference to a
+     * component it otherwise knows nothing about. A pin is a bounded number
+     * with a name and a unit, which is exactly what a `Param` is — so it is
+     * one, and both the faceplate and the scope reach it the same way.
+     *
+     * **One-based**, because it is a label on a route and nobody standing at a
+     * machine counts pins from zero. The readout stays zero-based: that is an
+     * index into an array, and it crosses to instruments that use it as one.
+     */
+    params: [
+      {
+        id: "target",
+        label: "TARGET",
+        unit: "PIN",
+        min: 1,
+        max: Math.max(1, waypoints.length),
+        step: 1,
+        get: () => target + 1,
+        set(value: number) {
+          const index = Math.round(value) - 1;
+          if (index >= 0 && index < waypoints.length) target = index;
+        },
+      },
+    ],
     readout: () => ({ target, pins: waypoints.length }),
     intent(): TrackCommand | null {
       if (waypoints.length === 0) return null;

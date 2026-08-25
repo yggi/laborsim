@@ -17,10 +17,13 @@
  * It is also the surface a blind subagent authoring a maker's theme works
  * against — which is why it shows *states*, not a pretty gallery.
  */
-import { styleOf } from "../cockpit/makers.ts";
-import { cellFor } from "../cockpit/parts.ts";
-import DashPanel from "../ui/DashPanel.svelte";
-import Rack from "../ui/Rack.svelte";
+
+import { chassisConditions, worst } from "../cockpit/annunciator.ts";
+import DashPanel from "../cockpit/DashPanel.svelte";
+import { cellFor, podFor } from "../cockpit/parts.ts";
+import Rack from "../cockpit/Rack.svelte";
+import { inertControls } from "../control/controls.ts";
+import { styleOf } from "../makers/houses.ts";
 import { SPECIMENS } from "./fixtures.ts";
 
 /** Which specimen the rack and the loose cells are showing. */
@@ -51,7 +54,17 @@ const cells = $derived(
     .filter((e) => e.cell !== null),
 );
 
+/** The same specimen's instruments. Not every component ships one. */
+const pods = $derived(
+  (current?.snapshot.stages ?? []).flatMap((stage) => {
+    const Pod = podFor(stage.id);
+    return Pod ? [{ stage, Pod }] : [];
+  }),
+);
+
 const noop = () => {};
+/** Nothing here is driving anything: the bench is about how kit *looks*. */
+const dead = () => inertControls();
 </script>
 
 <div class="sandbox">
@@ -71,14 +84,28 @@ const noop = () => {};
           about. The glass and the camera behind it are a separate problem
           (`NOTES.md`); this row is only the panel. -->
   {#snippet dash(specimen: (typeof SPECIMENS)[number])}
+    <!-- The conditions are derived here rather than passed in, because they
+         moved out of the panel and into the shell when the horn arrived. The
+         bench has to stand where the shell stands or it stops showing the
+         panel a player sees. `acked` is NOMINAL throughout: an unacknowledged
+         condition flashes, and the flash is a state worth looking at. -->
+    {@const lamps = chassisConditions(specimen.snapshot, specimen.estopped ?? false)}
     <div class="pin">
       <DashPanel
         snapshot={specimen.snapshot}
         rackOpen={false}
         estopped={specimen.estopped ?? false}
+        {lamps}
+        master={worst([
+          ...lamps.map((a) => a.condition),
+          ...specimen.snapshot.stages.map((s) => s.condition),
+        ])}
+        acked={0}
         onOpenRack={noop}
         onEstop={noop}
-        onToggleModule={noop}
+        onAck={noop}
+        onHorn={noop}
+        controls={dead}
       />
     </div>
   {/snippet}
@@ -128,7 +155,7 @@ const noop = () => {};
             <Cell
               stage={entry.stage}
               style={styleOf(entry.stage.maker)}
-              onToggle={noop}
+              controls={inertControls()}
             />
             <span class="tag">{entry.stage.maker}</span>
           </div>
@@ -140,7 +167,32 @@ const noop = () => {};
     </div>
   </section>
 
-  <!-- 3. The rack: three makers' plates, stacked, as mismatched kit. -->
+  <!-- 3. Pods: the parts that cost view. Shown against sky rather than against
+          the bench, because what an instrument looks like is inseparable from
+          what it is sitting in front of — a pod that reads beautifully on grey
+          card and vanishes over a bright site is a pod that failed. -->
+  <section>
+    <h2>PODS · {current?.name} · what it costs you to see</h2>
+    <div class="sky" data-pods={current?.name}>
+      {#each pods as entry (entry.stage.id)}
+        {@const Pod = entry.Pod}
+        <div class="specimen">
+          <Pod
+            stage={entry.stage}
+            style={styleOf(entry.stage.maker)}
+            snapshot={current?.snapshot}
+            controls={inertControls()}
+          />
+          <span class="tag light">{entry.stage.maker}</span>
+        </div>
+      {/each}
+      {#if pods.length === 0}
+        <p class="none light">No instruments. Clear glass — the bare chassis costs you nothing.</p>
+      {/if}
+    </div>
+  </section>
+
+  <!-- 4. The rack: three makers' plates, stacked, as mismatched kit. -->
   <section>
     <h2>RACK · {current?.name} · plates from three suppliers</h2>
     <div class="phone tall">
@@ -273,6 +325,19 @@ const noop = () => {};
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
+  }
+  /* Daylight over a site, roughly what the cab sees out of the glass. */
+  .sky {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 16px;
+    background: linear-gradient(180deg, #8fa7ae 0%, #b9c3b4 62%, #9d9a7e 100%);
+    border: 1px solid #2b3133;
+  }
+  .light {
+    color: #2b3133;
   }
   .tag {
     font-size: 8px;

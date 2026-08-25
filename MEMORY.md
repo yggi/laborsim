@@ -14,28 +14,29 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, placement, and both cameras |
 | `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
+| `docs/design/conventions.md` | the coding conventions, each with the bug that earned it |
 | `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
 | `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
 | `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
-| `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |
+| `docs/design/damage.md` | the ledger, the machine breaking, the reset |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/missions.md` | **exploratory** — Zachtronics budgeting, and why it inverts the chase camera |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/sound.md` | the voices, who owns each one, and what a sound house may not decide |
 | `docs/design/roadmap.md` | **forward-looking** — critical-path review and the argument behind the board's order |
 | `docs/design/stack.md` | the stack, and the rejected options with their reasons |
 | `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
 | `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
-| `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
 
 ---
 
 ## 1. Identity
 
 **laborsim** — a 3D browser game. Patlabor-themed mecha and vehicle simulator
-sandbox on a multi-layer educational physics/kinematics engine. Loop partially
+sandbox on a multi-layer educational physics/kinematics engine. Loop partly
 KSP-inspired: **build mode** and **sim mode**, bridged by the control layer.
 
 "Labor" = the Patlabor sense: industrial/utility machines that are tools first —
@@ -52,10 +53,10 @@ between what a machine is rated to do and what it does on the day.**
 system.** The player is not piloting a Labor; they are using the rig that
 teaches people to. Tonal anchor: the simulator sequence that opens *Patlabor 2*.
 
-Not flavour: it is the frame that licenses inspectability, replay, affordable
-failure, sandbox-as-native, procedural sites and the UI register — so check it
-**before** inventing machinery to justify something. Full list, where the frame
-stops, and which institution speaks: `docs/design/training-frame.md`.
+Not flavour: it licenses inspectability, replay, affordable failure,
+sandbox-as-native, procedural sites and the UI register — so check it **before**
+inventing machinery to justify something. Where the frame stops and which
+institution speaks: `docs/design/training-frame.md`.
 
 ## 2. The design thesis
 
@@ -97,11 +98,10 @@ If that scenario cannot be constructed on rung one, the rack is decoration.
 ### 3.1 The damage ledger — v0's verdict and core feedback
 
 **No job tickets in v0.** The failure loop needs a third beat and the damage
-ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage
-is **joules absorbed**, never hit points, so it is a quantity the player can be
-shown; **harming a citizen is categorical failure**, never a priced line item.
-Model, numbers, the two faces of the ledger and the build order:
-`docs/design/damage.md`. Voice: `docs/design/tone.md`.
+ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage is
+**joules absorbed**, never hit points, so it is a quantity the player can be
+shown — and now hear; **harming a citizen is categorical failure**, never a
+priced line item. Model, numbers and build order: `docs/design/damage.md`.
 
 ## 4. Core loop
 
@@ -113,21 +113,15 @@ Model, numbers, the two faces of the ledger and the build order:
 
 ### 4.1 Rung 1 is built
 
-Detail: `docs/design/tracked-platform.md`. The load-bearing claims:
-
-- Rapier has no anisotropic friction and its vehicle controller models *wheels*,
-  so **the track friction model is ours** — and that is the design, not a
-  workaround. The friction model is the teaching layer.
-- Colliders carry friction 0; six ray samples per track apply impulses capped at
-  `mu · N · dt`. **One tuned constant** (`MU = 0.95`); everything else is a
-  dimension or a mass.
-- The climb limit is `atan(MU)` ≈ **43.5°** — what a friction cone does, not a
-  number chosen to feel right. Past it the machine rears, loses contact and
-  **flips over backwards.** No tipping logic exists anywhere.
-- **Slip — commanded track speed minus actual ground speed — is rung 1's
-  teaching quantity**, on the telemetry line from the first commit, alongside
-  traction (fraction of the friction cone in use) which is **`null`, never 0,
-  for a track with no ground**: nothing measured is not a low reading.
+**The track friction model is ours** — Rapier has no anisotropic friction and
+its vehicle controller models wheels — and that is the design rather than a
+workaround: the friction model is the teaching layer. **One tuned constant**
+(`MU = 0.95`); everything else is a dimension or a mass, and the 43.5° climb
+limit is `atan(MU)` rather than a number chosen to feel right. **Slip is rung
+1's teaching quantity**, alongside traction, which is **`null` and never 0 for a
+track with no ground** — nothing measured is not a low reading, and every
+consumer has to decide what to show for it. Detail, and what falls out of the
+model: `docs/design/tracked-platform.md`.
 
 ## 5. The machinery ladder
 
@@ -138,11 +132,10 @@ balance controller — tipping is emergent from contacts alone.
 5. Off-road hexapod · 6. Bipedal walker
 
 **Sequence the ladder, not the biped.** The biped is the worst entry point for
-physics and the best one for concept art — which is why the probe started there
-and production must not. Full table: `docs/design/machinery-ladder.md`. The
-ladder is non-monotonic by design: the Phantom Labor attacks the sensor surface
-capability created, so the two-lever cage at rung one must stay a genuinely good
-machine, never a tutorial.
+physics and the best for concept art, which is why the probe started there and
+production must not. Full table: `docs/design/machinery-ladder.md`. The ladder is
+non-monotonic by design — the Phantom Labor attacks the sensor surface capability
+created — so the two-lever cage at rung one stays a good machine, not a tutorial.
 
 ## 6. The cockpit — panel budget and occlusion
 
@@ -157,11 +150,9 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **The chase camera is "hands off the wheel", not pause.** No cockpit and no
   control, but **the sim keeps stepping and nothing auto-stops** — leave the
   throttle open and the ledger will tell you what it cost.
-- **Viewport budgeting is a core mechanism, not a UI style**, which couples it
-  deeply to touch. This is *why* mobile-first is fixed — see § 9.
-- **The rail is a server rack, not a DIN rail**: faceplates stacked vertically,
-  screwed in, **each in its manufacturer's house style**. Kit from different
-  makers must look like kit from different makers.
+- **The rail is a server rack, not a DIN rail**: faceplates stacked vertically
+  and screwed in, each in its maker's house style. Viewport budgeting is a core
+  mechanism rather than a UI style, which is *why* mobile-first is fixed (§ 9).
 - **The machine's own instruments are one part**, not a row of separate dials —
   the KIBA-NAV-UNIT: speed, ATT-0 and TRACTION in one bezel, legends engraved in
   its own metal. **The dash is one wrapping flow of parts, bottom-aligned**, and
@@ -179,11 +170,15 @@ Spilled in full to `docs/design/components.md` (index). What must stay here:
 - **The dash is the seam** — visible in both postures, and it travels. Its theme
   belongs to the **vehicle's** manufacturer, which is why the machine's own
   instruments are one part (KIBA-NAV-UNIT) and fitted kit sits behind a seam.
+- **A manufacturer is one house** (`src/makers/`): colours, words **and sound**.
+  The machine's voice is its **chassis maker's**, a component's is its own, and
+  the site's belongs to materials. A house sets timbre, never level — the
+  rack-unit rule in another medium (`docs/design/sound.md`).
 
 ## 7. Mechanics that fall out of the above
 
-Detail: `docs/design/mechanics.md`. Each one *follows* from the core
-commitments — that is the argument for keeping them.
+Detail: `docs/design/mechanics.md`. Each *follows* from a core commitment,
+which is the argument for keeping it.
 
 - **Phantom Labor** — attacks the sensor surface capability created.
 - **Hot-patching, anchored on LOTO** — lock outputs versus rewire live.
@@ -194,18 +189,17 @@ commitments — that is the argument for keeping them.
 
 The engine is **multi-layer** and **educational**: the player can open a layer
 and see the quantities it works with, not just their result. **Every simulated
-quantity must be surfaceable.** A layer the player cannot open is not a teaching
-layer and does not belong.
+quantity must be surfaceable** — as a number, a needle or a voice. A layer the
+player cannot open is not a teaching layer.
 
 The engine of record is **Rapier (wasm)**, chosen for motorized joints, joint
 limits, and **determinism you can replay a failure with** — attribution is the
 design, so replay is not a nice-to-have.
 
-Target tier is the **virtual crane**: full dynamics plus an external stabilising
-wrench on the hull with a finite authority budget. That wrench **is** STAB-2 —
-switching it off does not fake a fall, it removes the thing that was holding you
-up. Mechanic and physics from the same object. See
-`docs/design/physics-migration.md` for the tier costs and what inverts.
+Target tier is the **virtual crane**: full dynamics plus a stabilising wrench on
+the hull with a finite authority budget. That wrench **is** STAB-2 — switching it
+off does not fake a fall, it removes the thing that was holding you up. Tier
+costs and what inverts: `docs/design/physics-migration.md`.
 
 ## 9. Stack — settled
 
@@ -218,29 +212,22 @@ occlusion by your own hand, no hover, no pixel precision. A desktop-first
 cockpit would be a different mechanic wearing the same name. This is upstream of
 stack, layout and control design alike.
 
-Use `@dimforge/rapier3d-deterministic`: it is bit-level cross-platform
-deterministic and `world.takeSnapshot()` hashes identically across machines,
-which makes replay a test rather than an aspiration. It costs SIMD and parallel
-features. Rapier also rules out single-file HTML output — it wants a bundler.
+Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
+aspiration. What that costs, and the rejected options with their reasons —
+**Godot**, **Babylon.js**, **Jolt** — are in `docs/design/stack.md`.
 
-Rejected, with reasons, in `docs/design/stack.md`: **Godot** (its web export
-cannot run C# at all), **Babylon.js** (switching cost lands on the proven cel
-pipeline), **Jolt** (its vehicle controller is the black box we refuse).
-
-No further dependencies without a reason. The art direction is procedural boxes
-and cylinders, so **no asset pipeline is needed for a long time** — do not build
-one preemptively.
+No further dependencies without a reason, and **no asset pipeline** — the art is
+procedural boxes and cylinders and the sound is synthesised, so there is nothing
+to load. Do not build one preemptively.
 
 ## 10. The prototype
 
-`prototype/concept-3/` — single file, three.js r128 from CDN, no build step. It
-answered *can this look and feel right in a browser, on a phone?* — yes.
-
-It is **concept art with working mechanisms**, not an architecture sketch.
-**Do not port its structure.** Do port the named mechanisms — the footstep
-policy above all, then the analytic 2-bone IK, the hydraulic rams and the cel
-pipeline. What it fakes, the six defects it cost and the method lessons it
-taught: `docs/design/prototype-findings.md` and `META.md`.
+`prototype/concept-3/` — one file, three.js from a CDN, no build. It answered
+*can this look and feel right in a browser, on a phone?* — yes. It is **concept
+art with working mechanisms**, not an architecture sketch: **do not port its
+structure**, do port the named mechanisms — the footstep policy above all, then
+the analytic 2-bone IK, the hydraulic rams, the cel pipeline. What it fakes and
+what it cost: `docs/design/prototype-findings.md`.
 
 ## 11. Repo map
 
@@ -250,12 +237,17 @@ src/
   sim/       simulation driver
     layers/  the individual simulation layers
   modules/   rack components: loops that hold one invariant in one frame
-  control/   the rack: ordering, arbitration, actuator-bus ownership
+  control/   the rack: ordering, arbitration, actuator-bus ownership;
+             and `Controls`, the one channel a command crosses back through
   build/     build mode: assembly, load-chart computation
-  cockpit/   pilot viewport: instruments, panel budget, occlusion
+  cockpit/   everything the machine's manufacturers made: the cab, the dash,
+             the rack's rail, and each component's three parts —
+             cells/ faces/ pods/, registered as one packet in `parts.ts`
+  makers/    who built the kit: one house per manufacturer, read by both renderers
   render/    three.js scene, cel pipeline
+  audio/     the machine's voice: `voices.ts` is arithmetic, `engine.ts` the graph
   world/     terrain, job sites, hazards (radiation, EMF)
-  ui/        application shell, mode switching
+  ui/        everything the rig made: the shell, the debrief, the live voice
   platform/  input (touch-first), persistence, config
 assets/      models, textures, data
 docs/design/ MEMORY.md spill files
@@ -266,6 +258,14 @@ tests/
 
 The tree is a claim about seams, not a promise about files. Move a seam if it
 turns out to be wrong, and record the move here.
+
+**The cockpit/ui line is the machine against the rig**, moved once (2026-08-25)
+because it had drifted. If a manufacturer built it — the cage, the dash, an
+instrument, a rack plate — it is `cockpit/`. If the training system built it —
+the debrief, the live voice, the shell, the volume control — it is `ui/` or the
+shell. The rig may read the machine; the machine knows nothing of the rig.
+**`makers/` is who they are rather than what they made**: colours, words and
+sound in one object per manufacturer, above both renderers that read it.
 
 ## 12. Conventions
 
@@ -283,17 +283,17 @@ and the checks: `docs/design/architecture-rules.md`.
 3. **One-directional snapshot boundary.** Sim imperative at 60 Hz, UI reads a
    snapshot at 10 Hz. An instrument is a view of a recording — which is why the
    same code drives a replay. **Svelte never owns the canvas. No Threlte.**
+   The snapshot has **two halves**: a *state*, sampled, for anything an
+   instrument shows, and an *event channel* (`core/events.ts`) for anything that
+   *happens* — a bounded ring of `seq`-stamped values, read with one number and
+   never by diffing a growing list. The channel notifies; the ledger records.
+   **Renderers** (`render/`, `audio/`) read at 60 Hz and interpolate; **readers**
+   (`ui/`, `cockpit/`) read at 10 Hz. Audio is a renderer, so a replay sounds
+   exactly like the run it recorded.
 
 ### Coding
 
-- **One fact, one place.** Three of the four probe defects came from keeping one
-  fact in two places (heading in `body.yaw` *and* `root.rotation.y`; hull height
-  from soles *and* from ground). Delete the duplicate rather than syncing it.
-- **Body axes: forward is +Z, up is +Y, so right is −X and left is +X.**
-  Named as `LEFT_X`/`RIGHT_X` in `core/spec.ts` rather than written inline —
-  getting them the wrong way round silently mirrors the steering, which is
-  invisible on a symmetric hull. It shipped that way once.
-- **Write the full rotation triple** — `rotation.set(k,0,0)`, not
-  `rotation.x = k` — so a hinge's one-axis constraint is explicit in the code
-  rather than assumed. `Object3D.add()` returns the *parent*.
-- Nothing else is established yet. Do not invent conventions here in advance.
+**One fact, one place** — three of the four probe defects came from keeping one
+fact in two. The rest, each with the bug that earned it — body axes, the
+rotation triple, the two custom-property namespaces:
+`docs/design/conventions.md`. Do not invent conventions there in advance.

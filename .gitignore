@@ -22,3 +22,6 @@ npm-debug.log*
 
 # Sandbox screenshots. Evidence, not artifacts — regenerate with `npm run shots`.
 shots/
+
+# Audio renders. Same reasoning — regenerate with `npm run listen`.
+renders/

@@ -4,8 +4,9 @@ Spilled from `MEMORY.md` § 3.1. The voice the ledger speaks in is in
 `docs/design/tone.md`; this is what it is speaking *about*.
 
 The model is **built** (L-031): furniture is dynamic, impacts are measured in
-joules, and lines are priced and attributed. The end-of-run report, more things
-worth breaking, machine damage and sound are still ahead.
+joules, and lines are priced and attributed. So is the end-of-run report (L-029),
+the live voice (L-044) and the sound (L-040). More things worth breaking (L-039)
+and machine damage (L-038) are still ahead.
 
 ---
 
@@ -118,18 +119,16 @@ that pulls to one side? That would be the strongest possible version, because
 it makes a damaged machine a *different machine to drive*, which is the whole
 subject. It is also the most expensive. Not v0.
 
-## Sound is the fourth channel, and it is synthesised
+## Sound is the fourth channel, and it is synthesised — **built** (L-040)
 
-Not sampled. **Engine-generated**, from the same quantities the sim already
-publishes — track speed, slip, contact count, impact energy, load. A machine
-labouring at 90% grip should *sound* like it, and the pitch of the thing you
-just hit should follow how hard you hit it.
+Not sampled: engine-generated, from the same quantities the sim already
+publishes, because a sampled clip is a black box triggered by an event and a
+synthesised voice is another rendering of a simulated quantity. Slip already has
+a number, a bar and a belt racing under a stationary machine; sound is the
+channel that reaches you when your eyes are on the ground.
 
-The argument is the inspectability pillar, not audio fashion: a sampled clip is
-a black box triggered by an event, and a synthesised voice is another rendering
-of a simulated quantity. Slip already has a number, a bar and a belt racing
-under a stationary machine; sound is the channel that reaches you when your
-eyes are on the ground.
+It grew past a section in this file. The voices, who owns each one, and what a
+manufacturer's sound house may and may not decide: `docs/design/sound.md`.
 
 **The machine should become a lemon.** As it takes abuse it should slip, pull to
 one side, buckle; smoke and leak oil; set off alarms and warning lights. Two
@@ -156,4 +155,4 @@ In order, and each one is a `BOARD.md` card:
 | L-032 record and playback | the ledger's *why* column. Also the only way a line can be argued with. |
 | L-029 the ledger itself | itemised, named, priced, condescending. |
 | L-038 machine damage and reset | the cost lands on you as well as on the site. |
-| L-040 the machine symphony | the fourth channel, once there is something to sound like. |
+| L-040 the machine symphony | **built.** The fourth channel, and it arrived early because there was already something to sound like. |

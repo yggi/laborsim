@@ -10,10 +10,16 @@
 import RAPIER from "@dimforge/rapier3d-deterministic-compat";
 import { type Module, runRack, type Stage } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
+import { createRecorder } from "../core/events.ts";
 import { hashBytes } from "../core/hash.ts";
-import { attitudeOf, type PropPose, type Snapshot } from "../core/snapshot.ts";
-import { CLEARANCE, TRACK } from "../core/spec.ts";
-import { vec } from "../core/vec.ts";
+import {
+  attitudeOf,
+  type PropPose,
+  type Shake,
+  type Snapshot,
+} from "../core/snapshot.ts";
+import { CLEARANCE, G, TRACK } from "../core/spec.ts";
+import { conjugate, rotate, vec } from "../core/vec.ts";
 import {
   generateProps,
   isBreakable,
@@ -43,6 +49,20 @@ import { spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
  * for furniture to touch down and fall asleep, cheap enough to do on load.
  */
 const SETTLE_STEPS = 120;
+
+/**
+ * Speed the hull has to lose in **one step** before it counts as having been
+ * hit rather than having been driven, m/s.
+ *
+ * It is a speed and not an energy because the drivetrain's own ceiling is a
+ * speed: every horizontal impulse the track model applies is capped at
+ * `mu · N · dt`, so braking as hard as physics allows sheds `MU · g / 60` ≈
+ * 0.16 m/s per step, whatever you were doing at the time. The energy that
+ * represents varies by an order of magnitude across the speed range; the speed
+ * does not. Set well above the ceiling so that rolling over rough ground — where
+ * the hull is genuinely bouncing — stays quiet and only the world speaks.
+ */
+const HULL_JOLT = 1.2;
 
 let ready: Promise<void> | undefined;
 export function initPhysics(): Promise<void> {
@@ -79,7 +99,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const seed = options.seed ?? 20260823;
   const modules = options.modules ?? [];
 
-  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: -G, z: 0 });
   world.timestep = STEP_SECONDS;
 
   const terrain = options.terrain ?? generateTerrain(seed);
@@ -146,6 +166,14 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * is always a small settling twitch. Charging for that produced a ¥55,690
    * bill before the machine had moved. These steps happen with no rack, no
    * drive and no ledger: the exercise begins with everything at rest.
+   *
+   * **It is not only a twitch, and this window is where it hides.** Measured on
+   * the default seed: everything stands for the first ten steps, and by step 120
+   * seventeen of eighteen marker poles, sixteen of twenty-two barriers and ten
+   * of forty-five cones are lying flat. They are tall boxes on 20° noise and
+   * they simply fall over. Nothing is wrong with the physics; the site is asking
+   * furniture to stand where it cannot. Carded as L-057 — the fix is footing in
+   * the generator, not a number here.
    */
   for (let i = 0; i < SETTLE_STEPS; i++) world.step();
   for (let i = 0; i < propBodies.length; i++) {
@@ -158,9 +186,15 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const waypoints = generateWaypoints(terrain);
 
   let tick = 0;
+  /** What the hull is being shaken by, measured each step. At rest, 1 g up. */
+  let shake: Shake = { surge: 0, heave: G, sway: 0, jerk: 0 };
+  /** The last accelerometer reading, so the next one can be differenced. */
+  let lastFelt = vec(0, G, 0);
   /** Ground covered this run, metres. */
   let distance = 0;
   let stages: readonly Stage[] = [];
+  /** The discrete half of the boundary. See `src/core/events.ts`. */
+  const recorder = createRecorder();
 
   /**
    * Energy delivered into each breakable this step, priced by the ledger.
@@ -181,7 +215,22 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       propEnergy[i] = now;
       if (delivered > 0) {
         const t = body.translation();
-        ledger.absorb(i, delivered, [t.x, t.y, t.z], blame);
+        const at = [t.x, t.y, t.z] as const;
+        // Every impact is announced; only some of them are billed. The ledger
+        // has always been the sole witness to a collision, which made hitting
+        // an already-written-off cone indistinguishable from missing it.
+        const prop = props[i];
+        if (prop) {
+          recorder.emit(tick, {
+            kind: "impact",
+            prop: i,
+            what: prop.kind,
+            joules: delivered,
+            at,
+          });
+        }
+        const line = ledger.absorb(i, delivered, at, blame);
+        if (line) recorder.emit(tick, { kind: "ledger", line });
       }
     }
   }
@@ -212,8 +261,51 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       const bus = runRack(modules);
       stages = bus.stages;
       machine.drive(bus.command.left, bus.command.right, STEP_SECONDS);
+      const hullBefore = machine.speed();
+      const velocityBefore = machine.body.linvel();
       world.step();
       tick++;
+
+      // What an accelerometer bolted to the hull reads: the velocity change over
+      // one step, **less gravity**, in the machine's own frame. Subtracting
+      // gravity is what makes it proper acceleration rather than `dv/dt` — at
+      // rest it reads a steady 1 g up because the ground is pushing, and in free
+      // fall it reads nothing at all because nothing is. Only the cab's rattle
+      // consumes it today; it is a real measurement either way, and one field
+      // away from being a G-meter on the glass.
+      const velocityAfter = machine.body.linvel();
+      const measured = vec(
+        (velocityAfter.x - velocityBefore.x) / STEP_SECONDS,
+        (velocityAfter.y - velocityBefore.y) / STEP_SECONDS + G,
+        (velocityAfter.z - velocityBefore.z) / STEP_SECONDS,
+      );
+      const felt = rotate(conjugate(machine.body.rotation()), measured);
+      // Jerk: how fast that reading is changing. It is what a loose thing in the
+      // cab actually answers to — see `Shake` — and it is differenced here, at
+      // the fixed step, so that it means the same on a phone dropping frames.
+      // `sqrt` and not `hypot`: sqrt is required to be correctly rounded and
+      // `Math.hypot` is not, and this value crosses to a renderer that a replay
+      // has to reproduce exactly (rule 2, and `waypoints.ts` says the same).
+      const dx = felt.x - lastFelt.x;
+      const dy = felt.y - lastFelt.y;
+      const dz = felt.z - lastFelt.z;
+      const jerk = Math.sqrt(dx * dx + dy * dy + dz * dz) / STEP_SECONDS;
+      lastFelt = felt;
+      shake = { surge: felt.z, heave: felt.y, sway: felt.x, jerk };
+      // What the world did to the machine, measured the same way as what the
+      // machine does to the world: energy lost in one step. Nothing prices it
+      // yet — L-038 does — but the machine's own collisions are now on the
+      // channel, which is what a landing has to be audible from.
+      const hullAfter = machine.speed();
+      const jolt = hullBefore - hullAfter;
+      if (jolt > HULL_JOLT) {
+        const hullMass = machine.body.mass();
+        recorder.emit(tick, {
+          kind: "hull",
+          joules: 0.5 * hullMass * (hullBefore * hullBefore - hullAfter * hullAfter),
+          jolt,
+        });
+      }
       // Ground covered, integrated at the fixed step. Multiply and add only, so
       // it stays bit-portable and two engines agree on the odometer reading —
       // which matters, because it is on the machine's dataplate cluster and a
@@ -239,12 +331,15 @@ export function createWorld(options: SimOptions = {}): SimWorld {
           left: machine.left,
           right: machine.right,
           speed: machine.speed(),
+          shake,
           ...attitudeOf(pose.rotation),
         },
         stages,
         props: movedProps(),
+        route: waypoints,
         damage: ledger.events,
         bill: ledger.total,
+        events: recorder.publish(),
       };
     },
     fingerprint() {
