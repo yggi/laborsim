@@ -184,6 +184,9 @@ export function snapshotOf(
         ]
       : [],
     bill: over.bill ?? 0,
+    // A specimen is a state held still to be looked at. Nothing on the bench
+    // reacts to events, and a frozen moment has no recent past.
+    events: [],
   };
 }
 

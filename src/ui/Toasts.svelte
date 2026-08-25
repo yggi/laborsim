@@ -8,13 +8,16 @@
  * and stays until you dismiss it, because categorical failure does not scroll
  * quietly off the screen.
  *
- * It reads new lines off the snapshot's damage list and turns each into a
- * notice. It never touches the sim, and it survives a reset (the run's damage
- * list shrinking back to empty) by noticing the count fell.
+ * It reads ledger lines off the **event channel** and turns each into a notice.
+ * It used to diff the snapshot's damage list against a high-water mark it kept
+ * itself, and to detect a RESET by noticing that list had got shorter — one
+ * consumer's private reimplementation of a subscription. `src/core/events.ts`
+ * owns both halves now, and this file keeps no position of its own.
  *
  * Architecture rule 3: snapshot in, nothing out but a dismiss.
  */
 import { styleOf } from "../cockpit/makers.ts";
+import { createEventReader } from "../core/events.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import type { DamageEvent } from "../sim/damage.ts";
 
@@ -49,10 +52,9 @@ interface Toast {
 }
 
 let toasts = $state<Toast[]>([]);
-/** Lines already voiced. Plain, not reactive — it is a high-water mark. */
-let seen = 0;
 let nextId = 0;
 const timers = new Map<number, ReturnType<typeof setTimeout>>();
+const ledger = createEventReader();
 
 function drop(id: number) {
   toasts = toasts.filter((t) => t.id !== id);
@@ -64,20 +66,19 @@ function drop(id: number) {
 }
 
 $effect(() => {
-  const damage = snapshot?.damage ?? [];
+  const { events, rewound } = ledger.take(snapshot);
 
-  // A reset re-racks the exercise: the list shrinks back toward empty. Forget
-  // what we voiced and clear the board.
-  if (damage.length < seen) {
-    seen = 0;
-    for (const id of timers.keys()) clearTimeout(timers.get(id));
+  // A reset re-racks the exercise. Whatever is on the board belongs to a run
+  // that no longer exists.
+  if (rewound) {
+    for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
     toasts = [];
   }
 
-  for (let i = seen; i < damage.length; i++) {
-    const line = damage[i];
-    if (!line) continue;
+  for (const event of events) {
+    if (event.kind !== "ledger") continue;
+    const line = event.line;
     const latched = line.category === "citizen asset";
     const id = nextId++;
     toasts = [...toasts, { id, line, latched }];
@@ -87,7 +88,6 @@ $effect(() => {
         setTimeout(() => drop(id), LINGER),
       );
   }
-  seen = damage.length;
 });
 
 const yen = (n: number) => `−¥${n.toLocaleString("en-US")}`;

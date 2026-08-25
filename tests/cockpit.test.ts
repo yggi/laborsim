@@ -190,6 +190,7 @@ describe("the masters are derived, never hand-wired", () => {
           },
         ],
         bill: 3000,
+        events: [],
       },
       false,
     );
@@ -235,6 +236,7 @@ describe("the tells point at an instrument that can show the thing", () => {
       route: [],
       damage: [],
       bill: 0,
+      events: [],
     };
   };
 

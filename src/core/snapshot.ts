@@ -1,5 +1,6 @@
 import type { Stage } from "../control/bus.ts";
 import type { DamageEvent } from "../sim/damage.ts";
+import type { SimEvent } from "./events.ts";
 
 /**
  * Architecture rule 3: state crosses from sim to UI in one direction, through
@@ -123,6 +124,16 @@ export interface Snapshot {
   readonly damage: readonly DamageEvent[];
   /** Total billed, yen. */
   readonly bill: number;
+  /**
+   * The recent past as **events** rather than as state — impacts, hull jolts,
+   * ledger lines — oldest first, each stamped with a monotonic `seq`.
+   *
+   * The rest of this interface is a state sampled at a moment, which is the
+   * right shape for anything an instrument shows and the wrong shape for
+   * anything that *happens*. Read it with a `createEventReader`, never by
+   * diffing: `src/core/events.ts` says why.
+   */
+  readonly events: readonly SimEvent[];
 }
 
 /**

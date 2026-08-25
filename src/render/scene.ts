@@ -11,6 +11,7 @@
  */
 
 import * as THREE from "three";
+import { createEventReader } from "../core/events.ts";
 import { makeRng } from "../core/rng.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
@@ -281,7 +282,7 @@ export function createViewport(
   scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }, propNodes));
   // Anything written off is repainted once, when the ledger says so.
   const wrecked = toon(0x4a4640, { rim: 0x8fa0a8, rimStrength: 0.45 });
-  let seenDamage = 0;
+  const ledger = createEventReader();
 
   greeble(machine, { accent, dark, hazard, lamp: lampMat });
 
@@ -311,15 +312,15 @@ export function createViewport(
         node.node.quaternion.set(rx, ry, rz, rw);
       }
       // New ledger lines since last frame. A write-off gets repainted; the
-      // physics already threw it wherever it went.
-      for (let i = seenDamage; i < snapshot.damage.length; i++) {
-        const line = snapshot.damage[i];
-        if (!line || line.state !== "destroyed") continue;
-        const node = propNodes[line.prop];
+      // physics already threw it wherever it went. This was the third place in
+      // the codebase keeping its own high-water mark into `snapshot.damage`,
+      // which is what earned the event channel.
+      for (const event of ledger.take(snapshot).events) {
+        if (event.kind !== "ledger" || event.line.state !== "destroyed") continue;
+        const node = propNodes[event.line.prop];
         if (!node) continue;
         for (const part of node.parts) part.material = wrecked;
       }
-      seenDamage = snapshot.damage.length;
 
       const [px, py, pz] = snapshot.machine.pose.position;
       const [qx, qy, qz, qw] = snapshot.machine.pose.rotation;

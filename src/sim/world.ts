@@ -10,6 +10,7 @@
 import RAPIER from "@dimforge/rapier3d-deterministic-compat";
 import { type Module, runRack, type Stage } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
+import { createRecorder } from "../core/events.ts";
 import { hashBytes } from "../core/hash.ts";
 import { attitudeOf, type PropPose, type Snapshot } from "../core/snapshot.ts";
 import { CLEARANCE, TRACK } from "../core/spec.ts";
@@ -43,6 +44,20 @@ import { spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
  * for furniture to touch down and fall asleep, cheap enough to do on load.
  */
 const SETTLE_STEPS = 120;
+
+/**
+ * Speed the hull has to lose in **one step** before it counts as having been
+ * hit rather than having been driven, m/s.
+ *
+ * It is a speed and not an energy because the drivetrain's own ceiling is a
+ * speed: every horizontal impulse the track model applies is capped at
+ * `mu · N · dt`, so braking as hard as physics allows sheds `MU · g / 60` ≈
+ * 0.16 m/s per step, whatever you were doing at the time. The energy that
+ * represents varies by an order of magnitude across the speed range; the speed
+ * does not. Set well above the ceiling so that rolling over rough ground — where
+ * the hull is genuinely bouncing — stays quiet and only the world speaks.
+ */
+const HULL_JOLT = 1.2;
 
 let ready: Promise<void> | undefined;
 export function initPhysics(): Promise<void> {
@@ -169,6 +184,8 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   /** Ground covered this run, metres. */
   let distance = 0;
   let stages: readonly Stage[] = [];
+  /** The discrete half of the boundary. See `src/core/events.ts`. */
+  const recorder = createRecorder();
 
   /**
    * Energy delivered into each breakable this step, priced by the ledger.
@@ -189,7 +206,22 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       propEnergy[i] = now;
       if (delivered > 0) {
         const t = body.translation();
-        ledger.absorb(i, delivered, [t.x, t.y, t.z], blame);
+        const at = [t.x, t.y, t.z] as const;
+        // Every impact is announced; only some of them are billed. The ledger
+        // has always been the sole witness to a collision, which made hitting
+        // an already-written-off cone indistinguishable from missing it.
+        const prop = props[i];
+        if (prop) {
+          recorder.emit(tick, {
+            kind: "impact",
+            prop: i,
+            what: prop.kind,
+            joules: delivered,
+            at,
+          });
+        }
+        const line = ledger.absorb(i, delivered, at, blame);
+        if (line) recorder.emit(tick, { kind: "ledger", line });
       }
     }
   }
@@ -220,8 +252,23 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       const bus = runRack(modules);
       stages = bus.stages;
       machine.drive(bus.command.left, bus.command.right, STEP_SECONDS);
+      const hullBefore = machine.speed();
       world.step();
       tick++;
+      // What the world did to the machine, measured the same way as what the
+      // machine does to the world: energy lost in one step. Nothing prices it
+      // yet — L-038 does — but the machine's own collisions are now on the
+      // channel, which is what a landing has to be audible from.
+      const hullAfter = machine.speed();
+      const jolt = hullBefore - hullAfter;
+      if (jolt > HULL_JOLT) {
+        const hullMass = machine.body.mass();
+        recorder.emit(tick, {
+          kind: "hull",
+          joules: 0.5 * hullMass * (hullBefore * hullBefore - hullAfter * hullAfter),
+          jolt,
+        });
+      }
       // Ground covered, integrated at the fixed step. Multiply and add only, so
       // it stays bit-portable and two engines agree on the odometer reading —
       // which matters, because it is on the machine's dataplate cluster and a
@@ -254,6 +301,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         route: waypoints,
         damage: ledger.events,
         bill: ledger.total,
+        events: recorder.publish(),
       };
     },
     fingerprint() {
