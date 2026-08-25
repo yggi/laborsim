@@ -17,7 +17,7 @@ import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.
 import { PROP_BOX, type Prop } from "../world/props.ts";
 import { sampleTerrain, type Terrain } from "../world/terrain.ts";
 import type { Pin } from "../world/waypoints.ts";
-import { cabCameraRotation } from "./camera.ts";
+import { cabCameraRotation, cabOffset, focalPixels } from "./camera.ts";
 import { ink, inked, terrainMaterial, toon } from "./toon.ts";
 
 /**
@@ -33,6 +33,22 @@ export interface Viewport {
   setMode(mode: CameraMode): void;
   /** Head pan in the cab; orbit in chase. Same gesture, different meaning. */
   look(dx: number, dy: number): void;
+  /**
+   * Where the cab has swept to, in CSS pixels, for the DOM that is bolted to
+   * it — the cage, the pods, the dash and the levers.
+   *
+   * The renderer publishes it because the renderer owns the projection. Read it
+   * once per frame and write it to one custom property; never let it become
+   * reactive state (architecture rule 3, and `docs/design/components.md`).
+   */
+  head(): { x: number; y: number };
+  /**
+   * Put the eyes back on the road now, rather than after the usual hold. For
+   * when something else has taken the pilot's attention — dropping them to the
+   * rack is turning your head, and the view should not be left over your
+   * shoulder while you read.
+   */
+  recentre(): void;
   dispose(): void;
 }
 
@@ -53,8 +69,18 @@ const LAYER_INTERIOR = 1;
 
 /** How long a look is left alone before the view starts easing forward, ms. */
 const LOOK_HOLD_MS = 1200;
-/** Per-frame fraction of the remaining angle. Slow enough to feel like a neck. */
-const LOOK_RETURN = 0.045;
+/**
+ * Time constant of the neck coming back, seconds. Slow enough to read as a
+ * head turning rather than a camera snapping.
+ *
+ * **Per second, not per frame.** It was a flat 0.045 of the remaining angle
+ * every frame, which is the same thing only at 60 fps: on a phone rendering at
+ * 30 the eyes came back twice as slowly, and the whole point of the mobile-first
+ * pillar is that the slow device is the real one. 0.37 s reproduces the old
+ * feel at 60 fps exactly. Found from a screenshot bench that kept catching the
+ * cab 25 px off centre and looking like a layout bug.
+ */
+const LOOK_TAU = 0.37;
 
 export function createViewport(
   canvas: HTMLCanvasElement,
@@ -292,8 +318,13 @@ export function createViewport(
   let tilt = 0;
   /** When the pilot last moved the view. Wall clock: camera feel, not sim. */
   let lastLook = 0;
+  /** Wall clock of the previous rendered frame, for a rate-independent ease. */
+  let lastFrame = 0;
   let orbit = 2.4;
   let elevation = 0.35;
+  /** Glass height in CSS pixels, which is what turns a look angle into a
+   *  translate. Zero until the first resize, and zero is harmless. */
+  let viewHeight = 0;
   const eye = new THREE.Vector3();
   // Wheel spin is integrated from snapshot time, not wall time, so a replay
   // turns them exactly as the live run did.
@@ -392,9 +423,16 @@ export function createViewport(
         // Renderer-side and frame-rate-coupled on purpose: this is camera feel,
         // never sim state, so it can use the wall clock that rule 2 keeps out of
         // the simulation.
-        if (performance.now() - lastLook > LOOK_HOLD_MS) {
-          pan += (0 - pan) * LOOK_RETURN;
-          tilt += (0 - tilt) * LOOK_RETURN;
+        const now = performance.now();
+        // Wall clock, clamped: a backgrounded tab comes back with a gap that
+        // would otherwise snap the head round in a single frame.
+        const frame = lastFrame === 0 ? 0 : Math.min((now - lastFrame) / 1000, 0.1);
+        lastFrame = now;
+        if (now - lastLook > LOOK_HOLD_MS) {
+          // deterministic-exempt: camera feel, and it never reaches the sim.
+          const eased = 1 - Math.exp(-frame / LOOK_TAU);
+          pan += (0 - pan) * eased;
+          tilt += (0 - tilt) * eased;
           if (Math.abs(pan) < 1e-3) pan = 0;
           if (Math.abs(tilt) < 1e-3) tilt = 0;
         }
@@ -429,8 +467,20 @@ export function createViewport(
     },
     resize(width, height) {
       renderer.setSize(width, height);
+      viewHeight = height;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+    },
+    head() {
+      // Chase is outside the machine: there is no cab to sweep, and the only
+      // furniture still on screen belongs to the rig rather than to the Labor.
+      if (mode !== "cab") return { x: 0, y: 0 };
+      return cabOffset(pan, tilt, focalPixels(camera.fov, viewHeight));
+    },
+    recentre() {
+      // Not a jump: expire the hold and let the same easing do the work, so the
+      // neck moves at one speed however it was told to come back.
+      lastLook = 0;
     },
     setMode(next) {
       mode = next;

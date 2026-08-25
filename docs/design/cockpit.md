@@ -133,6 +133,11 @@ heading: hold still for a moment and the neck eases back. Without it, every look
 costs a second deliberate swipe to undo — and the cheapest way to avoid that cost
 is to never look, which is the opposite of what a glance is for.
 
+The cage is also **structure the cockpit measures against**, not scenery: the
+pillars and the beam are where a pod's arm clamps, and they are one set of
+numbers shared by the frame you see and the frame a drop is judged against
+(`src/cockpit/cage.ts`, and the arms in `docs/design/components.md`).
+
 ## The dash is the seam, and it travels (built, L-048)
 
 The dash is the **only thing visible in both postures**, and it does not fade
@@ -381,12 +386,36 @@ watch an instrument for something their inner ear was built to feel. With the
 glass tilted, ATT-0 stops being the primary sense and becomes what an instrument
 is for: the exact figure, and the one you still trust in the dark.
 
-Two consequences to keep in view, neither a reason to undo it:
+### The whole cab moves, and it moves 1:1 (built, L-050)
 
-- **Screen-fixed instruments are now the odd ones out.** They were always going
-  to be (L-050 moves them into cage space), but a rolling horizon behind
-  viewport-pinned pods is the first place it reads as wrong rather than merely
-  unfinished.
+The same argument, one step further: **the cab does not move — you do.** Turn
+your head and the pillars, the pods, the levers and the dash all sweep across
+your field of view together, because they are one welded object and your neck is
+the only thing with a hinge in it.
+
+At the **projected rate**, not a comfortable fraction of it: a rigid object
+rotating past a pinhole projects to `f·tan θ`, and anything less is a cab made of
+rubber. On a phone that is brutal — 390 px of glass is about 26° across and the
+head pans to 86°, so a glance takes the instruments off the screen almost at
+once. That is the cost, and it is the same cost the chase camera charges: the
+recentring view (`components.md`) is what pays it back.
+
+The consequences are the interesting part, and both are the design working:
+
+- **A glance costs you the levers and the E-STOP.** In a real cab you find them
+  by feel; on glass you cannot. So looking around while the machine is moving is
+  a decision with a price, which is exactly what it should be.
+- **Reading the rack is a posture, not a camera mode.** With the cabinet open
+  you cannot look around at all — the same bargain as the levers, made with your
+  eyes — and opening it recentres the view, because that is turning your head.
+
+One deliberate exception: the **vignette at the edge of the glass does not
+sweep**. It is the aperture — the boundary of what you can see — rather than a
+part of the machine, and a dark band crossing the middle of the view would read
+as a bug rather than as structure. Everything with a bolt in it moves.
+
+Two consequences to keep in view, neither a reason to undo the roll:
+
 - **It is a motion-comfort surface.** Roll on rough ground is exactly the signal
   that provokes sim sickness, and the counter is a cab that is visibly still —
   which is what the cage and the dash are. If it ever needs a mitigation, the

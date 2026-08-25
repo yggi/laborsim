@@ -10,6 +10,7 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
+import { BEAM, PILLAR } from "./cockpit/cage.ts";
 import { styleOf } from "./cockpit/makers.ts";
 import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
 import { makeClock } from "./core/clock.ts";
@@ -86,6 +87,14 @@ let citizenSeen = false;
 let dashHeight = $state(96);
 
 let setViewMode: (m: CameraMode) => void = () => {};
+let recentreView: () => void = () => {};
+
+/** Dropping your eyes to the cabinet is turning your head: the view comes back
+ *  to forward with it, rather than being left over your shoulder. */
+function toggleRack() {
+  rackOpen = !rackOpen;
+  recentreView();
+}
 
 /**
  * A notice in a **manufacturer's** voice.
@@ -202,15 +211,55 @@ function resetSim() {
 /** Is a module with this id in the rack? Its instrument is fitted if so. */
 const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
 
+/**
+ * "Keep your eyes on the road", in the chassis maker's own words.
+ *
+ * The cage is KIBA's structure, so the nag is KIBA's voice — and it is the
+ * first thing to consume `voice.tips`, which has been populated for all three
+ * makers and read by nothing (`docs/design/components.md`).
+ *
+ * It fires when a long look comes back to centre, and then not again for a
+ * while: a reminder you get every time you glance is one you learn to ignore,
+ * and the point is the opposite of that.
+ */
+const NAG_AFTER = 0.6;
+const NAG_COOLDOWN_MS = 45_000;
+let lookedAway = false;
+/** Not `0`: a wall clock a minute into the session is already past any
+ *  cooldown measured from zero, and the *first* nag is the one that teaches
+ *  you the view comes back on its own. It was silent for 45 s once. */
+let lastNag = Number.NEGATIVE_INFINITY;
+let tipIndex = 0;
+
+function mindTheRoad(offsetX: number) {
+  const away = Math.abs(offsetX) > innerWidth * NAG_AFTER;
+  if (away) {
+    lookedAway = true;
+    return;
+  }
+  if (!lookedAway || Math.abs(offsetX) > 24) return;
+  lookedAway = false;
+  const now = performance.now();
+  if (now - lastNag < NAG_COOLDOWN_MS) return;
+  lastNag = now;
+  const { wordmark, voice } = styleOf(pilot.maker);
+  const tip = voice.tips[tipIndex % voice.tips.length];
+  tipIndex++;
+  if (tip) notify(pilot.maker, wordmark, tip);
+}
+
 /** Pod placements on the glass — draggable, and remembered per session. They
  *  start down the right, clear of the camera control at the very top.
  *
  *  ATT-0 is no longer among them: heading and attitude moved to the dash, so a
  *  bare chassis now starts with **clear glass** and the first component you fit
  *  is the first view you lose. */
-const rightX = typeof window === "undefined" ? 280 : innerWidth - 124;
-let navPos = $state({ x: rightX, y: 50 });
-let tiltPos = $state({ x: rightX, y: 224 });
+/** The widest instrument currently fitted, measured in the browser. It only
+ *  decides how the first frame looks: an arm settles a pod that does not fit. */
+const POD_W = 124;
+const rightX = (typeof window === "undefined" ? 390 : innerWidth) - PILLAR - POD_W;
+let navPos = $state({ x: rightX, y: BEAM + 24 });
+let tiltPos = $state({ x: rightX, y: BEAM + 198 });
 
 // Auto-open the debrief the moment a citizen is involved: it is categorical
 // failure, and the rig does not let that scroll past.
@@ -268,6 +317,7 @@ $effect(() => {
     );
     const clock = makeClock();
     setViewMode = viewport.setMode;
+    recentreView = viewport.recentre;
 
     const resize = () => viewport.resize(innerWidth, innerHeight);
     addEventListener("resize", resize);
@@ -280,13 +330,22 @@ $effect(() => {
     const drag = (e: PointerEvent) => {
       const prev = pointers.get(e.pointerId);
       if (!prev) return;
-      viewport.look(e.clientX - prev.x, e.clientY - prev.y);
+      // Eyes down at the cabinet is a posture, not a camera mode: while the
+      // rack is open you cannot look around, the same way you cannot reach the
+      // levers. The strip of windscreen shows you what is ahead and nothing
+      // else — which is the whole cost of reading while the machine is moving.
+      if (!rackOpen) viewport.look(e.clientX - prev.x, e.clientY - prev.y);
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };
     canvas.addEventListener("pointerdown", down);
     canvas.addEventListener("pointermove", drag);
     canvas.addEventListener("pointerup", up);
     canvas.addEventListener("pointercancel", up);
+
+    // `:root`, not the shell: the sweep is written imperatively every frame and
+    // the shell's `style` attribute belongs to Svelte, which would overwrite it
+    // the next time the dash changes height.
+    const root = document.documentElement;
 
     let last = performance.now();
     let sinceSnapshot = 0;
@@ -308,6 +367,15 @@ $effect(() => {
         latest = current;
       }
       viewport.render(current);
+
+      // The cab sweeps with the head. **One DOM write a frame, on one element**,
+      // and the compositor moves the cage, the pods, the levers and the dash
+      // between them — per-instrument reactivity at 60 Hz is the shape
+      // architecture rule 3 exists to prevent (`docs/design/components.md`).
+      const head = viewport.head();
+      root.style.setProperty("--look-x", `${head.x}px`);
+      root.style.setProperty("--look-y", `${head.y}px`);
+      mindTheRoad(head.x);
     };
     frame = requestAnimationFrame(tick);
 
@@ -318,6 +386,8 @@ $effect(() => {
       canvas.removeEventListener("pointermove", drag);
       canvas.removeEventListener("pointerup", up);
       canvas.removeEventListener("pointercancel", up);
+      root.style.removeProperty("--look-x");
+      root.style.removeProperty("--look-y");
       viewport.dispose();
       world.free();
     };
@@ -332,7 +402,10 @@ $effect(() => {
 
 <!-- `display: contents`, so it lays nothing out — it exists to publish the
      measured dash height to everything that has to sit clear of it. -->
-<div class="shell" style="--dash-h: {dashHeight}px">
+<div
+  class="shell"
+  style="--dash-h: {dashHeight}px; --cage-pillar: {PILLAR}px; --cage-beam: {BEAM}px"
+>
   <!-- Looking down at the rack slides the whole viewport up: a strip of glass
        stays visible at the top, and the machine keeps running while you read. -->
   <div class="viewport" class:down={rackOpen}>
@@ -440,7 +513,7 @@ $effect(() => {
         {rackOpen}
         estopped={estop}
         bind:height={dashHeight}
-        onOpenRack={() => (rackOpen = !rackOpen)}
+        onOpenRack={toggleRack}
         onEstop={hitEstop}
         onToggleModule={toggleModule}
       />
@@ -495,6 +568,11 @@ $effect(() => {
     pointer-events: none;
     /* Above the canvas, below everything bolted to the cab. */
     z-index: 1;
+    /* The cab is one rigid object and the head turns inside it, so the frame
+       sweeps exactly as the pods and the dash do (L-050). `translate` rather
+       than `transform`, so it composes with the skew on the pillars below and
+       is never dragged into somebody else's transition. */
+    translate: var(--look-x, 0px) var(--look-y, 0px);
   }
   /* Painted steel, lit from above-left like every other surface in here. */
   .cage .beam,
@@ -523,14 +601,16 @@ $effect(() => {
     left: 0;
     right: 0;
     top: 0;
-    height: 26px;
+    /* One fact, one place: the frame you can see and the frame a pod's arm is
+       measured against are the same numbers (`src/cockpit/cage.ts`). */
+    height: var(--cage-beam);
     border-bottom: 1px solid #0a0d0e;
   }
   /* The pillars lean in toward the roof, the way a cab's actually do. */
   .cage .pillar {
     top: 0;
     bottom: 0;
-    width: 22px;
+    width: var(--cage-pillar);
     border-right: 1px solid #0a0d0e;
   }
   .cage .pillar.left {
@@ -548,7 +628,7 @@ $effect(() => {
   /* Welded gussets where the pillar meets the beam. */
   .cage .gusset {
     position: absolute;
-    top: 26px;
+    top: var(--cage-beam);
     width: 30px;
     height: 30px;
     background: linear-gradient(160deg, #262b2e, #151a1d);
@@ -607,6 +687,11 @@ $effect(() => {
     flex-direction: column;
     transform: translateY(calc(100dvh - var(--dash-h)));
     transition: transform 0.28s ease;
+    /* The deck travels between postures on `transform`, with a transition. The
+       sweep is a *separate* property on purpose: a value rewritten every frame
+       must never be fed through a 0.28s ease, or the dash lags behind the cage
+       it is welded to. */
+    translate: var(--look-x, 0px) var(--look-y, 0px);
   }
   .deck.up {
     height: 74dvh;
@@ -624,6 +709,10 @@ $effect(() => {
     position: fixed;
     bottom: calc(var(--dash-h) + 14px);
     z-index: 3;
+    /* Bolted to the cab like everything else: look away and your hands go out
+       of shot. You cannot find a touchscreen lever by feel, which is the cost
+       of a glance and the reason the view comes back on its own. */
+    translate: var(--look-x, 0px) var(--look-y, 0px);
   }
   .levers.left {
     left: 14px;

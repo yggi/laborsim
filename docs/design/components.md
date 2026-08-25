@@ -4,9 +4,9 @@ A **component** is one thing you bought, and it shows up in the cockpit in up to
 three places at once. This file is the contract: what every manufacturer must
 honour, and what each is free to invent.
 
-Status: **built** (L-048), except pods-on-arms, which is deliberately split off
-(`NOTES.md`). The crystallized half is `MEMORY.md` § 6.1; how to *make* a theme
-is `docs/design/theming.md`.
+Status: **built** — the triptych (L-048), then the arms and the recentring view
+(L-050). The crystallized half is `MEMORY.md` § 6.1; how to *make* a theme is
+`docs/design/theming.md`.
 
 ---
 
@@ -207,44 +207,63 @@ Bypassing it then:
 void anybody's warranty. The flag has to distinguish a deliberate bypass from a
 system-level stop.
 
-## Pods are on arms — designed, deferred
-
-**Not built, and split off on purpose** — it is a different problem from "what
-does a component look like", and it drags in three decisions of its own. The
-thread is in `NOTES.md`. What follows is the design as it stands, so the next
-round starts from here rather than from scratch.
+## Pods are on arms (built, L-050)
 
 Instruments are **not viewport-fixed overlays.** They are clamped to the cage, so
-they translate on screen as the pilot looks around, and they swing back as the
-view recentres.
+they sweep across the glass as the pilot looks around and settle back as the view
+recentres. The cab is one rigid object and it all moves together — see
+`docs/design/cockpit.md`, which owns that decision.
 
-Consequences, all of them good:
-
-- **Placement is in cage space, not screen space.** The legality rules from L-008
-  (wholly on the glass, no overlap) are evaluated in cage coordinates at the
-  neutral look. The bound stops being "the screen edge" and becomes **the reach
-  of the arm**, which is a better reason.
+- **Placement is in cage space, not screen space.** Cage space *is* screen space
+  at the neutral look, so a pod's position means the same thing whichever way
+  the head is pointing. The legality rules from L-008 are evaluated there.
+- **The bound is the reach of the arm.** Four structural refusals and no screen
+  edge among them: not through a pillar, not behind the beam, not behind the
+  dash, and not further out than the arm goes (`src/cockpit/cage.ts`). The arm
+  clamps to the nearer pillar and the clamp slides up and down it, which is why
+  there is no vertical term in the reach.
+- **200 px of reach, chosen against the phone**: enough play either side that
+  placement is a real choice, while putting the middle of the windscreen out of
+  reach of a full-size instrument. You cannot park one in front of your own
+  eyeline — the occlusion budget (L-025) with a structural reason rather than a
+  rule. The consequence beat the intent: a **small** instrument still reaches
+  the centre, because a short pod on a long arm does.
+- **The arm is drawn.** A bracket from the pillar to the titlebar, so the reason
+  a drop is refused is a thing you can see rather than infer (principle 5).
+- **An arm settles what does not fit.** An instrument is whatever size its maker
+  made it, the dash grows a row as kit is fitted, and phones get turned
+  sideways — so a pod is pulled back onto its arm rather than left hanging, and
+  a default placement only has to be roughly right.
 - This is **not** `CSS3DRenderer` and does not reopen
-  `docs/design/instrument-rendering.md`. It is a 2D parallax translate driven by
-  look angle — no second renderer, no depth buffer, no perspective.
-- **It must not go through Svelte reactivity.** The viewport writes two custom
-  properties (`--look-x`, `--look-y`) on one container, imperatively, once per
-  frame; every arm reads them in a CSS `transform`. One DOM write per frame, the
-  compositor moves the rest. Per-instrument runes at 60 Hz is exactly the shape
-  architecture rule 3 exists to prevent.
+  `docs/design/instrument-rendering.md`. It is a 2D translate driven by look
+  angle — no second renderer, no depth buffer, no perspective.
+- **It does not go through Svelte reactivity.** The renderer publishes the sweep
+  in CSS pixels; the app writes `--look-x` / `--look-y` on `:root` once a frame
+  and the compositor moves everything that reads them. Per-instrument runes at
+  60 Hz is exactly the shape architecture rule 3 exists to prevent.
+- **`translate`, not a second `transform`.** Every cab element already carries a
+  transform of its own, and the deck's has a 0.28 s transition on it. A value
+  rewritten every frame fed through that ease would leave the dash lagging
+  behind the cage it is welded to.
 
-## The view recentres itself — designed, deferred with the arms
+## The view recentres itself (built, L-050)
 
 After the pilot stops looking around, the view eases back to forward. A swipe is
-a quick check, and normal returns by itself.
+a quick check, and normal returns by itself. Dropping your eyes to the rack
+recentres it too — that is turning your head, not a camera mode.
 
-It is a QoL fix and it is also a theming opportunity: the nag that accompanies it
-("keep your eyes on the road") is house voice, per manufacturer. The `voice.tips`
-slot exists and is populated for all three makers; **nothing consumes it yet**,
-because this is its trigger and this is deferred.
+The nag that accompanies it is house voice: **`voice.tips` now has a consumer**,
+and it is the chassis maker's, because the cage is the chassis maker's structure.
+It fires when a long look comes back to centre and then holds its tongue for 45 s;
+a reminder you get every time you glance is one you learn to ignore.
 
-Open: whether it applies in chase view. Probably not — in chase you are outside
-the machine and free look is the whole point.
+Two things the ease had to be told. It waits 1.2 s before starting, or every
+glance costs a deliberate swipe to undo. And it is **per second, not per frame**:
+the same constant applied per frame made the neck twice as slow on a phone
+rendering at 30, which is the device the whole mobile-first pillar is about.
+
+Settled: it does **not** apply in chase view. You are outside the machine there
+and free look is the whole point of being there.
 
 ---
 

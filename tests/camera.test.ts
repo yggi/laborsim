@@ -10,7 +10,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { RIGHT_X } from "../src/core/spec.ts";
-import { cabCameraRotation } from "../src/render/camera.ts";
+import { cabCameraRotation, cabOffset, focalPixels } from "../src/render/camera.ts";
 
 const FORWARD = new THREE.Vector3(0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -100,5 +100,50 @@ describe("the cab camera", () => {
     // ...and the frame is still orthonormal after three multiplications.
     expect(looking.length()).toBeCloseTo(1, 12);
     expect(viewUp(leaning, 0.6, 0.2).dot(looking)).toBeCloseTo(0, 12);
+  });
+});
+
+describe("the cab, seen from inside it", () => {
+  /** The real camera and a phone: 58° vertical over 844 CSS pixels. */
+  const f = focalPixels(58, 844);
+
+  it("puts the glass a focal length away", () => {
+    // A point one focal length ahead and half a screen up projects to the top
+    // edge. That is what makes the number a projection rather than a gain.
+    expect(f).toBeCloseTo(422 / Math.tan((58 * Math.PI) / 360), 9);
+    expect(focalPixels(58, 0)).toBe(0);
+  });
+
+  it("does not move when the head does not", () => {
+    expect(cabOffset(0, 0, f)).toEqual({ x: -0, y: 0 });
+  });
+
+  it("sweeps against the look, because the cab is what stayed still", () => {
+    // Look to the machine's right (positive pan) and the pillar, the pod and
+    // the dash all travel left. Getting this backwards is the bug that would
+    // read as the cab being steered by the head rather than carrying it.
+    expect(cabOffset(0.3, 0, f).x).toBeLessThan(0);
+    expect(cabOffset(-0.3, 0, f).x).toBeGreaterThan(0);
+    // Look up and the cab drops down the screen (CSS y grows downward).
+    expect(cabOffset(0, 0.3, f).y).toBeGreaterThan(0);
+    expect(cabOffset(0, -0.3, f).y).toBeLessThan(0);
+  });
+
+  it("moves the cab exactly as far as the world moves the other way", () => {
+    // The test of 1:1: a pod at the centre of the glass and a landmark it was
+    // sitting in front of must still coincide after the head turns. The
+    // landmark's screen position is f·tan(θ) by the projection three.js uses.
+    const pan = 0.22;
+    expect(cabOffset(pan, 0, f).x).toBeCloseTo(-f * Math.tan(pan), 9);
+  });
+
+  it("takes the cab clean off the glass within a small part of the look range", () => {
+    // 390 px of glass at this focal length is about 26° across, and the head
+    // pans to 86°. So a glance loses you the instruments almost at once — which
+    // is the cost the view recentring exists to pay back.
+    const halfGlass = 195;
+    const gone = Math.atan(halfGlass / f);
+    expect(gone).toBeLessThan(0.26);
+    expect(Math.abs(cabOffset(1.5, 0, f).x)).toBeGreaterThan(10 * halfGlass);
   });
 });

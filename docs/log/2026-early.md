@@ -11,11 +11,68 @@ the live log. Two cuts so far:
    and the Pages workflow itself.
 4. The cel pipeline and the first site worth driving through.
 5. The round that made the rack a pipeline and gave NAV-1 the wheel.
+6. The determinism audit, the survey ground and the greebles.
 
 The gate says to cut the oldest *year*, but there has only been one year so far,
 so the cut is by era instead.
 
 ---
+
+## 2026-08-23 — determinism audit, survey ground, greebles
+
+Cards: none closed · rule 2 now enforced by test
+
+Thinking about L-019 before building it turned up **two live rule-2 violations
+already shipped**. Site furniture was placed with `Math.sin`/`cos` on its yaw,
+which wrote non-portable values straight into collider transforms, and NAV-1's
+route was generated the same way. Both are sim state; both would have broken
+cross-browser replay silently. Neither had been caught by having the rule
+written down and read.
+
+So the rule is now **enforced by a test** rather than documented. It scans
+`src/sim`, `control`, `modules`, `world` and `core` for non-portable maths, with
+`sqrt` and `round` allowed because IEEE-754 requires them to be correctly
+rounded, and a `deterministic-exempt:` comment to justify a line — used twice:
+the quantized ramp slope, and the display-only pitch/roll. The scanner blanks
+comments while preserving line numbers, since the naive strip collapsed them and
+reported the wrong place.
+
+Fixes: prop headings now come from `randomYawQuat`, which rejection-samples a
+unit vector and uses the half-angle identities, so only `sqrt` is involved.
+Waypoints are rejection-sampled from an annulus and ordered by a **pseudo-angle**
+— the diamond-angle trick, monotone in true bearing but pure arithmetic — rather
+than stepping `cos`/`sin` around a circle.
+
+Moving the pins broke an autonav test, which turned out to be the test's fault:
+it asserted raw displacement in a short window, and the new route can start with
+the first pin *behind* the machine, so it spends four seconds turning. Rewritten
+to assert the range to the pin closes, which is what "it navigates" actually
+means and does not encode an accident of layout.
+
+**Visuals.** Ground gets survey contours (minor at 1 m, major at 5 m, `fwidth`
+keeping them a pixel wide at any distance) and slope-based hill shading. The
+contours are the training-rig register showing through, and they do real work: a
+cel-shaded slope otherwise gives almost no cue how steep it is, and steepness is
+the whole of rung 1. The machine gets procedural greebles — deck plates, flank
+ribs, grab rails, exhaust stacks, a dorsal pack, a roof beacon — which matter
+because a bare box has no scale, and hatches and rails are things a human body
+uses.
+
+Two real bugs found on the way. The chase camera had no ground clamp, so
+dragging down put it *under* the heightfield. And hill shading used three's
+fragment-stage `normal`, which is **view space** — so "slope" was measuring
+"faces the camera", and hillsides darkened as the camera tilted. Now derived
+from the world position's screen-space derivatives, which also avoids depending
+on a vertex chunk name.
+
+Worth recording honestly: a dark wedge across the site got diagnosed as a
+shadow-frustum problem, then as hill shading, then as the ramp — three wrong
+calls. Disabling `receiveShadow` on the terrain settled it: the wedge survived,
+so it was never a shadow. It is simply ground facing away from the key light
+landing on the cel ramp's dark band, with the ridge as the boundary — cel
+shading working. Lifted the sky fill so the shade side reads as slope rather
+than hole. The lesson is the one from the probe: an isolating experiment beats
+three plausible hypotheses, and I should have run it first.
 
 ## 2026-08-23 — the rack is a pipeline, and NAV-1 drives
 

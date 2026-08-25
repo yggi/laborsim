@@ -55,3 +55,34 @@ export function cabCameraRotation(
     .multiply(pitch.setFromAxisAngle(RIGHT, -tilt))
     .multiply(FACE_FORWARD);
 }
+
+/**
+ * The pinhole's focal length, in CSS pixels — the one number that converts a
+ * look angle into a distance on the glass.
+ *
+ * It lives here because it belongs to the camera. The cab furniture is DOM and
+ * knows nothing about field of view; the renderer knows nothing about the DOM.
+ * This is the seam, and it is one line of trigonometry rather than a shared
+ * assumption in two files.
+ */
+export function focalPixels(fovDegrees: number, heightPx: number): number {
+  return heightPx / 2 / Math.tan((fovDegrees * Math.PI) / 360);
+}
+
+/**
+ * Where everything bolted to the cab has moved to on screen, in CSS pixels,
+ * when the pilot's head is at (`pan`, `tilt`).
+ *
+ * The cab does not move; **you** do. So the sign is the mirror of the look:
+ * turn your head to the machine's right and the pillar, the pod and the dash
+ * all sweep left across your field of view.
+ *
+ * `tan`, not the angle itself. A rigid object rotating past a pinhole projects
+ * to `f·tan θ`, which is exact at the centre of the glass — where the pods sit
+ * and where the eye actually is during a glance — and increasingly generous
+ * towards the edges. That error is the price of the whole cab being one flat
+ * translate instead of a second 3D renderer (`docs/design/components.md`).
+ */
+export function cabOffset(pan: number, tilt: number, focalPx: number) {
+  return { x: -focalPx * Math.tan(pan), y: focalPx * Math.tan(tilt) };
+}

@@ -125,6 +125,144 @@ for (const [name, ...pose] of POSES) {
   written++;
 }
 
+/**
+ * Then the same view with the cab in front of it — the real app, driven by
+ * dragging on the glass exactly as a thumb would.
+ *
+ * The poses above cannot show this half: the cage, the pods, the levers and the
+ * dash are DOM, and they only exist once the app has booted. What is being
+ * looked at here is whether the cab and the world agree about which way the
+ * head is pointing.
+ */
+const LOOKS = [
+  ["app-forward", 0, 0],
+  ["app-look-right", -170, 0],
+  ["app-look-left", 170, 0],
+  ["app-look-up", 0, 90],
+  ["app-look-far-right", -520, 0],
+];
+
+if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
+  await page.goto(`${base}/`, { waitUntil: "networkidle" });
+  // Rapier initialises before anything is on screen; the canvas is the tell.
+  await page.waitForSelector("canvas");
+  await page.waitForTimeout(1500);
+
+  for (const [name, dx, dy] of LOOKS) {
+    if (filter && !name.includes(filter)) continue;
+    // A drag on the glass, in one gesture, then a frame to settle. The look
+    // eases back after 1.2 s, so the shot is taken inside the hold.
+    await page.mouse.move(195, 380);
+    await page.mouse.down();
+    await page.mouse.move(195 + dx, 380 + dy, { steps: 6 });
+    await page.screenshot({ path: `${OUT}${name}.png` });
+    await page.mouse.up();
+    written++;
+  }
+
+  // One check a screenshot cannot make: that *everything* bolted to the cab
+  // moved by the same amount. A new overlay that forgets its `translate` is
+  // invisible in a still — it just looks like part of the rig — and it is
+  // exactly the regression this half of the bench exists to catch.
+  const CAB_PARTS = [".cage", ".deck", ".levers", "[data-draggable]"];
+  // Read the boxes and the offset in one go, so no frame lands between them.
+  const measure = (selectors) =>
+    page.evaluate((list) => {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        look: {
+          x: Number.parseFloat(style.getPropertyValue("--look-x")),
+          y: Number.parseFloat(style.getPropertyValue("--look-y")),
+        },
+        parts: list.map((selector) => {
+          const r = document.querySelector(selector)?.getBoundingClientRect();
+          return { selector, x: r?.left ?? Number.NaN, y: r?.top ?? Number.NaN };
+        }),
+      };
+    }, selectors);
+
+  const rest = await measure(CAB_PARTS);
+  await page.mouse.move(195, 380);
+  await page.mouse.down();
+  await page.mouse.move(75, 330, { steps: 4 });
+  const swept = await measure(CAB_PARTS);
+  await page.mouse.up();
+
+  // Each part carries its own resting transform — the deck is translated down
+  // by a screen minus the dash, the levers sit in the corners — so what has to
+  // agree is the *change*, not the position.
+  for (const [i, part] of swept.parts.entries()) {
+    const was = rest.parts[i];
+    const off = Math.hypot(
+      part.x - was.x - (swept.look.x - rest.look.x),
+      part.y - was.y - (swept.look.y - rest.look.y),
+    );
+    if (!(off <= 1)) {
+      failures.push(
+        `${part.selector} did not sweep with the cab: moved by ` +
+          `(${(part.x - was.x).toFixed(1)}, ${(part.y - was.y).toFixed(1)}) ` +
+          `while the cab moved by (${(swept.look.x - rest.look.x).toFixed(1)}, ` +
+          `${(swept.look.y - rest.look.y).toFixed(1)})`,
+      );
+    }
+  }
+
+  // Let the view ease all the way back to forward before the next set. It is
+  // asymptotic and it holds for 1.2 s before it even starts: measured, a full
+  // 86° pan is still 23 px off centre at 2.6 s and 24 px at 4.5 s — small
+  // enough to look like a layout bug in a screenshot, and not one.
+  await page.waitForTimeout(5600);
+
+  // The arm, and what it refuses. A pod pulled in off its pillar shows the
+  // bracket holding it; pulled to the middle of the glass, where no full-size
+  // instrument reaches, the drop is refused and it snaps back.
+  const grip = page.locator('[aria-label="move NAV-1"]');
+  /** Where to drag NAV-1's left edge to, given the box it is in now. */
+  const middle = (at) => (VIEWPORT.width - at.width) / 2;
+  for (const [name, target, release] of [
+    ["app-arm", (at) => at.x - 70, true],
+    ["app-out-of-reach", middle, false],
+    ["app-refused", middle, true],
+  ]) {
+    if (filter && !name.includes(filter)) continue;
+    // Re-measured every time: a legal drop leaves the pod somewhere new, and
+    // pressing where it *used* to be is pressing the glass — which pans the
+    // view and quietly turns a placement test into a camera test.
+    const at = await grip.boundingBox();
+    const dx = target(at) - at.x;
+    await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(at.x + at.width / 2 + dx, at.y + at.height / 2, { steps: 6 });
+    if (release) {
+      await page.mouse.up();
+      // Long enough for the 0.18 s snap-back to have finished.
+      await page.waitForTimeout(320);
+    }
+    await page.screenshot({ path: `${OUT}${name}.png` });
+    if (!release) await page.mouse.up();
+    written++;
+  }
+
+  // The eyes back on the road, and the chassis maker's opinion about that.
+  //
+  // On a fresh page on purpose. The nag fires on the *first* long look that
+  // comes back to centre and then holds its tongue for 45 s, so a session that
+  // has already looked around five times has spent it — which is exactly what
+  // happened when this shot came back empty and read as the nag being broken.
+  if (!filter || "app-nag".includes(filter)) {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    await page.waitForSelector("canvas");
+    await page.waitForTimeout(1500);
+    await page.mouse.move(195, 400);
+    await page.mouse.down();
+    await page.mouse.move(195 - 400, 400, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(5600);
+    await page.screenshot({ path: `${OUT}app-nag.png` });
+    written++;
+  }
+}
+
 await browser.close();
 await server.close();
 

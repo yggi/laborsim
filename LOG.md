@@ -7,7 +7,7 @@ Not plans, not open questions.
 and link it from the archive list below.
 
 Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to and
-including the round that made the rack a pipeline.
+including the determinism audit.
 
 Entry format:
 
@@ -18,6 +18,71 @@ What happened, in past tense. Anything tried and rejected, and why.
 ```
 
 ---
+
+## 2026-08-25 — the cab is one rigid object
+
+Cards: closed [L-050]. Opened: [L-057]. History trimmed to its gate: [L-037]
+dropped, already narrated below.
+
+The card was ready and half of it was already built — the view has recentred
+itself since L-052, and the card still listed it as work. Two decisions were
+genuinely unmade, and they were the whole design: **what sweeps when the pilot
+looks around, and how fast.** Answered: the *whole cab*, and *1:1*.
+
+**The whole cab.** Pods, cage, levers and dash are one welded object; the neck is
+the only hinge. Anything else is incoherent the moment you look at it — a pod
+clamped to a cage that does not move is a sticker. The rig's own controls (the
+CAB/CHASE switch, the toasts, the debrief) stay put, which turns out to be a
+usable rule: **the machine's furniture moves, the rig's does not.** One
+deliberate exception, the vignette at the edge of the glass: it is the aperture,
+not a part, and a dark band crossing the middle of the view reads as a bug.
+
+**1:1, at `f·tan θ`.** A rigid object rotating past a pinhole projects that way;
+anything less is a cab made of rubber. On a phone it is brutal — 390 px of glass
+is 26° across and the head pans to 86°, so a glance takes the instruments off
+the screen almost at once. That is the price, and it is the chase camera's
+bargain again: a glance costs you the levers and the E-STOP, which you cannot
+find by feel on glass. The recentring view is what pays it back. Carried to
+`NOTES.md` as the one thing only a player can settle.
+
+**One DOM write a frame.** The renderer publishes the sweep in CSS pixels — it
+owns the projection, and `focalPixels` is the seam — and the app writes
+`--look-x`/`--look-y` on `:root`, not on the shell, whose `style` attribute
+belongs to Svelte and would overwrite it. Read as **`translate`**, never as a
+second `transform`: every cab element already has a transform, and the deck's
+carries a 0.28 s transition that a per-frame value must not be fed through.
+
+**The bound became the arm.** Placement moved into cage space (screen space at
+the neutral look), and a drop is refused by structure: not through a pillar, not
+behind the beam or the dash, not further out than 200 px of reach. That puts the
+middle of the windscreen out of reach — the occlusion budget with a *reason*
+instead of a rule. Rejected: hanging every pod from the header beam, which is
+tidier and says nothing about the middle of the glass. The consequence beat the
+intent: a **small** instrument still reaches the centre, because a short pod on a
+long arm does. Cheap in view, free to place. Nobody designed that.
+
+The arm is **drawn**, back to its pillar, so a refusal is visible rather than
+inferred. And an arm **settles** a pod that does not fit — instruments are
+whatever size their maker made them, the dash grows a row as kit is fitted, and
+phones get turned sideways; L-056 no longer inherits pods stranded off-glass.
+
+**Three defects, all found by looking.** The cab bench grew an app half (`npm run
+cab` boots the real thing and drags on the glass) and it paid immediately: the
+KIBA nag never fired, because `lastNag = 0` means "45 s since the epoch", which
+a page a minute old has already passed — the *first* nag is the one that teaches
+you the view comes back. Then the cab kept photographing 25 px off centre at
+2.6 s and again at 5.6 s: the recentring ease was a flat fraction **per frame**,
+so a phone at 30 fps got a neck twice as slow — on the device the mobile-first
+pillar is entirely about. It is a time constant now. Third, the bench itself
+pressed where a pod *used* to be after moving it, which pans the view: a
+placement test quietly became a camera test.
+
+The bench also carries the check a screenshot cannot make: everything bolted to
+the cab moved by the same amount as `--look-x`. Reintroduced the bug to watch it
+fail (META) — it named `.levers` and exited 1.
+
+Not added to `MEMORY.md` again, and now it is a card: the file is at 299 of 300
+and two durable facts are parked in the spill files waiting for room. [L-057].
 
 ## 2026-08-25 — the horizon rolls with the machine
 
@@ -909,59 +974,3 @@ To wire that without breaking rule 3, modules gained a `readout()` of plain
 numbers that travels inside their stage. Instruments read it from the snapshot
 rather than holding a live module, so the boundary holds and the same
 instrument code will drive a replay.
-
-## 2026-08-23 — determinism audit, survey ground, greebles
-
-Cards: none closed · rule 2 now enforced by test
-
-Thinking about L-019 before building it turned up **two live rule-2 violations
-already shipped**. Site furniture was placed with `Math.sin`/`cos` on its yaw,
-which wrote non-portable values straight into collider transforms, and NAV-1's
-route was generated the same way. Both are sim state; both would have broken
-cross-browser replay silently. Neither had been caught by having the rule
-written down and read.
-
-So the rule is now **enforced by a test** rather than documented. It scans
-`src/sim`, `control`, `modules`, `world` and `core` for non-portable maths, with
-`sqrt` and `round` allowed because IEEE-754 requires them to be correctly
-rounded, and a `deterministic-exempt:` comment to justify a line — used twice:
-the quantized ramp slope, and the display-only pitch/roll. The scanner blanks
-comments while preserving line numbers, since the naive strip collapsed them and
-reported the wrong place.
-
-Fixes: prop headings now come from `randomYawQuat`, which rejection-samples a
-unit vector and uses the half-angle identities, so only `sqrt` is involved.
-Waypoints are rejection-sampled from an annulus and ordered by a **pseudo-angle**
-— the diamond-angle trick, monotone in true bearing but pure arithmetic — rather
-than stepping `cos`/`sin` around a circle.
-
-Moving the pins broke an autonav test, which turned out to be the test's fault:
-it asserted raw displacement in a short window, and the new route can start with
-the first pin *behind* the machine, so it spends four seconds turning. Rewritten
-to assert the range to the pin closes, which is what "it navigates" actually
-means and does not encode an accident of layout.
-
-**Visuals.** Ground gets survey contours (minor at 1 m, major at 5 m, `fwidth`
-keeping them a pixel wide at any distance) and slope-based hill shading. The
-contours are the training-rig register showing through, and they do real work: a
-cel-shaded slope otherwise gives almost no cue how steep it is, and steepness is
-the whole of rung 1. The machine gets procedural greebles — deck plates, flank
-ribs, grab rails, exhaust stacks, a dorsal pack, a roof beacon — which matter
-because a bare box has no scale, and hatches and rails are things a human body
-uses.
-
-Two real bugs found on the way. The chase camera had no ground clamp, so
-dragging down put it *under* the heightfield. And hill shading used three's
-fragment-stage `normal`, which is **view space** — so "slope" was measuring
-"faces the camera", and hillsides darkened as the camera tilted. Now derived
-from the world position's screen-space derivatives, which also avoids depending
-on a vertex chunk name.
-
-Worth recording honestly: a dark wedge across the site got diagnosed as a
-shadow-frustum problem, then as hill shading, then as the ramp — three wrong
-calls. Disabling `receiveShadow` on the terrain settled it: the wedge survived,
-so it was never a shadow. It is simply ground facing away from the key light
-landing on the cel ramp's dark band, with the ridge as the boundary — cel
-shading working. Lifted the sky fill so the shade side reads as slope rather
-than hole. The lesson is the one from the probe: an isolating experiment beats
-three plausible hypotheses, and I should have run it first.

@@ -88,13 +88,13 @@ between a box collider and bilinear placement height; too little contact shadow;
 or the toon material flattening the ground seam. Measure the actual rest gap
 before theorising further (META: ask the sim what it computed).
 
-## Pods on arms — deferred, and deliberately separated
+## How much of the cab should a glance cost you?
 
-Instruments should be **clamped to the cage** and move on screen as you look
-around, not sit as viewport-fixed overlays (`docs/design/components.md`). Split
-off from the triptych work on purpose, because it drags in three things that are
-each their own decision: look angle has to reach the DOM without going through
-Svelte reactivity; L-008's placement rules move from screen space into cage
-space, where the bound becomes the reach of the arm rather than the screen edge;
-and the view-recentring QoL is entangled with it. None of it is blocked — it is
-just a different problem than "what does a component look like."
+The cab sweeps 1:1 with the head, so a look takes the levers, the E-STOP and
+every instrument off the glass within about 15° (`docs/design/cockpit.md`).
+Honest, and the intended price — but on a phone you cannot find a lever by feel,
+and only somebody who did not build it can say if that is the *right* price.
+
+Two dials if it is too much, different in kind: shorten the pan range (you see
+less of the site) or damp the sweep below 1:1 (the cab stops being rigid). Prefer
+the first. A sim-sickness mitigation, if one is ever needed, is the same dial.

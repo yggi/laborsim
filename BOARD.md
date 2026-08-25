@@ -49,16 +49,6 @@ built; what remains is more to break, replay, and the path to the conflict.
   plate.
 - **needs:** L-048 (built)
 
-### [L-050] Pods on arms, and the view that recentres
-- **what:** instruments clamp to the cage and translate with the look instead of
-  being viewport-fixed; placement moves from screen space into cage space, where
-  the bound is the reach of the arm; the view eases back to forward on its own,
-  with a house-voice nag. `voice.tips` already exists and nothing consumes it.
-- **done-when:** looking around moves the pods, a drop is refused by arm reach
-  rather than by the screen edge, and the look recentres without a per-instrument
-  rune firing at 60 Hz.
-- **needs:** NOTES thread "Pods on arms"
-
 ### [L-051] The cage and the levers are KIBA's too
 - **what:** the chassis component brings the cab furniture, and it is currently
   a plain inset shadow and two generic sliders. They belong in the chassis
@@ -117,14 +107,22 @@ built; what remains is more to break, replay, and the path to the conflict.
 ### [L-056] The glass in landscape — cage, viewport and perspective
 - **what:** the panel reflows in both orientations now; the cab around it does
   not. The deck's travel is in `dvh` and the rack takes 74 of them, which is a
-  portrait number — turned sideways the glass is a letterbox, the rack overshoots
-  and the pods sit where a portrait layout left them. Camera FOV, cage geometry
-  and the deck's travel want deciding together rather than patching one at a
-  time. Do not start it as a CSS pass.
+  portrait number — turned sideways the glass is a letterbox and the rack
+  overshoots. Camera FOV, cage geometry and the deck's travel want deciding
+  together rather than patching one at a time. Do not start it as a CSS pass.
+  Also: 200 px of arm reach is a phone number, and a landscape glass has a much
+  bigger unreachable middle.
 - **done-when:** a phone turned sideways gives a cab worth driving from, with the
   same instruments, no clipped cage and no geometry that only works at one
   aspect ratio.
-- **needs:** L-050 (pods move into cage space, which is half this problem)
+
+### [L-057] MEMORY.md is one line from its gate — spill a section
+- **what:** 299 of 300 lines, and two durable facts are now parked in spill files
+  because there is no room for their index-level statement (the cab has no
+  gimbal; the cab is one rigid object). § 6 is the fattest section and the
+  obvious candidate. Trim on purpose, not under pressure (META).
+- **done-when:** `MEMORY.md` has room again and nothing true was lost — the
+  spilled section has a one-line index entry pointing at it.
 
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
@@ -257,6 +255,17 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-050] Pods on arms, and the view that recentres — **closed**
+The whole cab sweeps, 1:1 with the look: pods, cage, levers and dash are one
+rigid object and the head is the only hinge. Placement moved into cage space and
+the bound became the arm — not through a pillar, not behind the beam or the
+dash, not further out than 200 px of reach, which puts the middle of the
+windscreen out of reach of a full-size instrument and leaves it reachable by a
+small one. The arm is drawn, so a refusal is visible. One `--look-x`/`--look-y`
+write per frame on `:root`, read as `translate` (never `transform`, which
+carries transitions). `voice.tips` got its consumer. Found by looking: the
+recentring ease was per *frame*, so the neck was twice as slow at 30 fps.
+
 ### [L-055] GRIP and SLIP become one head — **closed**
 TRACTION: the plan view, nose up, a channel per track. Channel colour is the
 fraction of the friction cone in use, channel length is the contact patch, the
@@ -328,15 +337,4 @@ it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
 sines come straight out of the quaternion and stay bit-portable. Ships enabled
 and deliberately timid (25°/18° against a 43.5° climb limit), so the first
 lesson is that your own machine is what stopped you.
-
-### [L-037] The rack as equipment — **closed**
-Server rack rather than DIN rail: faceplates, ears, screws, and a house style
-per manufacturer (KIBA WORKS, TOWA DENKI, HANSA REGELTECHNIK). Module settings
-as bounded numbers with units — never gains. ATT-0 compass/attitude head as the
-chassis instrument, TILT-GUARD's two banded gauges as its own. Rack toggle
-became a control-panel cover at the seam; the camera became an item in the
-instrument column. Tracks are belts wrapped round their wheels rather than
-boxes, and the site is steeper.
-
-
 
