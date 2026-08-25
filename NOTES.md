@@ -73,16 +73,17 @@ ladder** they descend, or both as a matrix. Shapes `src/sim/layers/` directly.
 
 ## The lemon — degradation
 
-The symptom half of this thread became cards (L-040 sound, L-046 lights, L-043
-the status panel, now closed): smoke, lamps and a rougher note teach the player
-to *listen* before anything costs them.
+The symptom half became cards and most are now closed — the status panel (L-043),
+the voice (L-040); lights (L-046) remain. Smoke, lamps and a rougher note teach
+the player to *listen* before anything costs them.
 
 What is still a thread is **degradation**: the drive genuinely changes — per-track
 `MU` falls, a bias enters the normal-load share, a sprocket will not take full
 torque. That makes a damaged machine a *different machine*, which is the whole
-subject, and it is the expensive part. The friction model can already express
-most of it, which is suspicious in a good way. Not v0; do not let the reset
-design (L-038) foreclose it.
+subject, and it is the expensive part. It got cheaper twice over: the friction
+model can already express most of it, and the drive note renders `traction`
+directly, so a track that has lost grip would **sound** wrong with no audio work
+at all. Not v0; do not let the reset design (L-038) foreclose it.
 
 ## Pods on arms — deferred, and deliberately separated
 

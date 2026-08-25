@@ -36,11 +36,17 @@ npm run typecheck  # svelte-check
 npm run lint       # biome
 npm run format     # biome, writing fixes
 npm run build      # typecheck, then production bundle
+npm run shots      # screenshot every cockpit specimen  → shots/
+npm run listen     # render every voice to WAV, measured → renders/
 ```
 
 `npm run dev` binds to `0.0.0.0` on purpose: the cockpit has to be tested on a
 real phone from day one, because desktop-only iteration hides touch problems
 that are mechanics here, not polish.
+
+The last two are benches, and they exist because the things they check are not
+expressible as assertions. `/sandbox.html` is every component in every state;
+`/listen.html` is every voice the machine has. Both ship with the site.
 
 ### The three architecture rules
 

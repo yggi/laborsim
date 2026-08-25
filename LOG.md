@@ -21,6 +21,77 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — the event channel, and the machine's voice
+
+Cards: closed [L-040]. Opened: [L-060]. Threads closed: none. Evidence added to
+[L-057] and [L-046].
+
+**The contraction came first, and it was already earned.** Three files were
+keeping their own high-water mark into `snapshot.damage` and diffing it every
+frame — the live voice, the renderer repainting a write-off, and the debrief —
+and two of them carried a private hack to notice a RESET, because the list
+getting *shorter* was the only clue a run had restarted. Audio would have been
+the fourth. `src/core/events.ts` is the discrete half of the boundary: the sim
+stamps every happening with a monotonic `seq` into a bounded ring, a consumer
+keeps one number and one reader, and the rewind rule lives in one place instead
+of being reimplemented per list and per cause.
+
+The channel is the notification and the ledger stays the record. That split is
+why the ring can be bounded: nothing consuming it wants a thump it failed to
+play thirty seconds ago, and anything that needs the whole run still reads
+`snapshot.damage`.
+
+**Two things the ledger could not say now reach it.** `assessDamage` had always
+measured the joules delivered into every prop every step and thrown the number
+away unless it crossed a pricing threshold — so hitting an already-written-off
+cone was, to everything downstream, identical to missing it. And the machine's
+own collisions had no witness at all; they do now, thresholded on a **speed**
+rather than an energy, because the track model caps its impulses at `mu·N·dt` so
+0.16 m/s per step is all the drivetrain can shed however hard you brake.
+Anything past that was the world. L-038 wants that number.
+
+**Found by turning it on:** the untouched generated site emits one impact at
+tick 109 — a marker pole falling over on its own, 1.6 J, unbilled and until now
+invisible. Nothing is wrong; that is L-057, and the channel is the first thing
+in the codebase able to see it.
+
+**Then the voices** (`src/audio/`). Five, none of them sampled: the drive note
+carrying load, the grind carrying slip, impacts scaled by joules, the hull on
+its own scale, and the horn as the audible half of the master lamp. The
+arithmetic is in `voices.ts` with no WebAudio in it, and `engine.ts` is the only
+file that knows an oscillator exists — which is what lets the graph be built on
+an `OfflineAudioContext` exactly as on a live one.
+
+**Rejected: putting the mute on the dash.** A Labor's horn has no cut-out, which
+is the entire point of a horn, so a machine with a "make me quiet" switch would
+be a machine nobody would certify. Volume is the *rig's* control and sits with
+the camera, which is the other thing that belongs to the room rather than to the
+machine. The same reasoning settled where the acknowledgement lives: it moved
+out of `DashPanel` and into the shell, because the lamp and the horn have to be
+one fact and the beacon will be the third to read it.
+
+**The bench found three defects nothing else could have.** `npm run listen`
+renders every scene through the real graph in Chromium and prints peak, loudness
+and brightness at each end of it:
+
+1. Its own first brightness measure was blind. Zero-crossing rate is a standard
+   cheap proxy for spectral centroid and it does **not move** when a filter
+   opens on a periodic waveform — a lowpassed sawtooth crosses zero twice a
+   cycle at 340 Hz and at 2600 Hz alike. It reported the entire `labouring`
+   sweep as six hertz. Replaced with the fraction of energy above 1500 Hz.
+2. The continuous voices were loud enough to sit permanently inside the limiter,
+   so a 140 kJ landing came out no louder than driving along. Halved, and the
+   limiter moved from −10 dB to −4.
+3. The strike's filter was tied to the ring pitch, which made the heaviest
+   impacts the dullest, because the heaviest things ring lowest. The ring is the
+   material and the strike is the energy; they are separate numbers now.
+
+A fourth fell out of (2): opening a sawtooth's filter can only ever move a few
+percent of its energy, so brightness alone was a cue visible in a spectrum and
+inaudible across a room. Load makes the machine **louder** as well now.
+
+---
+
 ## 2026-08-25 — the pod joins the registry, and the seam moves
 
 Cards: closed [L-059]. Opened: [L-057], [L-058]. Threads closed: "props seem to
@@ -309,6 +380,21 @@ number read the other way up, it falls toward zero as you get into trouble, and
 "no ground" becomes zero margin rather than zero use — the overload disappears
 by construction. A bigger change to the face than to the sim. Carded as part of
 [L-055].
+
+## Cards pushed out of `BOARD.md` history
+
+The board keeps ten; older closed cards land here, in date order.
+
+### [L-036] TILT-GUARD — the first safety component — **closed** (2026-08-24)
+Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
+Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
+signal's range and turn the machine around — a safety module causing the crash
+it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
+sines come straight out of the quaternion and stay bit-portable. Ships enabled
+and deliberately timid (25°/18° against a 43.5° climb limit), so the first
+lesson is that your own machine is what stopped you.
+
+---
 
 ## 2026-08-24 — the panel stops talking
 

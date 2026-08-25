@@ -29,14 +29,13 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/stack.md` | the stack, and the rejected options with their reasons |
 | `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
 | `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
-| `prototype/concept-3/HANDOVER.md` | the source handover brief, verbatim, frozen |
 
 ---
 
 ## 1. Identity
 
 **laborsim** — a 3D browser game. Patlabor-themed mecha and vehicle simulator
-sandbox on a multi-layer educational physics/kinematics engine. Loop partially
+sandbox on a multi-layer educational physics/kinematics engine. Loop partly
 KSP-inspired: **build mode** and **sim mode**, bridged by the control layer.
 
 "Labor" = the Patlabor sense: industrial/utility machines that are tools first —
@@ -53,10 +52,10 @@ between what a machine is rated to do and what it does on the day.**
 system.** The player is not piloting a Labor; they are using the rig that
 teaches people to. Tonal anchor: the simulator sequence that opens *Patlabor 2*.
 
-Not flavour: it is the frame that licenses inspectability, replay, affordable
-failure, sandbox-as-native, procedural sites and the UI register — so check it
-**before** inventing machinery to justify something. Full list, where the frame
-stops, and which institution speaks: `docs/design/training-frame.md`.
+Not flavour: it licenses inspectability, replay, affordable failure,
+sandbox-as-native, procedural sites and the UI register — so check it **before**
+inventing machinery to justify something. Where the frame stops and which
+institution speaks: `docs/design/training-frame.md`.
 
 ## 2. The design thesis
 
@@ -98,11 +97,10 @@ If that scenario cannot be constructed on rung one, the rack is decoration.
 ### 3.1 The damage ledger — v0's verdict and core feedback
 
 **No job tickets in v0.** The failure loop needs a third beat and the damage
-ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage
-is **joules absorbed**, never hit points, so it is a quantity the player can be
-shown; **harming a citizen is categorical failure**, never a priced line item.
-Model, numbers, the two faces of the ledger and the build order:
-`docs/design/damage.md`. Voice: `docs/design/tone.md`.
+ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage is
+**joules absorbed**, never hit points, so it is a quantity the player can be
+shown — and now hear; **harming a citizen is categorical failure**, never a
+priced line item. Model, numbers and build order: `docs/design/damage.md`.
 
 ## 4. Core loop
 
@@ -139,11 +137,10 @@ balance controller — tipping is emergent from contacts alone.
 5. Off-road hexapod · 6. Bipedal walker
 
 **Sequence the ladder, not the biped.** The biped is the worst entry point for
-physics and the best one for concept art — which is why the probe started there
-and production must not. Full table: `docs/design/machinery-ladder.md`. The
-ladder is non-monotonic by design: the Phantom Labor attacks the sensor surface
-capability created, so the two-lever cage at rung one must stay a genuinely good
-machine, never a tutorial.
+physics and the best for concept art, which is why the probe started there and
+production must not. Full table: `docs/design/machinery-ladder.md`. The ladder is
+non-monotonic by design — the Phantom Labor attacks the sensor surface capability
+created — so the two-lever cage at rung one stays a good machine, not a tutorial.
 
 ## 6. The cockpit — panel budget and occlusion
 
@@ -183,8 +180,8 @@ Spilled in full to `docs/design/components.md` (index). What must stay here:
 
 ## 7. Mechanics that fall out of the above
 
-Detail: `docs/design/mechanics.md`. Each one *follows* from the core
-commitments — that is the argument for keeping them.
+Detail: `docs/design/mechanics.md`. Each *follows* from a core commitment,
+which is the argument for keeping it.
 
 - **Phantom Labor** — attacks the sensor surface capability created.
 - **Hot-patching, anchored on LOTO** — lock outputs versus rewire live.
@@ -195,8 +192,8 @@ commitments — that is the argument for keeping them.
 
 The engine is **multi-layer** and **educational**: the player can open a layer
 and see the quantities it works with, not just their result. **Every simulated
-quantity must be surfaceable.** A layer the player cannot open is not a teaching
-layer and does not belong.
+quantity must be surfaceable** — as a number, a needle or a voice. A layer the
+player cannot open is not a teaching layer.
 
 The engine of record is **Rapier (wasm)**, chosen for motorized joints, joint
 limits, and **determinism you can replay a failure with** — attribution is the
@@ -223,20 +220,18 @@ Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
 aspiration. What that costs, and the rejected options with their reasons —
 **Godot**, **Babylon.js**, **Jolt** — are in `docs/design/stack.md`.
 
-No further dependencies without a reason. The art direction is procedural boxes
-and cylinders, so **no asset pipeline is needed for a long time** — do not build
-one preemptively.
+No further dependencies without a reason, and **no asset pipeline** — the art is
+procedural boxes and cylinders and the sound is synthesised, so there is nothing
+to load. Do not build one preemptively.
 
 ## 10. The prototype
 
-`prototype/concept-3/` — single file, three.js r128 from CDN, no build step. It
-answered *can this look and feel right in a browser, on a phone?* — yes.
-
-It is **concept art with working mechanisms**, not an architecture sketch.
-**Do not port its structure.** Do port the named mechanisms — the footstep
-policy above all, then the analytic 2-bone IK, the hydraulic rams and the cel
-pipeline. What it fakes, the six defects it cost and the method lessons it
-taught: `docs/design/prototype-findings.md` and `META.md`.
+`prototype/concept-3/` — one file, three.js from a CDN, no build. It answered
+*can this look and feel right in a browser, on a phone?* — yes. It is **concept
+art with working mechanisms**, not an architecture sketch: **do not port its
+structure**, do port the named mechanisms — the footstep policy above all, then
+the analytic 2-bone IK, the hydraulic rams, the cel pipeline. What it fakes and
+what it cost: `docs/design/prototype-findings.md`.
 
 ## 11. Repo map
 
@@ -253,6 +248,7 @@ src/
              the rack's rail, and each component's three parts —
              cells/ faces/ pods/, registered as one packet in `parts.ts`
   render/    three.js scene, cel pipeline
+  audio/     the machine's voice: `voices.ts` is arithmetic, `engine.ts` the graph
   world/     terrain, job sites, hazards (radiation, EMF)
   ui/        everything the rig made: the shell, the debrief, the live voice
   platform/  input (touch-first), persistence, config
@@ -266,12 +262,11 @@ tests/
 The tree is a claim about seams, not a promise about files. Move a seam if it
 turns out to be wrong, and record the move here.
 
-**The cockpit/ui line is the machine against the rig**, and it was moved once
-(2026-08-25) because it had drifted: every instrument in the cab was living in
-`ui/` while its primitives were in `cockpit/`. If a manufacturer built it — the
-cage, the dash, an instrument, a rack plate — it is `cockpit/`. If the training
-system built it — the debrief, the live voice, the shell, the debug telemetry —
-it is `ui/`. The rig may read the machine; the machine knows nothing of the rig.
+**The cockpit/ui line is the machine against the rig**, moved once (2026-08-25)
+because it had drifted. If a manufacturer built it — the cage, the dash, an
+instrument, a rack plate — it is `cockpit/`. If the training system built it —
+the debrief, the live voice, the shell, the volume control — it is `ui/` or the
+shell. The rig may read the machine; the machine knows nothing of the rig.
 
 ## 12. Conventions
 
@@ -289,6 +284,13 @@ and the checks: `docs/design/architecture-rules.md`.
 3. **One-directional snapshot boundary.** Sim imperative at 60 Hz, UI reads a
    snapshot at 10 Hz. An instrument is a view of a recording — which is why the
    same code drives a replay. **Svelte never owns the canvas. No Threlte.**
+   The snapshot has **two halves**: a *state*, sampled, for anything an
+   instrument shows, and an *event channel* (`core/events.ts`) for anything that
+   *happens* — a bounded ring of `seq`-stamped values, read with one number and
+   never by diffing a growing list. The channel notifies; the ledger records.
+   **Renderers** (`render/`, `audio/`) read at 60 Hz and interpolate; **readers**
+   (`ui/`, `cockpit/`) read at 10 Hz. Audio is a renderer, so a replay sounds
+   exactly like the run it recorded.
 
 ### Coding
 

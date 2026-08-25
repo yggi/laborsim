@@ -29,15 +29,6 @@ Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
 1 over the rack as the build surface. The verdict, its voice and the dash are
 built; what remains is more to break, replay, and the path to the conflict.
 
-### [L-040] The machine symphony — synthesised sound
-- **what:** engine-generated audio from the quantities the sim already
-  publishes — track speed, slip, contacts, impact energy — plus the alarms, which
-  now exist and are mute. Never sampled: a clip is a black box triggered by an
-  event, a synth voice is another rendering of a simulated quantity.
-- **done-when:** a machine labouring at 90% grip sounds like it, an impact's
-  voice follows how hard it was, and an unacknowledged master alarm is audible.
-- **needs:** L-031
-
 ### [L-049] Themes, authored independently — the agentic round
 - **what:** one author per manufacturer, each given only its own `LORE.md`
   entry, `components.md`, `theming.md` and the KIBA reference — blind to the
@@ -124,9 +115,24 @@ built; what remains is more to break, replay, and the path to the conflict.
   or place kit only where it can stand, or give the tall things a base. Rejected
   already: placing a box on the highest point of its own footprint, which drops
   it onto one corner and toppled 13 more cones.
+  Now audible as well as measurable: the event channel reports one impact at
+  tick 109 on the default seed, which is a pole hitting the ground. It is 1.6 J
+  and comes out as a tick rather than a bang, so nothing needs muting — but the
+  site making a noise before the operator has touched anything is the clearest
+  possible statement of the problem.
 - **done-when:** an untouched site is still standing when the exercise begins,
-  and the first line in the ledger came from the machine.
+  and the first line in the ledger came from the machine, and an untouched site
+  is silent.
 - **needs:** NOTES thread "the site is hard to crash into on purpose"
+
+### [L-060] Impacts you can hear the side of
+- **what:** an impact's voice is centred. It knows where it happened — the event
+  carries a world position — and hearing that you clipped something on your left
+  is a real cue on a machine you steer with two independent tracks. Wants the
+  hull pose, a body-frame transform, and a decision about what "left" means when
+  the camera is behind the machine rather than in it.
+- **done-when:** clipping a cone on one side is audibly on that side, in the cab,
+  and the chase camera does not lie about which side it was.
 
 ### [L-058] The ground seam
 - **what:** props read as hovering, and it is not a gap: the rest gap under a
@@ -191,7 +197,9 @@ built; what remains is more to break, replay, and the path to the conflict.
 ### [L-046] External lights and beacons
 - **what:** headlights/spotlight, a red brake light, rotating warning beacons on
   the machine — feedback in the chase view and plain eye-candy. Wire them to sim
-  state (braking, alarm) so they mean something, not just decoration.
+  state (braking, alarm) so they mean something, not just decoration. Cheaper
+  now: the master condition and its acknowledgement live in the shell, so the
+  beacon is the third consumer of a fact rather than a fourth derivation of it.
 - **done-when:** the beacon turns under a master-alarm and the brake light comes
   on when you reverse the tracks against motion.
 
@@ -278,6 +286,19 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-040] The machine symphony — synthesised sound — **closed**
+Five voices, none sampled: the drive note carrying load (filter, droop and
+loudness off `traction`), the grind carrying slip and only where there is
+ground, impacts whose amplitude is the square root of the joules, the hull on
+its own scale, and the horn as the audible half of the master lamp. `voices.ts`
+is arithmetic with no WebAudio in it and `engine.ts` is the only file that knows
+an oscillator exists, so the graph builds on an `OfflineAudioContext` exactly as
+on a live one — which is `npm run listen`. It earned the event channel on the
+way in (`core/events.ts`), and the master condition moved out of `DashPanel`
+into the shell so the lamp and the horn are one fact. Rejected: a mute on the
+dash — a Labor's horn has no cut-out, so volume is the rig's control and sits
+with the camera.
+
 ### [L-059] The pod joins the registry, and the seam moves — **closed**
 The triptych's third part was hand-wired into the shell: a branch and a position
 variable per component, and a live `Autonav` held so the scope could call
@@ -353,12 +374,3 @@ anything already sliding got integrated until it wrote itself off. Rejected:
 Rapier's contact-force events — a solver force magnitude is not inspectable and
 energy is. Learned: toughness must be a fraction of ½·m·v², or a cone rated at
 22 J is indestructible by a 6.2 t machine.
-
-### [L-036] TILT-GUARD — the first safety component — **closed**
-Caps drive on hull pitch and roll, limits set by two sliders on its faceplate.
-Verb `AMP`, because `CAP` would clamp a positive intent into a reversing
-signal's range and turn the machine around — a safety module causing the crash
-it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
-sines come straight out of the quaternion and stay bit-portable. Ships enabled
-and deliberately timid (25°/18° against a 43.5° climb limit), so the first
-lesson is that your own machine is what stopped you.

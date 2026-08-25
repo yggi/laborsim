@@ -53,11 +53,6 @@ the first observable state is two seconds old. Two hypotheses and one
 measured-worse fix went into explaining a launch that never happened. **Ask what
 ran before your first observation.**
 
-**Instrument early.**
-Carried in from the concept-3 probe, which lost rounds diagnosing from
-screenshots until a telemetry line settled it instantly. It pays twice here: the
-readout a developer needs to diagnose a failure is the readout the player needs.
-
 ## Verification
 
 **A test that passes either way is worthless.**
@@ -73,16 +68,16 @@ rack's HALT, and what it was actually detecting was furniture destroying itself
 on spawn. A bite check proves the code path ran, not that the scenario happened.
 Assert the scenario too — here, that the impact speed was non-zero.
 
-**A scripted edit that matches nothing fails silently.**
-Two `str.replace` edits in one round did nothing at all, because the formatter
-had reflowed the file since the string was written. One of them removed the
-dash's background and left the overlay that was meant to replace it, turning the
-whole panel black — and the tests, types and lint stayed green, because nothing
-about it was wrong, it just was not there. Any scripted edit asserts it matched.
-
-**Verify by exit code, not by grepping output.**
-A deploy failed on formatting because the local check grepped for `lint/` rule
-hits and a formatter diagnostic does not match that pattern.
+**A check that cannot fail is not a check.**
+Three scars, one shape. Two `str.replace` edits did nothing at all, because the
+formatter had reflowed the file since the strings were written — one blanked the
+dash and everything stayed green, since nothing was *wrong*, it just was not
+there. A deploy failed on formatting because the local check grepped output for
+`lint/`, which a formatter diagnostic does not match. And an audio bench measured
+brightness as zero-crossing rate, which does not move when a filter opens on a
+periodic waveform: it would have signed off on a voice that did nothing.
+Assert the edit matched; verify by exit code; move the instrument before you
+trust what it says.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both
@@ -97,14 +92,19 @@ the route changed — because the first pin can be *behind* the machine. It was
 testing an accident of layout. Assert the thing you mean: the range to the pin
 closes.
 
-**Screenshots catch what CI cannot — so make looking cheap first.**
+**Perception catches what CI cannot — so make it cheap first.**
 Build green, tests green, and the cab view was a solid black wall: an ink shell
 seen from inside. Then a cyan wall — an opaque windscreen 0.47 m from the eye.
-Neither is expressible as an assertion. Re-earned on the dash, which was written
-blind for an hour, read correctly, typechecked, passed 104 tests, and put the
-whole instrument cluster off-screen at 390 px. Two more defects fell out of the
-same loop within minutes of a bench existing. Looking is only reliable when it
-costs nothing, so when the work is visual, build the fixture bench *first*.
+Neither is expressible as an assertion. Re-earned on the dash, written blind for
+an hour, typechecked, 104 tests green, and the whole instrument cluster
+off-screen at 390 px. Perception is only reliable when it costs nothing, so when
+the work is visual — or audible — build the bench *first*. The audio bench paid
+for itself three times in its first run, on defects no test could hold: a limiter
+crushing every impact, a strike filter tied backwards to the ring, and a cue that
+measured beautifully and could not be heard. It goes back to the concept-3 probe,
+which lost rounds diagnosing from screenshots until one telemetry line settled it
+instantly — and it pays twice, because the readout a developer needs to diagnose
+a failure is the readout the player needs.
 
 ## Design
 
