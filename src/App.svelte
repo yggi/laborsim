@@ -196,15 +196,11 @@ $effect(() => {
 });
 
 let setViewMode: (m: CameraMode) => void = () => {};
-let recentreView: () => void = () => {};
-
-/** Dropping your eyes to the cabinet is turning your head: the view comes back
- *  to forward with it, rather than being left over your shoulder. */
 function toggleRack() {
   rackOpen = !rackOpen;
-  recentreView();
   // A cabinet door, not a switch: the latch is the heaviest thing on the panel
-  // and it is the same sound going both ways.
+  // and it is the same sound going both ways. The view needs no telling to come
+  // back — nothing is holding the glass, so it is already on its way.
   clunk();
 }
 
@@ -419,16 +415,21 @@ $effect(() => {
     );
     const clock = makeClock();
     setViewMode = viewport.setMode;
-    recentreView = viewport.recentre;
 
     const resize = () => viewport.resize(innerWidth, innerHeight);
     addEventListener("resize", resize);
     resize();
 
     const pointers = new Map<number, { x: number; y: number }>();
-    const down = (e: PointerEvent) =>
+    const down = (e: PointerEvent) => {
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const up = (e: PointerEvent) => pointers.delete(e.pointerId);
+      // The neck is sprung, and a hand on the glass is what holds it.
+      viewport.hold(true);
+    };
+    const up = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size === 0) viewport.hold(false);
+    };
     const drag = (e: PointerEvent) => {
       const prev = pointers.get(e.pointerId);
       if (!prev) return;
@@ -520,12 +521,27 @@ $effect(() => {
          sitting inside, with pillars at the corners of your vision and a header
          beam overhead. It is the cheapest way to make the glass read as an
          *opening* rather than as the edge of a screen — and it is the chassis
-         maker's structure, so it belongs to KIBA the way the dash does. -->
+         maker's structure, so it belongs to KIBA the way the dash does.
+
+         It **continues past the windscreen**, which is what the sweep made
+         necessary: turn your head and the A-pillar leaves, and if there is
+         nothing beyond it you are looking out of a cab that ends. So there is a
+         roof over you, a door post out to each side, and a waist rail between
+         them with side glass in it. None of it is visible looking forward; all
+         of it is the difference between a frame and a cab. -->
     {#if mode === "cab"}
       <div class="cage" aria-hidden="true">
+        <div class="roof"></div>
+        <div class="wall left"></div>
+        <div class="wall right"></div>
         <div class="beam"></div>
+        <div class="soffit"></div>
         <div class="pillar left"></div>
         <div class="pillar right"></div>
+        <div class="post left"></div>
+        <div class="post right"></div>
+        <div class="rail left"></div>
+        <div class="rail right"></div>
         <div class="gusset left"></div>
         <div class="gusset right"></div>
       </div>
@@ -683,7 +699,9 @@ $effect(() => {
   }
   /* Painted steel, lit from above-left like every other surface in here. */
   .cage .beam,
-  .cage .pillar {
+  .cage .pillar,
+  .cage .post,
+  .cage .rail {
     position: absolute;
     background:
       linear-gradient(160deg, rgba(255, 255, 255, 0.2), transparent 38%),
@@ -703,10 +721,13 @@ $effect(() => {
     background-size: 100% 58px;
     opacity: 0.75;
   }
-  /* The header beam. Low enough to be present, not so low it is a letterbox. */
+  /* The header beam. Low enough to be present, not so low it is a letterbox —
+     and running the whole width of the cab, not just the width of the glass,
+     because a beam that stopped at the A-pillar would leave the side windows
+     with no top edge the moment you looked at them. */
   .cage .beam {
-    left: 0;
-    right: 0;
+    left: calc(-1 * var(--cab-side));
+    right: calc(-1 * var(--cab-side));
     top: 0;
     /* One fact, one place: the frame you can see and the frame a pod's arm is
        measured against are the same numbers (`src/cockpit/cage.ts`). */
@@ -747,6 +768,92 @@ $effect(() => {
   .cage .gusset.right {
     right: 15px;
     clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
+  /* The roof, above the beam and off the top of the glass: you only ever see it
+     by looking up, and before it existed looking up showed sky through a hole
+     in the machine. Ribbed, because a pressed steel roof is. */
+  .cage .roof {
+    position: absolute;
+    left: calc(-1 * var(--cab-side));
+    right: calc(-1 * var(--cab-side));
+    bottom: 100%;
+    height: 60vh;
+    background:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 2px, transparent 2px 46px),
+      linear-gradient(0deg, #2c3336 0%, #1b2124 40%, #12171a 100%);
+    box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.6);
+  }
+  /* The underside of the beam. A box section has a face you can see from below,
+     and without it the beam is a painted stripe. */
+  .cage .soffit {
+    position: absolute;
+    left: calc(-1 * var(--cab-side));
+    right: calc(-1 * var(--cab-side));
+    top: var(--cab-beam);
+    height: 5px;
+    background: linear-gradient(180deg, #596164 0%, #2b3235 100%);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+  }
+  /* The door posts, one glass-width out to each side. They are the reason a
+     look sideways lands on a cab rather than on nothing: chunkier than the
+     A-pillars, unskewed, and carrying the same bolt line. */
+  .cage .post {
+    top: 0;
+    bottom: 0;
+    width: 34px;
+  }
+  .cage .post.left {
+    left: calc(-1 * var(--cab-side));
+  }
+  .cage .post.right {
+    right: calc(-1 * var(--cab-side));
+  }
+  .cage .post::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 50% 50%, #6a7375 0 1.8px, transparent 2.2px);
+    background-repeat: repeat-y;
+    background-position: 50% 40px;
+    background-size: 100% 66px;
+    opacity: 0.7;
+  }
+  /* The door skin, beyond the post. The head turns further than the cab is
+     wide, and past the side glass there is no more glass — there is a door. It
+     runs the whole height and further out than the neck goes, so a look over
+     your shoulder lands on painted steel rather than on a hole where the
+     machine should be. Pressed, with a swage line at the waist. */
+  .cage .wall {
+    position: absolute;
+    top: calc(-1 * var(--cab-wall));
+    bottom: calc(-1 * var(--cab-wall));
+    width: var(--cab-wall);
+    background:
+      linear-gradient(180deg, transparent calc(62% - 2px), rgba(0, 0, 0, 0.55) 62%,
+        rgba(255, 255, 255, 0.06) calc(62% + 2px), transparent calc(62% + 5px)),
+      linear-gradient(90deg, #171c1f 0%, #262d30 12%, #1c2225 60%, #12171a 100%);
+  }
+  .cage .wall.left {
+    right: calc(100% + var(--cab-side));
+  }
+  .cage .wall.right {
+    left: calc(100% + var(--cab-side));
+  }
+
+  /* The waist rail under each side window — the bottom edge of the side glass,
+     at about the height the dash meets it. */
+  .cage .rail {
+    top: 62%;
+    height: 16px;
+    width: var(--cab-side);
+    border-top: 1px solid #0a0d0e;
+  }
+  .cage .rail.left {
+    right: 100%;
+  }
+  .cage .rail.right {
+    left: 100%;
   }
 
   /* The viewport is a window, not a screen. */

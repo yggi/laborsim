@@ -41,9 +41,10 @@ built; what remains is more to break, replay, and the path to the conflict.
 - **needs:** L-048 (built)
 
 ### [L-051] The cage and the levers are KIBA's too
-- **what:** the chassis component brings the cab furniture, and it is currently
-  a plain inset shadow and two generic sliders. They belong in the chassis
-  maker's packet like the dashboard does.
+- **what:** the chassis component brings the cab furniture. It has the geometry
+  now — a roof, door posts, side glass, and levers that are sticks in a gate —
+  but it is all generic steel. It belongs in the chassis maker's packet like the
+  dashboard does.
 - **done-when:** the cage frame and the levers are recognisably the same
   manufacturer's as the panel they sit behind.
 

@@ -1,13 +1,12 @@
 # NOTES.md — open threads
 
-**Open, uncrystallized threads only.** Not a task list (that's `BOARD.md`), not
-a record (that's `LOG.md`), not settled truth (that's `MEMORY.md`).
+**Open, uncrystallized threads only.** Not a task list (that's `BOARD.md`), not a
+record (that's `LOG.md`), not settled truth (that's `MEMORY.md`). A thread leaves
+exactly three ways: it crystallizes into `MEMORY.md`, becomes a card in
+`BOARD.md`, or is deleted as no longer interesting.
 
-A thread leaves exactly three ways: it crystallizes into `MEMORY.md`, becomes a
-card in `BOARD.md`, or is deleted as no longer interesting.
-
-**Gate: 100 lines.** Overflow means threads have gone stale — resolve, promote
-or delete. Do not grow the file.
+**Gate: 100 lines.** Overflow means threads have gone stale — resolve, promote or
+delete. Do not grow the file.
 
 ---
 
@@ -92,10 +91,10 @@ event on the recording, not as a surface to fit.
 
 ## How much of the cab should a glance cost you?
 
-The cab sweeps 1:1 with the head, so a look takes the levers, the E-STOP and
-every instrument off the glass within about 15° (`docs/design/cockpit.md`).
-Honest, and the intended price — but you cannot find a touchscreen lever by
-feel, and only somebody who did not build it can say if that is the right price.
-Two dials if it is too much: shorten the pan range (you see less of the site) or
-damp the sweep below 1:1 (the cab stops being rigid). Prefer the first; a
-sim-sickness mitigation, if one is ever needed, is the same dial.
+The cab sweeps 1:1, so a look takes the levers, the E-STOP and every instrument
+off the glass within about 15°, and past 35° you are looking at the door
+(`docs/design/cockpit.md`). Honest, and the intended price — but you cannot find
+a touchscreen lever by feel, and only somebody who did not build it can say if
+that is the right price. Two dials if it is too much: shorten the pan range (you
+see less of the site) or damp the sweep below 1:1 (the cab stops being rigid).
+Prefer the first; a sim-sickness mitigation is the same dial.

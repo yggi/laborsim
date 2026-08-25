@@ -21,6 +21,49 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — a cab that goes round you, and levers you can hold
+
+Cards: none closed. [L-051] narrowed — the cab furniture has geometry now and
+still has no maker. Merged the audio branch in; see the merge commit for what
+had to be reconciled.
+
+**The cage stops being a frame and becomes a cab.** Sweeping the whole cab
+(L-050) made a hole nobody had to look for: the A-pillar leaves the glass at
+about 26° and behind it was sky. So the cab now continues past the windscreen —
+a ribbed roof with the beam's underside showing, a door post out each side with
+side glass and a waist rail between, and beyond the post a **door skin** wide
+enough to outlast the neck. The head pans to 86°, which at 1:1 is thousands of
+pixels, and a wall that ran out first would be a hole at exactly the angle you
+were curious about. The vignette at the very edge stays put on purpose: it is the
+aperture, not a part.
+
+**The vertical look was inverted against itself.** Dragging right looked left —
+grab-the-world — and dragging down looked *down*. One convention, not two: both
+axes drag the world now.
+
+**The neck is sprung.** The 1.2 s hold before the view eased back put a dwell in
+the middle of a glance; it now starts the instant the hand leaves the glass. The
+renderer is told `hold(true/false)` rather than being given a timestamp, because
+the state is *a hand is on the glass*, not *a gesture happened*. `recentre()`
+went with it — opening the rack no longer has to ask for the view back, because
+nothing is holding it.
+
+**The levers are sticks.** A shaft up through a ribbed rubber boot on a bolted
+plate, a moulded grip, a gate with a notch at neutral — same place, same throw,
+same dead zone, and not one line of the pointer maths changed. Pulled back is
+drawn 8% larger, because the seat looks *along* the machine and a fore-and-aft
+lever mostly moves toward you and away from you; with no perspective at all it
+reads as a grip sliding in a groove, which is the slider it stopped being.
+
+**Found by looking, twice.** The bench pulled a lever it did not mean to: the
+levers sweep with the cab, so a drag started while the cab was still out landed
+on one that had slid under the pointer. That is the cab being honest and the
+bench being wrong — it waits for the spring now. And `npm run cab` vanished from
+`package.json` during the merge, because `git checkout --theirs` ran before the
+edit that was supposed to keep both, so the edit matched nothing and said
+nothing (META: a scripted edit that matches nothing fails silently). The bench
+failing to start is what said so.
+
 ## 2026-08-25 — the cab is one rigid object
 
 Cards: closed [L-050]. Opened: [L-064]. History trimmed to its gate: [L-037]
@@ -904,62 +947,3 @@ One process note worth keeping: two edits this round silently did nothing,
 because `str.replace` on a file the formatter had reflowed matches nothing and
 says so with silence. One of them turned the whole dash black. Scripted edits
 now assert that they matched.
-
-## 2026-08-24 — the dash stops being a screen
-
-Cards: [L-052] closed. [L-040] sound raised to ready; [L-041] demoted behind it.
-
-A visual round on the dashboard, against one instruction: *industrial machine,
-not a website.* Three rules came out of it, and they decide more arguments than
-anything else in `theming.md`:
-
-1. **The label is a separate object** — an engraved plate bolted near the
-   control, never text set inside or beside it.
-2. **A plate never changes.** TILT-GUARD's plate says TILT-GUARD whether the
-   guard is working, limiting or bypassed. A label that rewrites itself is a
-   screen pretending to be a panel. (I had it swapping to ÜBERBRÜCKT; the
-   screenshot made it obvious that was a UI habit, not a machine.)
-3. **The lens is the state** — colour and position, not words.
-
-Three registers, one job each: the plate names, the lens reports, and the strip
-says the one sentence when there is one. Everything else on the dash shut up.
-
-Structurally: the pinned right-hand column is gone, so no horizontal split and
-no scrolling — one wrapping flow, things bolted where they fit. The rack toggle
-became **the latch it always was**: full width along the bottom seam, which is
-the top edge of the cabinet below it, and the rack's own duplicate CLOSE button
-went with it. One hood, one handle.
-
-The masters are now **push-to-acknowledge**, the way an annunciator panel works
-— new conditions flash, pressing makes them steady, and they go dark only when
-the condition clears. Acknowledging is not dismissing. The E-STOP moved in
-beside them and latches like a real mushroom: cap sinks, flushes, locks.
-
-Dropped the SLIP/GND/¥ legend row. Those conditions still feed the masters and
-name the strip; what they no longer do is make the panel explain itself in
-words, which is the thing a panel does not do.
-
-**Found rather than built**, from a remark in the brief: *a guard ordered above
-the thing it guards becomes a warning light.* TILT-GUARD scales what reaches it,
-so above the pilot it scales HALT and the pilot's SET overwrites the result — no
-authority at the terminal — while its condition still lights the dash. Guard,
-bypass or advise, chosen by ordering alone, with no new verb, setting or
-mechanism. Zero lines of implementation; it is under test now.
-
-Two bugs the screenshots caught, both invisible to CI:
-
-- an enabled, healthy component showed a **dark lamp**, identical to a switched
-  off one — the panel telling you nothing at a glance, which is the only thing
-  it is for. Enabled and fine is a *lit* lamp.
-- the alarm strip named a bypassed HANSA guard in KIBA's word.
-
-Sound (L-040) moved to ready. It was already linked to damage, symptoms and the
-lemon; the alarms landing mute is what settled it — an annunciator you cannot
-hear is half an annunciator, and the acknowledge gesture has nothing to silence.
-
-Also: the deploy has been failing since this branch started. The build is green
-every time — lint, typecheck, tests, artifact — and the *deploy* job is rejected
-in one second, because the `github-pages` environment only accepts the default
-branch. Nothing pushed here has been publishable, which is why the live site is
-still this morning's. Needs one settings change or a merge; recorded so the next
-session does not re-diagnose it.

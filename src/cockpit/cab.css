@@ -23,4 +23,22 @@
    */
   --cab-look-x: 0px;
   --cab-look-y: 0px;
+
+  /*
+   * How far out to each side the cab keeps going past the windscreen — where
+   * the door post stands, and how much side glass there is before it.
+   *
+   * Roughly a glass-width, which at this field of view is about 26° off the
+   * nose: far enough that a glance forward never sees it, close enough that
+   * turning your head lands on structure rather than on nothing.
+   */
+  --cab-side: 520px;
+
+  /*
+   * And beyond the post: door. Wide enough to outlast the neck — the head pans
+   * to 86°, which at 1:1 puts the far side of the cab thousands of pixels off
+   * the glass, and a wall that ran out before then would be a hole in the
+   * machine at exactly the angle you were curious about.
+   */
+  --cab-wall: 12000px;
 }

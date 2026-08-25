@@ -44,12 +44,13 @@ export interface Viewport {
    */
   head(): { x: number; y: number };
   /**
-   * Put the eyes back on the road now, rather than after the usual hold. For
-   * when something else has taken the pilot's attention — dropping them to the
-   * rack is turning your head, and the view should not be left over your
-   * shoulder while you read.
+   * A hand is on the glass, or has come off it.
+   *
+   * The neck is sprung: it pulls back to straight ahead whenever nothing is
+   * holding it. So the *hold* is the state worth telling the renderer about,
+   * and the pointer that knows it lives in the shell.
    */
-  recentre(): void;
+  hold(down: boolean): void;
   dispose(): void;
 }
 
@@ -68,8 +69,6 @@ const SKY_HIGH = 0x5f8fb0;
  */
 const LAYER_INTERIOR = 1;
 
-/** How long a look is left alone before the view starts easing forward, ms. */
-const LOOK_HOLD_MS = 1200;
 /**
  * Time constant of the neck coming back, seconds. Slow enough to read as a
  * head turning rather than a camera snapping.
@@ -317,8 +316,8 @@ export function createViewport(
   let mode: CameraMode = "cab";
   let pan = 0;
   let tilt = 0;
-  /** When the pilot last moved the view. Wall clock: camera feel, not sim. */
-  let lastLook = 0;
+  /** A hand is on the glass, so the sprung neck stays where it is put. */
+  let held = false;
   /** Wall clock of the previous rendered frame, for a rate-independent ease. */
   let lastFrame = 0;
   let orbit = 2.4;
@@ -411,25 +410,30 @@ export function createViewport(
       }
 
       if (mode === "cab") {
-        // **Eyes back on the road.**
+        // **Eyes back on the road, and the neck is sprung.**
         //
-        // A swipe is a glance, not a new heading: once you stop moving, the view
-        // eases back to straight ahead on its own. Without it every look costs
-        // a second deliberate swipe to undo, and the cheapest way to avoid that
-        // cost is to never look — which is the opposite of what a glance is for.
+        // A swipe is a glance, not a new heading: the view pulls back to
+        // straight ahead the instant you let go of the glass. Without it every
+        // look costs a second deliberate swipe to undo, and the cheapest way to
+        // avoid that cost is to never look — the opposite of what a glance is
+        // for.
+        //
+        // It used to wait 1.2 s before starting, which made a glance a thing
+        // with a *dwell* in it; sprung, it is a thing you hold. Holding is what
+        // `held` is: the hand is on the glass, so the spring is compressed and
+        // the head stays where it has been put.
         //
         // Cab only. In chase you are outside the machine and free look is the
         // entire point of being there.
         //
-        // Renderer-side and frame-rate-coupled on purpose: this is camera feel,
-        // never sim state, so it can use the wall clock that rule 2 keeps out of
-        // the simulation.
+        // Renderer-side on purpose: this is camera feel, never sim state, so it
+        // can use the wall clock that rule 2 keeps out of the simulation.
         const now = performance.now();
         // Wall clock, clamped: a backgrounded tab comes back with a gap that
         // would otherwise snap the head round in a single frame.
         const frame = lastFrame === 0 ? 0 : Math.min((now - lastFrame) / 1000, 0.1);
         lastFrame = now;
-        if (now - lastLook > LOOK_HOLD_MS) {
+        if (!held) {
           // deterministic-exempt: camera feel, and it never reaches the sim.
           const eased = 1 - Math.exp(-frame / LOOK_TAU);
           pan += (0 - pan) * eased;
@@ -478,10 +482,8 @@ export function createViewport(
       if (mode !== "cab") return { x: 0, y: 0 };
       return cabOffset(pan, tilt, focalPixels(camera.fov, viewHeight));
     },
-    recentre() {
-      // Not a jump: expire the hold and let the same easing do the work, so the
-      // neck moves at one speed however it was told to come back.
-      lastLook = 0;
+    hold(down) {
+      held = down;
     },
     setMode(next) {
       mode = next;
@@ -491,11 +493,16 @@ export function createViewport(
       else camera.layers.enable(LAYER_INTERIOR);
     },
     look(dx, dy) {
-      lastLook = performance.now();
       if (mode === "cab") {
         // Limited travel: you are strapped into a seat, not floating.
+        //
+        // Both axes drag the *world*, not the head: pull the glass right and
+        // you look left, pull it down and you look up. The vertical used to be
+        // the other way round, which is the one combination nobody has a name
+        // for — the horizontal was already grab-the-world, so the two axes
+        // disagreed with each other.
         pan = clampNumber(pan - dx * 0.005, -1.5, 1.5);
-        tilt = clampNumber(tilt - dy * 0.004, -0.7, 0.5);
+        tilt = clampNumber(tilt + dy * 0.004, -0.7, 0.5);
       } else {
         orbit -= dx * 0.006;
         elevation = clampNumber(elevation + dy * 0.005, -0.15, 1.1);

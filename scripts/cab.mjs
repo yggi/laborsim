@@ -102,11 +102,13 @@ await page.evaluate(async () => {
       a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
       a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
     ];
-    // `look` is relative and self-centring, so the head is re-aimed from zero
-    // every time: set the mode (which zeroes it), then push the whole angle in
-    // one gesture, in the pixel units the drag handler speaks.
+    // `look` is relative and the neck is sprung, so the head is re-aimed from
+    // zero every time: set the mode (which zeroes it), hold the glass so it
+    // cannot spring back mid-pose, then push the whole angle in one gesture, in
+    // the pixel units the drag handler speaks.
     viewport.setMode("cab");
-    if (pan || tilt) viewport.look(-pan / 0.005, -tilt / 0.004);
+    viewport.hold(true);
+    if (pan || tilt) viewport.look(-pan / 0.005, tilt / 0.004);
     const [x, y, z] = snapshot.machine.pose.position;
     viewport.render({
       ...snapshot,
@@ -138,7 +140,8 @@ const LOOKS = [
   ["app-forward", 0, 0],
   ["app-look-right", -170, 0],
   ["app-look-left", 170, 0],
-  ["app-look-up", 0, 90],
+  ["app-look-up", 0, 120],
+  ["app-look-down", 0, -120],
   ["app-look-far-right", -520, 0],
 ];
 
@@ -150,13 +153,19 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
 
   for (const [name, dx, dy] of LOOKS) {
     if (filter && !name.includes(filter)) continue;
-    // A drag on the glass, in one gesture, then a frame to settle. The look
-    // eases back after 1.2 s, so the shot is taken inside the hold.
+    // A drag on the glass, in one gesture. The shot is taken *before* the
+    // release on purpose: the neck is sprung and starts back the moment the
+    // pointer lifts.
     await page.mouse.move(195, 380);
     await page.mouse.down();
     await page.mouse.move(195 + dx, 380 + dy, { steps: 6 });
     await page.screenshot({ path: `${OUT}${name}.png` });
     await page.mouse.up();
+    // Let the spring bring the cab home before the next drag. Not politeness:
+    // the levers sweep with everything else, so a drag started while the cab is
+    // still out can land on a lever that has slid under the pointer — which is
+    // the cab being honest, and a bench pulling a lever it did not mean to.
+    await page.waitForTimeout(1400);
     written++;
   }
 
@@ -207,11 +216,11 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
     }
   }
 
-  // Let the view ease all the way back to forward before the next set. It is
-  // asymptotic and it holds for 1.2 s before it even starts: measured, a full
-  // 86° pan is still 23 px off centre at 2.6 s and 24 px at 4.5 s — small
-  // enough to look like a layout bug in a screenshot, and not one.
-  await page.waitForTimeout(5600);
+  // Let the spring pull the view all the way back before the next set. It is
+  // asymptotic: a full 86° pan is most of the way back in a second and settled
+  // in about three. A screenshot taken too early catches the cab 20-odd px off
+  // centre, which looks like a layout bug and is not one.
+  await page.waitForTimeout(4000);
 
   // The arm, and what it refuses. A pod pulled in off its pillar shows the
   // bracket holding it; pulled to the middle of the glass, where no full-size

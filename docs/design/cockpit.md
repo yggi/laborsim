@@ -128,10 +128,30 @@ and gussets where they meet. It is the cheapest way to make the glass read as an
 *opening* rather than as the edge of a screen, and it is chassis-maker structure,
 so it belongs to KIBA the way the dash does.
 
-And the view **returns to forward on its own**. A swipe is a glance, not a new
-heading: hold still for a moment and the neck eases back. Without it, every look
-costs a second deliberate swipe to undo — and the cheapest way to avoid that cost
-is to never look, which is the opposite of what a glance is for.
+**And it does not stop at the windscreen.** That became necessary the moment the
+cab began to sweep with the head (below): the A-pillar leaves the glass after
+about 26°, and if nothing stands behind it you are looking out of a cab that
+ends. So there is a roof over you with the beam's underside showing, a door post
+out to each side with side glass and a waist rail between, and beyond the post a
+door skin that outlasts the neck. Nothing of it is visible looking forward and
+all of it is the difference between a frame and a cab.
+
+Deliberately *not* structure: the vignette at the very edge of the glass. It is
+the aperture — the boundary of what you can see — rather than a part of the
+machine, so it stays put while everything else sweeps.
+
+And the view **springs back to forward**. A swipe is a glance, not a new heading:
+let go of the glass and the neck starts back immediately. It used to wait 1.2 s
+first, which put a *dwell* in the middle of a glance; sprung, a look is a thing
+you hold, and the moment you stop holding it you are facing the road again.
+Without any of that, every look costs a second deliberate swipe to undo — and
+the cheapest way to avoid that cost is to never look, which is the opposite of
+what a glance is for.
+
+Both axes **drag the world**, and that is one convention, not two: pull the glass
+right and you look left, pull it down and you look up. The vertical used to be
+inverted relative to the horizontal, which is the one combination nobody has a
+name for.
 
 The cage is also **structure the cockpit measures against**, not scenery: the
 pillars and the beam are where a pod's arm clamps, and they are one set of
@@ -147,6 +167,12 @@ your view once you have dropped your eyes to the cabinet.
 That is honest cab geometry rather than a transition: the dash physically sits
 between the windscreen and the rack, so looking past it puts it overhead. It is
 one object at one height, and the dash and the rack together are one deck.
+
+The levers themselves are **sticks**, not sliders: a shaft up through a rubber
+boot on a bolted plate, with a moulded grip, moving in a gate with a notch at
+neutral. Same place, same throw, same dead zone — but principle 7 says the cab is
+the real thing you are sitting in, and a slider is a thing on a screen. Pulled
+back is drawn slightly larger, because pulled back is nearer your chest.
 
 The consequence worth keeping: **the levers go with the glass.** Looking down
 puts your hands in the cabinet, not on the controls. The bus keeps carrying
@@ -408,11 +434,6 @@ The consequences are the interesting part, and both are the design working:
 - **Reading the rack is a posture, not a camera mode.** With the cabinet open
   you cannot look around at all — the same bargain as the levers, made with your
   eyes — and opening it recentres the view, because that is turning your head.
-
-One deliberate exception: the **vignette at the edge of the glass does not
-sweep**. It is the aperture — the boundary of what you can see — rather than a
-part of the machine, and a dark band crossing the middle of the view would read
-as a bug rather than as structure. Everything with a bolt in it moves.
 
 Two consequences to keep in view, neither a reason to undo the roll:
 

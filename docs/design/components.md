@@ -257,10 +257,12 @@ and it is the chassis maker's, because the cage is the chassis maker's structure
 It fires when a long look comes back to centre and then holds its tongue for 45 s;
 a reminder you get every time you glance is one you learn to ignore.
 
-Two things the ease had to be told. It waits 1.2 s before starting, or every
-glance costs a deliberate swipe to undo. And it is **per second, not per frame**:
-the same constant applied per frame made the neck twice as slow on a phone
-rendering at 30, which is the device the whole mobile-first pillar is about.
+Two things the ease had to be told. It is **sprung** — it starts the instant the
+hand leaves the glass, so a look is a thing you hold rather than a thing with a
+dwell in it; the renderer is told when a hand is on the glass, because that is
+the state, not the gesture. And it is **per second, not per frame**: the same
+constant applied per frame made the neck twice as slow on a phone rendering at
+30, which is the device the whole mobile-first pillar is about.
 
 Settled: it does **not** apply in chase view. You are outside the machine there
 and free look is the whole point of being there.
