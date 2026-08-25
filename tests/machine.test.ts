@@ -8,6 +8,9 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
+// The dash's own threshold, not a second copy of it: the claim under test is
+// about where the sim sits relative to what the panel calls slipping.
+import { SLIPPING } from "../src/cockpit/annunciator.ts";
 import type { Module, TrackCommand, Verb } from "../src/control/bus.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
@@ -172,13 +175,42 @@ describe("grades, and where traction runs out", () => {
   it("climbs a gentle grade without effort", () => {
     const { gained, end } = climb(10, 20);
     expect(gained).toBeGreaterThan(5);
-    expect(end.machine.left.traction).toBeLessThan(0.6);
+    // A number rather than null: six samples are down, so there is a friction
+    // cone for the reading to be a fraction of.
+    expect(end.machine.left.traction).not.toBeNull();
+    expect(end.machine.left.traction ?? 1).toBeLessThan(0.6);
   });
 
   it("climbs a hard grade, using nearly all its grip", () => {
     const { gained, end } = climb(40, 20);
     expect(gained).toBeGreaterThan(15);
-    expect(end.machine.left.traction).toBeGreaterThan(0.8);
+    expect(end.machine.left.traction ?? 0).toBeGreaterThan(0.8);
+  });
+
+  it("runs out of margin before it runs out of grip — why the dash shows both", () => {
+    // The load-bearing claim behind putting traction and slip on one head
+    // instead of keeping slip alone. On a hard-but-climbable grade the machine
+    // is nearly out of friction and has *not* started sliding: the traction
+    // reading says so and the slip reading says nothing. Delete this property
+    // and the panel has no instrument that warns before the failure.
+    const world = createWorld({
+      terrain: makeRampTerrain(40, 5),
+      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+    });
+    for (let i = 0; i < 60; i++) world.step();
+    let warned = 0;
+    let steps = 0;
+    for (let i = 0; i < 20 * 60; i++) {
+      world.step();
+      const m = world.snapshot().machine;
+      const use = Math.max(m.left.traction ?? 0, m.right.traction ?? 0);
+      const slip = Math.max(Math.abs(m.left.slip), Math.abs(m.right.slip));
+      steps++;
+      if (use > 0.8 && slip <= SLIPPING) warned++;
+    }
+    world.free();
+    // Measured at about two-thirds of the climb. Well clear of a fluke.
+    expect(warned / steps).toBeGreaterThan(0.4);
   });
 
   it("cannot climb past the friction limit, and ends up back down", () => {
@@ -194,6 +226,24 @@ describe("grades, and where traction runs out", () => {
     if (end.machine.left.contacts === 0) {
       expect(Math.abs(end.machine.left.slip)).toBeCloseTo(MAX_TRACK_SPEED, 1);
     }
+  });
+
+  it("reports no traction at all — not zero — for a track with no ground", () => {
+    // Zero and null are opposite machines: a parked one using none of its grip,
+    // and one in the air with no grip to use. They read the same on a dial that
+    // takes a number for both, which is what the old GRIP dial did.
+    const { end } = climb(55, 20);
+    for (const track of [end.machine.left, end.machine.right]) {
+      if (track.contacts === 0) expect(track.traction).toBeNull();
+      else expect(typeof track.traction).toBe("number");
+    }
+  });
+
+  it("still reports a number for a track that is merely idle", () => {
+    const { end } = drive(0, 0, 120);
+    expect(end.machine.left.contacts).toBeGreaterThan(0);
+    expect(end.machine.left.traction).not.toBeNull();
+    expect(end.machine.left.traction ?? 1).toBeLessThan(0.1);
   });
 });
 

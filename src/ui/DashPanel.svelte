@@ -58,7 +58,7 @@ import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import Attitude from "./Attitude.svelte";
 import Gauge from "./Gauge.svelte";
 import Meters from "./Meters.svelte";
-import SlipGauge from "./SlipGauge.svelte";
+import Traction from "./Traction.svelte";
 
 let {
   snapshot,
@@ -88,7 +88,6 @@ const chassis = $derived(stages.find((s) => s.id === "PILOT"));
 const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
 
 const speed = $derived(m?.speed ?? 0);
-const grip = $derived(Math.max(m?.left.traction ?? 0, m?.right.traction ?? 0));
 
 /**
  * The chassis's own conditions. They get no legend row of their own — a strip of
@@ -114,10 +113,7 @@ const overall = $derived(
  * unacknowledged, the master owns that, and two things blinking out of phase is
  * a panel arguing with itself.
  */
-const tells = $derived({
-  GRIP: conditionAt(chassisLamps, "GRIP"),
-  SLIP: conditionAt(chassisLamps, "SLIP"),
-});
+const tells = $derived({ TRACTION: conditionAt(chassisLamps, "TRACTION") });
 const said = (c: Condition): string =>
   c >= ALARM ? "alarm" : c >= WARN ? "warning" : "nominal";
 
@@ -182,8 +178,11 @@ const cells = $derived(
       </div>
     </div>
 
-    <!-- The cluster. Attitude biggest and in the middle, because that is the
-         question you ask most often and aircraft settled the arrangement. -->
+    <!-- The cluster: the two big heads in the middle, the small dial and the
+         counters at the ends. Aircraft settled that arrangement, and the two in
+         the middle are the two questions you ask constantly — how am I sitting
+         (ATT-0, the horizon) and what are the tracks doing (TRACTION, the plan
+         view). One is the machine seen from the side, the other from above. -->
     <div class="group instruments">
       <div class="inst">
         <Gauge
@@ -199,34 +198,18 @@ const cells = $derived(
         <Attitude {snapshot} size={54} />
         <span class="mfg-legend">ATT-0</span>
       </div>
+      <!-- The plan view, sized to match ATT-0: they are the machine's two
+           viewpoints and neither is the other's satellite. -->
       <div class="inst">
-        <Gauge
-          label="traction used"
-          frac={grip}
-          display={(grip * 100).toFixed(0)}
-          danger={0.85}
-          size={44}
-        />
+        <Traction {snapshot} size={54} />
         <span class="plateline">
           <span
             class="tell mfg-lamp"
-            data-lit={tells.GRIP}
+            data-lit={tells.TRACTION}
             role="img"
-            aria-label="grip {said(tells.GRIP)}"
+            aria-label="traction {said(tells.TRACTION)}"
           ></span>
-          <span class="mfg-legend">GRIP %</span>
-        </span>
-      </div>
-      <div class="inst">
-        <SlipGauge {snapshot} size={46} />
-        <span class="plateline">
-          <span
-            class="tell mfg-lamp"
-            data-lit={tells.SLIP}
-            role="img"
-            aria-label="slip {said(tells.SLIP)}"
-          ></span>
-          <span class="mfg-legend">SLIP M/S</span>
+          <span class="mfg-legend">TRACTION %</span>
         </span>
       </div>
       <!-- Hours over distance, one housing. No plate: the units are screened on

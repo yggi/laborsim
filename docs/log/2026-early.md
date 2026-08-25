@@ -7,11 +7,87 @@ the live log. Two cuts so far:
    architecture rules, the diegetic frame, and the prototype handover.
 2. The rounds that got the machine driving and shipped: rung 1 on two levers,
    the toolchain, and the first deploy to Pages.
+3. The rest of that shipping era — the steering fix, the machine's first face,
+   and the Pages workflow itself.
 
 The gate says to cut the oldest *year*, but there has only been one year so far,
 so the cut is by era instead.
 
 ---
+
+## 2026-08-23 — mirrored steering, and giving the machine a face
+
+Reported from the live build: steering went the wrong way, and — the more
+useful half of the report — it was impossible to say *which* thing was
+mirrored, left/right or forward/back, because the hull is a symmetric box with
+no moving parts.
+
+**The bug was real and derivable rather than guessable.** Forward is +Z and up
+is +Y, and in a right-handed frame `forward = up × right`, which gives right =
+−X and left = +X. Check against three.js if that looks wrong: a camera's
+forward is −Z, up +Y, right +X, and `(0,1,0) × (1,0,0) = (0,0,−1)` ✓. The code
+placed `offsets.left` at −GAUGE/2, i.e. on the machine's *right* side, so the
+left lever drove the right track. The sides are now named constants `LEFT_X`
+and `RIGHT_X` in `core/spec.ts`, used by the sim and the renderer alike, with
+the derivation written above them.
+
+Also corrected a latent misnomer: the `right` vector in the track model came
+from `cross(normal, forward)`, which points **left**. It caused no bug because
+lateral damping is symmetric in that axis, but a wrongly-named axis in a file
+full of cross products is a trap. It is `cross(forward, normal)` now.
+
+**The existing tests could not have caught this.** They asserted that yaw
+*changed*, never which way. Four direction tests now pin it, and I verified
+they actually bite by reintroducing the bug: three fail with it, all pass
+without. A test that passes either way is worthless.
+
+The second half of the report was the more interesting one, so the machine got
+**sprockets and idlers** — a large drive sprocket at the rear, small idler at
+the front, spinning at commanded track speed. They do three jobs at once: they
+make the facing unmistakable, they make left and right visibly independent so
+this class of bug can never be silent again, and they turn **slip into
+something you can see** — a track spinning under a stationary machine, rather
+than a number you have to read. That last one is the inspectability pillar
+getting a free win. Spin integrates from snapshot time, not wall time, so a
+replay turns them exactly as the live run did.
+
+Headlamps and a bumper at the nose finish the job: the front now reads at any
+angle, which a painted stripe would not.
+
+Housekeeping: MEMORY had drifted to 307 against its 300 gate — I called the
+gates clear in an earlier session when they were not. The stack section's
+rejected-options block spilled to `docs/design/stack.md`.
+
+## 2026-08-23 — playable from GitHub Pages
+
+Cards: closed [L-030]
+
+The machine is now one tap away at https://yggi.github.io/laborsim/, which
+matters more than it sounds: mobile-first is a hard pillar and the cockpit
+cannot be judged honestly on a desktop. Being able to open it on an actual
+phone closes the loop between deciding a control feels right and finding out.
+
+Deploy runs on every push to the default branch, but **gated on lint, typecheck
+and the full test suite** — a broken machine cannot reach the site. The repo is
+public, so Pages costs nothing, and the workflow provisions the site itself via
+`configure-pages` with `enablement: true` rather than needing someone to click
+through Settings.
+
+The base path is taken from the Pages config rather than hardcoded, because a
+project site serves from `/<repo>/` and a rename would otherwise 404 every
+asset silently. Verified by building with the base set, serving the output from
+a real subdirectory, and driving the machine in a browser there: no 404s, no
+console errors, telemetry live.
+
+Caught one bug before it shipped: the workflow used `$default-branch`, which is
+a placeholder GitHub only substitutes in starter templates. In a real workflow
+file it is a literal string that matches nothing. The `claude/**` pattern covers
+the current default branch anyway, and `main` is there for later.
+
+No COOP/COEP headers are needed, which is worth recording as a dividend of the
+stack choice: Rapier runs single-threaded so nothing wants SharedArrayBuffer,
+and plain static hosting is enough. Godot's web export would have needed
+cross-origin isolation configured.
 
 ## 2026-08-23 — L-014: rung 1 drives
 

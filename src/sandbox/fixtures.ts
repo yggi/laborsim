@@ -26,14 +26,24 @@ import {
 } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 
-const track = (over: Partial<Snapshot["machine"]["left"]> = {}) => ({
-  commanded: 0,
-  surface: 0,
-  slip: 0,
-  contacts: 6,
-  traction: 0.2,
-  ...over,
-});
+/**
+ * A track state that cannot be built inconsistent: no contact means no traction
+ * reading, because there is no friction cone to report a fraction of. A fixture
+ * saying `contacts: 0, traction: 1` used to be expressible, and it described a
+ * machine that does not exist.
+ */
+const track = (over: Partial<Snapshot["machine"]["left"]> = {}) => {
+  const contacts = over.contacts ?? 6;
+  return {
+    commanded: 0,
+    surface: 0,
+    slip: 0,
+    traction: 0.2,
+    ...over,
+    contacts,
+    ...(contacts === 0 ? { traction: null } : {}),
+  };
+};
 
 interface StageSpec {
   readonly id: string;
@@ -97,6 +107,12 @@ export function snapshotOf(
     roll?: number;
     slip?: number;
     contacts?: number;
+    /**
+     * The right track's contact count, when it differs from the left's. The two
+     * sides losing the ground *separately* is the case a single reduced number
+     * cannot show, so the bench has to be able to pose it.
+     */
+    rightContacts?: number;
     commanded?: number;
     traction?: number;
     bill?: number;
@@ -122,7 +138,7 @@ export function snapshotOf(
       right: track({
         slip: slip * 0.6,
         traction: over.traction ?? 0.2,
-        contacts: over.contacts ?? 6,
+        contacts: over.rightContacts ?? over.contacts ?? 6,
         commanded: over.commanded ?? over.speed ?? 0,
       }),
       speed: over.speed ?? 0,
@@ -242,6 +258,20 @@ export const SPECIMENS: readonly Specimen[] = [
         seconds: 1355,
       },
     ),
+  },
+  {
+    name: "one track over the edge",
+    note: "Left track hard on the ground and nearly out of grip, right track hanging over nothing. The old GRIP dial reduced the two sides with `max` and showed the good one, so this looked identical to a hard turn. The plan view cannot: one channel is hot, the other is hatched.",
+    snapshot: snapshotOf([PILOT, NAV, TILT], {
+      speed: 0.9,
+      roll: 0.22,
+      slip: 0.2,
+      traction: 0.95,
+      contacts: 4,
+      rightContacts: 0,
+      commanded: 1.2,
+      seconds: 1288,
+    }),
   },
   {
     name: "guard bypassed",

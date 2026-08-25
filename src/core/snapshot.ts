@@ -33,8 +33,18 @@ export interface TrackState {
   readonly slip: number;
   /** Samples touching ground, of 6. Zero means this track is doing nothing. */
   readonly contacts: number;
-  /** Fraction of available traction being used, 0–1. At 1 you are sliding. */
-  readonly traction: number;
+  /**
+   * Fraction of available traction being used, 0–1. At 1 you are sliding.
+   *
+   * **`null` means there is no ground to grip** — not "gripping nothing". It
+   * used to be `0` for both, so 0% read the same whether the machine was parked
+   * with all six samples down or clawing air over a ridge, which are opposite
+   * conditions. Measured on a 55° ramp: 426 consecutive steps airborne, the dash
+   * reading 0% beside a lit NO CONTACT lamp. A quantity nothing is measuring is
+   * not a small quantity, and the type now says so — every consumer has to
+   * decide what to show for it.
+   */
+  readonly traction: number | null;
 }
 
 export interface MachineState {

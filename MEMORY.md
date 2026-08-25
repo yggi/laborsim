@@ -125,7 +125,9 @@ Detail: `docs/design/tracked-platform.md`. The load-bearing claims:
   number chosen to feel right. Past it the machine rears, loses contact and
   **flips over backwards.** No tipping logic exists anywhere.
 - **Slip — commanded track speed minus actual ground speed — is rung 1's
-  teaching quantity**, and it is on the telemetry line from the first commit.
+  teaching quantity**, on the telemetry line from the first commit, alongside
+  traction (fraction of the friction cone in use) which is **`null`, never 0,
+  for a track with no ground**: nothing measured is not a low reading.
 
 ## 5. The machinery ladder
 

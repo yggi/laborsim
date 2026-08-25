@@ -65,8 +65,14 @@ export function conditionAt(
   );
 }
 
-/** How much slip counts as slipping, m/s. Above this the tracks are sliding. */
-const SLIPPING = 0.4;
+/**
+ * How much slip counts as slipping, m/s. Above this the tracks are sliding.
+ *
+ * Exported because the TRACTION head changes the bar's colour on exactly this
+ * number. A gauge that went red at a different threshold from the lamp beside
+ * it would be two instruments disagreeing about one fact.
+ */
+export const SLIPPING = 0.4;
 /** How much commanded track speed counts as trying, m/s. */
 const TRYING = 0.05;
 
@@ -113,16 +119,21 @@ export function chassisConditions(
       word: "GND",
       text: "TRACK — NO CONTACT",
       condition: airborne ? ALARM : NOMINAL,
-      // A track touching nothing has no traction, so the grip dial is where you
-      // see it: pinned, with no ground under it.
-      at: "GRIP",
+      // The plan view is where you see it: that track's channel hatches out and
+      // its contact rail closes to nothing. This used to point at a GRIP dial
+      // that read 0% for a track in the air — the same reading as parked — which
+      // is the instrument agreeing with the lamp by accident and disagreeing
+      // with it by appearance.
+      at: "TRACTION",
     },
     {
       id: "SLIP",
       word: "SLIP",
       text: "TRACKS SLIPPING",
       condition: slip > SLIPPING ? WARN : NOMINAL,
-      at: "SLIP",
+      // Same instrument, because slip and the margin left before it are two
+      // readings of one head now. One gauge, one tell.
+      at: "TRACTION",
     },
     {
       id: "YEN",

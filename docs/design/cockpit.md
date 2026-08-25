@@ -155,7 +155,7 @@ The closed face of the rack is not a button — it is **a live instrument in its
 own right**, a sheet of yellow industrial steel across the bottom of the glass
 and in view while you drive. On it: the machine's riveted dataplate (whose
 serial is the world seed), the chassis maker's instrument cluster — road speed,
-ATT-0, grip, slip, and one housing carrying hours over distance on drums — one
+ATT-0, TRACTION, and one housing carrying hours over distance on drums — one
 **ALARM** annunciator, the red mushroom **E-STOP**, and then every fitted
 component's cell. A **latch** across the bottom edge opens the rack: the panel
 rides up, the cabinet comes with it. Same bargain as the chase camera, made with
@@ -185,6 +185,50 @@ stop the deliberate ceremony it is on a real machine.
 
 The live half of the ledger stacks above it (L-044), and the thing you glance
 at constantly is the machine's health, not a menu.
+
+## TRACTION — one head, two viewpoints (built, L-055)
+
+The cluster has **two big heads and they are the machine's two viewpoints**:
+ATT-0 is the horizon, seen from the side, and TRACTION is the plan view, seen
+from above. Nose up, hull in the middle, a track channel either side. Between
+them the pilot has the attitude and the contact patch, which is the whole of
+rung 1.
+
+It replaced two dials, GRIP and SLIP, and the reason it is one head rather than
+two is not tidiness. **They measure genuinely different things** — slip is a
+velocity difference at the contact, traction is impulse demanded over impulse
+the ground can hold; measured over 7200 steps the correlation between them is
+**0.267**. On a 40° ramp the machine climbs cleanly with slip under the lamp
+threshold 89% of the time while traction sits at 0.93: at the edge of the
+friction cone, not yet sliding. That is the panel's **only reading that arrives
+before the failure**, so dropping it for SLIP alone was not available.
+
+What was available was noticing that they are two readings of one question, and
+that a person reads colour and length as separate channels:
+
+| mark | quantity |
+|---|---|
+| the channel's **colour** | fraction of the friction cone in use — cold, working, amber |
+| the channel's **length** | contact patch: hatched where samples have left the ground |
+| the **bar**, centre-zero | slip, growing the way the track is sliding |
+
+Three rules the head is built to, each of which was a defect in the two dials it
+replaced:
+
+- **Red means a thing has happened.** The heat ramp stops at amber, so the red
+  slip bar and the red frame at the limit never disappear into it. The first
+  draft ran the ramp to red and the two collided exactly where it mattered.
+- **No number for a quantity nothing is measuring.** A track with no ground
+  hatches out and the readout blanks to `---`. The GRIP dial showed `0%` for it,
+  which is what a *parked* machine shows. `TrackState.traction` is now `null`
+  there so no future reader can get it wrong.
+- **No reduction across the two tracks.** GRIP was `max(left, right)` and took
+  the good track's number when one side lost the ground — a machine hanging over
+  an edge read the same as one in a hard turn. Both channels are drawn.
+
+The needle is damped at 0.6 s (`src/cockpit/damping.ts`), which is a display
+filter and not a sim change: undamped, the traction reading sat above the
+gauge's own danger band **21% of a flat-ground run** at full speed.
 
 ## Cockpit identity — the interior is not exchangeable
 

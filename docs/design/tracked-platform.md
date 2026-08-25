@@ -66,7 +66,19 @@ independently.
 **Commanded track speed minus actual ground speed under the track.** Every
 rung-1 failure is legible in it — spinning on a grade, skating through a turn,
 clawing air when beached — and it is on the telemetry line from the first
-commit, alongside grip (fraction of the traction limit in use) and contact count.
+commit, alongside traction (fraction of the friction cone in use) and contact
+count.
+
+Slip is the *lagging* half of the pair and traction is the leading one: measured
+over 7200 steps their correlation is only **0.267**, and on a 40° ramp the
+machine sits at 0.93 traction with slip below the slipping threshold 89% of the
+time — out of margin, still gripping. Both are on the panel's TRACTION head
+(`docs/design/cockpit.md`).
+
+**`traction` is `null`, never 0, when a track has no ground.** There is no
+friction cone to report a fraction of, and 0 is what a parked machine reports —
+the opposite condition. The type carries that distinction so a reader cannot
+lose it by forgetting to check `contacts`.
 
 ## Controls
 

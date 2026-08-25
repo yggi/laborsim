@@ -114,18 +114,6 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
-### [L-055] GRIP earns its place, or loses it
-- **what:** GRIP measures something SLIP cannot — how much of the friction cone
-  is in use — but the dial reads 0% both when parked and when clawing air,
-  saturates for the whole of a normal turn, sits above its own danger band 22%
-  of the time on flat ground, and takes the *good* track's number when one side
-  loses the ground. Fix the instrument: move the GND tell to SLIP, make "no
-  ground" not read as "no demand", smooth ~0.6 s, revisit `max` over the tracks.
-  Or drop the dial and keep the quantity for L-040.
-- **done-when:** the dial reads low only when there is genuinely reserve left, a
-  track that has lost the ground is unmistakable on the panel, and no gauge
-  shows a number for a quantity nothing is measuring.
-
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
   to TILT-GUARD and the first module whose right answer is *situational*: slow
@@ -257,6 +245,14 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-055] GRIP and SLIP become one head — **closed**
+TRACTION: the plan view, nose up, a channel per track. Channel colour is the
+fraction of the friction cone in use, channel length is the contact patch, the
+centre-zero bar is slip. `TrackState.traction` is `null` rather than 0 for a
+track with no ground. Needle damped at 0.6 s. The GND and SLIP tells both point
+at it, and the odometer got its right-alignment, its own colour for the metres
+and a full column for the point.
+
 ### [L-052] The dash becomes a panel — **closed**
 No inline labelling: every control is named by a separate engraved plate, a
 plate never changes, and the lens carries the state. One wrapping flow, no
@@ -330,9 +326,5 @@ became a control-panel cover at the seam; the camera became an item in the
 instrument column. Tracks are belts wrapped round their wheels rather than
 boxes, and the site is steeper.
 
-### [L-017] The attribution rule — **closed for rung 1**
-Under a pipeline there is no owner to name, so the chain is shown stage by
-stage down to the terminal, with active/idle/bypassed LEDs and each module's
-one-sentence statement of what it considers.
 
 

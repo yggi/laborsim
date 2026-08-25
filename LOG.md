@@ -6,8 +6,8 @@ Not plans, not open questions.
 **Gate: 1000 lines.** On overflow, cut the oldest year into `docs/log/<year>.md`
 and link it from the archive list below.
 
-Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first
-deploy.
+Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to and
+including the first deploy.
 
 Entry format:
 
@@ -18,6 +18,85 @@ What happened, in past tense. Anything tried and rejected, and why.
 ```
 
 ---
+
+## 2026-08-25 — GRIP and SLIP become one head
+
+Cards: closed [L-055]. History trimmed to its gate: [L-017] dropped, already
+narrated above.
+
+**TRACTION.** The cluster now has two big heads and they are the machine's two
+viewpoints: ATT-0 the horizon, seen from the side, and TRACTION the plan view,
+seen from above — nose up, hull in the middle, a track channel either side. The
+answer to yesterday's question was *both readings, one instrument*, which the
+measurements had already forced: slip alone deletes the panel's only warning
+that arrives before the failure, and GRIP alone was wrong in three regimes out
+of four.
+
+Three marks, chosen because a person reads them as separate channels: the
+channel's **colour** is the fraction of the friction cone in use, its **length**
+is the contact patch (hatched where samples have left the ground), and the
+centre-zero **bar** is slip, growing the way the track is sliding. Contacts had
+never been on the panel at all — only on the debug telemetry line — and folding
+them into the channel's length is what made the outer contact rail unnecessary.
+
+**Rejected: a separate rail for contacts.** Built it first, 2.5 units wide in a
+100-unit viewBox — 1.3 px at the size this is actually bolted on at. The
+screenshot settled it (META again): a reading nobody could take. Making contact
+*be* the live length of the channel is one mechanism instead of two, and it
+degrades into the no-contact state for free.
+
+**Rejected: a heat ramp that runs to red.** Also settled by screenshot. At 0.94
+the channel was rust-red and the red slip bar vanished into it — the two marks
+this head exists to separate, collapsed. The ramp stops at amber now, and red
+belongs to the things that have *happened*: the slip bar and the frame at the
+limit.
+
+**`traction` is `null`, not 0, for a track with no ground.** The type change is
+the actual fix for the defect found yesterday; the instrument is downstream of
+it. 0 is what a *parked* machine reports, and a dial that takes a number for
+both showed the same thing for opposite conditions. Every consumer now has to
+decide — `Telemetry`, the readout (which blanks to `---`), and the fixtures,
+where `contacts: 0, traction: 1` used to be expressible and described a machine
+that does not exist.
+
+**Damping lives in the instrument, and the numbers say it is enough.** Undamped,
+traction sat above the gauge's own danger band 21% of a flat-ground run at full
+speed. The UI reads snapshots at 10 Hz and *decimating* a signal like that
+rather than averaging it triples the jump between updates (0.06 → 0.19 of full
+scale). Measured four pipelines: raw 60 Hz (23.0% false alarms, 1.50 σ between
+flat and 40°), decimated 10 Hz (21.0%, 1.53 σ), decimated and damped at 0.6 s
+(**0.0%, 2.12 σ**), sim-side window mean then damped (0.0%, 2.29 σ). The damper
+alone does the work, so the sim keeps one meaning for one field; 0.17 σ is not
+worth a second. A damped needle *is* the real quantity — every dial on a real
+machine has oil or a shorted coil in it — and `damping.ts` carries that argument
+with the table.
+
+**Both tells point at TRACTION**, which is the fix for the mis-attachment: GND
+used to light a lamp beside a dial that read 0% for a track in the air. And the
+`max(left, right)` reduction is gone rather than repaired — both channels are
+drawn, so a machine hanging one track over an edge no longer reads identically
+to one in a hard turn. There is a bench specimen for exactly that now; it was
+not previously expressible, because `snapshotOf` gave both tracks the same
+contact count.
+
+**The odometer.** Right-aligned, so the digits sit against the KM screened
+beside them instead of floating in a window sized for the clock above. The
+metres are their own colour (`--mfg-odo-fraction`, defaulting to the integer
+colour so an unopinionated maker sees no change) — a real trip meter puts the
+fractional drum on a separate wheel because it is the part always moving and the
+part you are not reading. And the decimal point got a full column: it had a
+quarter-width one with the glyph absolutely positioned inside it, which was a
+space fix for a window this reel no longer lives in.
+
+Not done, and deliberately: no annunciation for *low margin*. Traction pins at
+1.00 for 100% of a normal hard turn — skid-steer fills the friction circle by
+construction — so a lamp on it would cry wolf every time the machine turns. The
+colour carries it; a lamp would need a condition that understands turning, and
+that is a module's opinion, not a chassis symptom.
+
+`MEMORY.md` is now full at 300 lines and `NOTES.md` at 100. The next durable
+fact or open thread forces a spill; the log itself took its third cut to make
+room for this entry.
 
 ## 2026-08-25 — is GRIP the same instrument as SLIP?
 
@@ -882,77 +961,3 @@ verifier, seeded sites are one integer apart. That convergence is the best
 evidence so far that the v0 scope was drawn in the right place. The open core
 is the metric: **what counts as operator interaction** is undefined, and it is
 load-bearing.
-
-## 2026-08-23 — mirrored steering, and giving the machine a face
-
-Reported from the live build: steering went the wrong way, and — the more
-useful half of the report — it was impossible to say *which* thing was
-mirrored, left/right or forward/back, because the hull is a symmetric box with
-no moving parts.
-
-**The bug was real and derivable rather than guessable.** Forward is +Z and up
-is +Y, and in a right-handed frame `forward = up × right`, which gives right =
-−X and left = +X. Check against three.js if that looks wrong: a camera's
-forward is −Z, up +Y, right +X, and `(0,1,0) × (1,0,0) = (0,0,−1)` ✓. The code
-placed `offsets.left` at −GAUGE/2, i.e. on the machine's *right* side, so the
-left lever drove the right track. The sides are now named constants `LEFT_X`
-and `RIGHT_X` in `core/spec.ts`, used by the sim and the renderer alike, with
-the derivation written above them.
-
-Also corrected a latent misnomer: the `right` vector in the track model came
-from `cross(normal, forward)`, which points **left**. It caused no bug because
-lateral damping is symmetric in that axis, but a wrongly-named axis in a file
-full of cross products is a trap. It is `cross(forward, normal)` now.
-
-**The existing tests could not have caught this.** They asserted that yaw
-*changed*, never which way. Four direction tests now pin it, and I verified
-they actually bite by reintroducing the bug: three fail with it, all pass
-without. A test that passes either way is worthless.
-
-The second half of the report was the more interesting one, so the machine got
-**sprockets and idlers** — a large drive sprocket at the rear, small idler at
-the front, spinning at commanded track speed. They do three jobs at once: they
-make the facing unmistakable, they make left and right visibly independent so
-this class of bug can never be silent again, and they turn **slip into
-something you can see** — a track spinning under a stationary machine, rather
-than a number you have to read. That last one is the inspectability pillar
-getting a free win. Spin integrates from snapshot time, not wall time, so a
-replay turns them exactly as the live run did.
-
-Headlamps and a bumper at the nose finish the job: the front now reads at any
-angle, which a painted stripe would not.
-
-Housekeeping: MEMORY had drifted to 307 against its 300 gate — I called the
-gates clear in an earlier session when they were not. The stack section's
-rejected-options block spilled to `docs/design/stack.md`.
-
-## 2026-08-23 — playable from GitHub Pages
-
-Cards: closed [L-030]
-
-The machine is now one tap away at https://yggi.github.io/laborsim/, which
-matters more than it sounds: mobile-first is a hard pillar and the cockpit
-cannot be judged honestly on a desktop. Being able to open it on an actual
-phone closes the loop between deciding a control feels right and finding out.
-
-Deploy runs on every push to the default branch, but **gated on lint, typecheck
-and the full test suite** — a broken machine cannot reach the site. The repo is
-public, so Pages costs nothing, and the workflow provisions the site itself via
-`configure-pages` with `enablement: true` rather than needing someone to click
-through Settings.
-
-The base path is taken from the Pages config rather than hardcoded, because a
-project site serves from `/<repo>/` and a rename would otherwise 404 every
-asset silently. Verified by building with the base set, serving the output from
-a real subdirectory, and driving the machine in a browser there: no 404s, no
-console errors, telemetry live.
-
-Caught one bug before it shipped: the workflow used `$default-branch`, which is
-a placeholder GitHub only substitutes in starter templates. In a real workflow
-file it is a literal string that matches nothing. The `claude/**` pattern covers
-the current default branch anyway, and `main` is there for later.
-
-No COOP/COEP headers are needed, which is worth recording as a dividend of the
-stack choice: Rapier runs single-threaded so nothing wants SharedArrayBuffer,
-and plain static hosting is enough. Godot's web export would have needed
-cross-origin isolation configured.

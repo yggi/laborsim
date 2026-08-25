@@ -101,9 +101,19 @@ const rate = $derived(Math.abs(snapshot?.machine.speed ?? 0) / 1000);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55);
     color: #ece7db;
   }
-  /* The trip wheels are the older part: cream digits, not white. */
+  /* The trip wheels are the older part: cream digits, not white.
+
+     Right-aligned, and the metres in their own colour. Both are what the real
+     part does and both are the same reason: the kilometres are the reading and
+     the metres are the wheel that never stops turning. Left-aligned in a glass
+     sized for the clock above it, the reel floated in the middle of its window
+     with the units nowhere near the KM screened beside them — so the digits are
+     pushed against the mark that names them, and the fractional drum is the
+     dimmer one you learn to look past. */
   .trip {
     --mfg-odo-color: #e6dfcb;
+    --mfg-odo-fraction: #9c8f72;
+    justify-content: flex-end;
   }
   .colon {
     font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

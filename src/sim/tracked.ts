@@ -253,12 +253,16 @@ function slew(current: number, target: number, dt: number): number {
 }
 
 function idleTrack(): TrackState {
-  return { commanded: 0, surface: 0, slip: 0, contacts: 0, traction: 0 };
+  return { commanded: 0, surface: 0, slip: 0, contacts: 0, traction: null };
 }
 
 function summarize(commanded: number, acc: TrackAccumulator): TrackState {
+  // No sample down means no friction cone to be a fraction of. Reporting 0 here
+  // said "using none of your grip", which is what a parked machine reports —
+  // and the two are opposite conditions. `null` is the honest answer, and it
+  // makes every reader decide what to show rather than accidentally show a zero.
   if (acc.contacts === 0) {
-    return { commanded, surface: 0, slip: commanded, contacts: 0, traction: 0 };
+    return { commanded, surface: 0, slip: commanded, contacts: 0, traction: null };
   }
   const surface = acc.surfaceSum / acc.contacts;
   return {

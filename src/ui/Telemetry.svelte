@@ -19,9 +19,10 @@ const {
 
 const num = (n: number) => (n >= 0 ? "+" : "") + n.toFixed(2);
 
-/** Amber past two-thirds of grip, red once the track is genuinely sliding. */
+/** Amber past two-thirds of the friction cone, red once the track is sliding. */
 function tractionClass(track: TrackState): string {
-  if (track.contacts === 0) return "alert";
+  // No ground reports `null`, not 0 — there is no cone to be a fraction of.
+  if (track.traction === null) return "alert";
   if (track.traction > 0.95) return "alert";
   if (track.traction > 0.66) return "warn";
   return "ok";

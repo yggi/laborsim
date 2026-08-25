@@ -30,8 +30,8 @@
  * snapshot value like everything else and animates its own presentation.
  *
  * Adapted from a standalone component. Theming, all namespaced per the theme
- * contract: `--mfg-odo-color`, `--mfg-odo-label`, `--mfg-odo-accent`,
- * `--mfg-odo-font`.
+ * contract: `--mfg-odo-color`, `--mfg-odo-fraction`, `--mfg-odo-label`,
+ * `--mfg-odo-accent`, `--mfg-odo-font`.
  */
 import { fly } from "svelte/transition";
 
@@ -55,7 +55,7 @@ const {
   rate?: number;
   /** Integer places. */
   digits?: number;
-  /** Fractional places. The point gets a quarter-column of its own (`POINT`). */
+  /** Fractional places. The point takes a column of its own. */
   decimals?: number;
   /** Pixel height of one digit; the face scales to it. */
   height?: number;
@@ -80,19 +80,8 @@ const {
 
 /** ms per digit roll, identical for every place. */
 const ROLL = 110;
-/** em per digit column, the natural monospace advance. */
+/** em per column — digits and the point alike, the natural monospace advance. */
 const ADV = 0.62;
-/**
- * em for the decimal point's column.
- *
- * It used to be zero — the point was drawn on the seam between two digits so
- * that `00` and `0.0` came out the same width. It was, and the screenshot said
- * so: at a monospace advance the glyphs already fill their columns, so a point
- * on the seam lands on the foot of the digit to its left and disappears into
- * it. A quarter of a column is enough air to read it as a point, and a drum
- * that gains a decimal place is not a thing this instrument does.
- */
-const POINT = 0.26;
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -102,8 +91,8 @@ const digitAt = (v: number, p: number): number =>
   ((Math.floor(v / 10 ** p) % 10) + 10) % 10;
 
 const shown = $derived(Math.max(0, value));
-const cols = $derived(digits + decimals);
-const width = $derived((cols + (prefix ? 1 : 0)) * ADV + (decimals > 0 ? POINT : 0));
+const cols = $derived(digits + decimals + (prefix ? 1 : 0) + (decimals > 0 ? 1 : 0));
+const width = $derived(cols * ADV);
 
 interface Roll {
   from: number;
@@ -180,7 +169,7 @@ const places = $derived.by(() => {
   role="img"
   aria-label="{label}: {value.toFixed(decimals)}"
   style="height: {height}px; font-size: {(height * 0.74).toFixed(1)}px;
-         width: {width.toFixed(2)}em; --mfg-adv: {ADV}em; --mfg-point: {POINT}em"
+         width: {width.toFixed(2)}em; --mfg-adv: {ADV}em"
 >
   {#key epoch}
     <!-- Fixed width, reels stacked absolutely: on an epoch change both are
@@ -199,12 +188,19 @@ const places = $derived.by(() => {
 
       {#each places as pl (pl.p)}
         {#if pl.p === -1}
-          <span class="pt" style="height: {height}px; line-height: {height}px">
-            <i>.</i>
+          <!-- A column like any other. It had a quarter-width one of its own,
+               with the glyph absolutely placed inside it, back when this reel
+               had to fit a window it no longer lives in. A point that gets the
+               same advance as a digit needs none of that, and it puts the
+               fractional drums where a real trip meter puts them: past a
+               separator, in their own colour. -->
+          <span class="col pt" style="height: {height}px; line-height: {height}px">
+            .
           </span>
         {/if}
         <span
           class="col"
+          class:frac={pl.p < 0}
           style="height: {height}px;
                  opacity: {((0.18 + 0.82 * pl.open) * pl.lead).toFixed(3)};
                  filter: blur({((1 - pl.open) * 1.6).toFixed(2)}px)"
@@ -270,24 +266,20 @@ const places = $derived.by(() => {
     opacity: 0.8;
     text-align: center;
   }
-  /* A narrow column of its own, and a full line box, so the glyph sits on the
-     digits' baseline. A zero-height box puts it above the reel, where
-     overflow:hidden eats it — and a zero-*width* one hides it a subtler way, by
-     landing it on the foot of the digit to its left (see POINT). */
+  /* The point does not roll, so it sets its own text rather than stacking a
+     strip. A full line box, so it sits on the digits' baseline — a zero-height
+     one puts it above the reel where overflow:hidden eats it. */
   .pt {
-    position: relative;
-    display: block;
-    width: var(--mfg-point);
-  }
-  /* The glyph is one em wide and centred, so it is centred in the thin column
-     regardless of what the font does with a period's advance. */
-  .pt i {
-    position: absolute;
-    left: calc(var(--mfg-point) / 2 - 0.5em);
-    top: 0;
-    width: 1em;
     text-align: center;
-    font-style: normal;
-    color: var(--mfg-odo-color, #ece7db);
+    overflow: visible;
+  }
+  /* The fractional drums are a different colour on a real trip meter — usually
+     a whole separate wheel, in white against the black ones — because the tenth
+     is the part that is always moving and the part you are not reading. It
+     defaults to the integer colour, so a maker that has no opinion gets the
+     behaviour it had before. */
+  .col.frac .strip span,
+  .col.pt {
+    color: var(--mfg-odo-fraction, var(--mfg-odo-color, #ece7db));
   }
 </style>

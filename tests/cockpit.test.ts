@@ -24,7 +24,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { chassisConditions, masterLine, worst } from "../src/cockpit/annunciator.ts";
+import {
+  chassisConditions,
+  conditionAt,
+  masterLine,
+  worst,
+} from "../src/cockpit/annunciator.ts";
+import { damp } from "../src/cockpit/damping.ts";
 import { MAKER_NAMES, styleOf } from "../src/cockpit/makers.ts";
 import { cellFor, REGISTERED } from "../src/cockpit/parts.ts";
 import {
@@ -35,6 +41,7 @@ import {
   runRack,
   WARN,
 } from "../src/control/bus.ts";
+import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
 
 const COCKPIT = new URL("../src/cockpit", import.meta.url).pathname;
 /**
@@ -185,6 +192,102 @@ describe("the masters are derived, never hand-wired", () => {
     const line = masterLine([], stages, "SYSTEMS NOMINAL");
     expect(line.condition).toBe(NOMINAL);
     expect(line.text).toBe("SYSTEMS NOMINAL");
+  });
+});
+
+describe("the tells point at an instrument that can show the thing", () => {
+  /** A snapshot with whatever the case under test needs, and nothing else. */
+  const withTracks = (over: Partial<TrackState>): Snapshot => {
+    const contacts = over.contacts ?? 6;
+    const track: TrackState = {
+      commanded: 0,
+      surface: 0,
+      slip: 0,
+      traction: contacts === 0 ? null : 0.2,
+      ...over,
+      contacts,
+      ...(contacts === 0 ? { traction: null } : {}),
+    };
+    return {
+      tick: 0,
+      simSeconds: 0,
+      seed: 1,
+      distance: 0,
+      machine: {
+        pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
+        left: track,
+        right: track,
+        speed: 0,
+        pitch: 0,
+        roll: 0,
+      },
+      stages: [],
+      props: [],
+      damage: [],
+      bill: 0,
+    };
+  };
+
+  it("sends a track that has lost the ground to TRACTION, where it is visible", () => {
+    // It used to point at a GRIP dial that read 0% for a track in the air —
+    // the same reading as parked. The plan view hatches that track out.
+    const lamps = chassisConditions(withTracks({ contacts: 0, commanded: 1.4 }), false);
+    expect(conditionAt(lamps, "TRACTION")).toBe(ALARM);
+  });
+
+  it("sends slipping tracks to the same head, because it is one head now", () => {
+    const lamps = chassisConditions(withTracks({ slip: 1.2 }), false);
+    expect(conditionAt(lamps, "TRACTION")).toBe(WARN);
+  });
+
+  it("points nothing at the dials that no longer exist", () => {
+    const lamps = chassisConditions(
+      withTracks({ contacts: 0, slip: 1.2, commanded: 1.4 }),
+      false,
+    );
+    expect(conditionAt(lamps, "GRIP")).toBe(NOMINAL);
+    expect(conditionAt(lamps, "SLIP")).toBe(NOMINAL);
+  });
+
+  it("leaves a condition with no gauge lighting only the master", () => {
+    // The stop is a control, not a measurement. Nothing on the cluster is
+    // reading it, so nothing on the cluster claims to.
+    const lamps = chassisConditions(withTracks({}), true);
+    expect(worst(lamps.map((l) => l.condition))).toBe(ALARM);
+    expect(conditionAt(lamps, "TRACTION")).toBe(NOMINAL);
+  });
+});
+
+describe("the instrument damper", () => {
+  it("snaps to the reading when the needle has nothing to damp from", () => {
+    expect(damp(null, 0.8, 0.1, 0.6)).toBe(0.8);
+  });
+
+  it("drops the needle when the reading stops existing, never fading it out", () => {
+    // A track that leaves the ground has no traction reading, and damping from
+    // its last one would be the gauge inventing a number for a dead channel.
+    expect(damp(0.9, null, 0.1, 0.6)).toBeNull();
+  });
+
+  it("takes one time constant to cover about 63% of the gap", () => {
+    const after = damp(0, 1, 0.6, 0.6) ?? 0;
+    expect(after).toBeCloseTo(1 - Math.exp(-1), 6);
+  });
+
+  it("damps by elapsed time, not by number of updates", () => {
+    // The same second of sim, delivered as one slow frame or ten fast ones,
+    // has to leave the needle in the same place — otherwise a phone dropping
+    // frames reads a different machine.
+    const once = damp(0, 1, 1, 0.6) ?? 0;
+    let many: number | null = 0;
+    for (let i = 0; i < 10; i++) many = damp(many, 1, 0.1, 0.6);
+    expect(many ?? 0).toBeCloseTo(once, 10);
+  });
+
+  it("does not move on a zero or backwards step", () => {
+    // A reset winds the clock back. Nothing sensible is damped across that.
+    expect(damp(0.4, 0.9, 0, 0.6)).toBe(0.9);
+    expect(damp(0.4, 0.9, -2, 0.6)).toBe(0.9);
   });
 });
 
