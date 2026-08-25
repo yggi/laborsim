@@ -157,6 +157,17 @@ const MAKERS: Record<string, MakerStyle> = {
       rattle: { hz: 900, q: 1.2 },
       // A pressed-steel buzzer wired straight to the annunciator relay.
       alarm: { wave: "square", warnHz: 620, alarmHz: 990 },
+      // Sprung steel with a long throw, and a contactor the size of a fist
+      // behind it. You can hear the difference between having pressed the
+      // button and having actually switched something, which is the point.
+      panel: {
+        clickHz: 1500,
+        clickDecay: 0.035,
+        clickGrit: 0.72,
+        clunkHz: 155,
+        clunkDecay: 0.14,
+        clunkGrit: 0.5,
+      },
       // Three trumpets on the cab roof, plumbed into the same air line as the
       // brakes, tuned to a major triad by somebody who did not think of it as
       // tuning. It is the loudest thing the machine can do on purpose, and the
@@ -235,6 +246,18 @@ const MAKERS: Record<string, MakerStyle> = {
       rattle: { hz: 1600, q: 2.1 },
       // A moulded piezo sounder. Polite, and impossible to take seriously.
       alarm: { wave: "sine", warnHz: 700, alarmHz: 1180 },
+      // A membrane over a dome switch, and a solid-state relay that makes no
+      // noise at all — so the clunk is barely there, and what you get instead
+      // is a tick with nothing behind it. Whether that is refinement or a
+      // machine that will not tell you what it did is left to the operator.
+      panel: {
+        clickHz: 2900,
+        clickDecay: 0.014,
+        clickGrit: 0.55,
+        clunkHz: 420,
+        clunkDecay: 0.03,
+        clunkGrit: 0.35,
+      },
       // Not an air horn at all: a moulded sounder behind a grille, an octave
       // apart, with an electronic attack and no air to let go of. It carries
       // about as far as a doorbell, which TOWA would describe as considerate.
@@ -315,6 +338,18 @@ const MAKERS: Record<string, MakerStyle> = {
       rattle: { hz: 1200, q: 1.6 },
       // Two tones a fifth apart, to a standard, as klaxons have been since 1954.
       alarm: { wave: "square", warnHz: 660, alarmHz: 880 },
+      // Machined, short-throw, and utterly unambiguous: one hard clack going in
+      // and another coming out, with a relay that shuts the same way every time
+      // because a guard whose state you cannot hear is a guard you have to look
+      // at.
+      panel: {
+        clickHz: 2100,
+        clickDecay: 0.022,
+        clickGrit: 0.8,
+        clunkHz: 240,
+        clunkDecay: 0.075,
+        clunkGrit: 0.62,
+      },
       // The same interval again, in brass this time, because the standard is
       // the standard. Harder-edged and quicker to speak than the KIBA, with the
       // shortest release of the three: HANSA does not believe in a note that

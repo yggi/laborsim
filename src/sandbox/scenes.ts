@@ -103,6 +103,18 @@ const chassisStage = (maker: string): Stage => ({
   safety: false,
 });
 
+/** A fitted component's slot, for scenes about the panel rather than the ride. */
+const fittedStage = (over: Partial<Stage> & { id: string; maker: string }): Stage => ({
+  label: over.id,
+  verb: "CAP",
+  enabled: true,
+  idle: false,
+  output: { left: 0, right: 0 },
+  condition: NOMINAL,
+  safety: false,
+  ...over,
+});
+
 /**
  * Everything a scene needs and nothing it does not.
  *
@@ -119,6 +131,8 @@ function frameOf(
   maker = "KIBA WORKS",
   /** Standing on the ground unless a scene says otherwise: 1 g up, and still. */
   shake: Shake = { surge: 0, heave: G, sway: 0, jerk: 0 },
+  /** Kit fitted below the chassis, for scenes about the panel. */
+  fitted: readonly Stage[] = [],
 ): Snapshot {
   const tick = Math.round(t / STEP_SECONDS);
   return {
@@ -135,7 +149,7 @@ function frameOf(
       roll: 0,
       shake,
     },
-    stages: [chassisStage(maker)],
+    stages: [chassisStage(maker), ...fitted],
     props: [],
     route: [],
     damage: [],
@@ -437,6 +451,37 @@ export const SCENES: readonly Scene[] = [
       ),
       alarm: t > 1.5 ? ALARM : NOMINAL,
       horn: t > 2.2 && t < 4.5,
+    }),
+  },
+  {
+    name: "switchgear",
+    note: "an idling machine and four switches thrown late: TOWA's guidance off, HANSA's verb changed, its guard bypassed, then put back. Each is a click and a clunk a fraction apart — the button, then the load letting go — in the voice of whoever built the kit. Nothing here is a UI event: it is all on the snapshot, so a replay clicks too. Opens quiet on purpose; the second half is the panel.",
+    seconds: 7,
+    frame: (t) => ({
+      snapshot: frameOf(
+        t,
+        track({ commanded: 0, traction: 0 }),
+        track({ commanded: 0, traction: 0 }),
+        [],
+        "KIBA WORKS",
+        undefined,
+        [
+          fittedStage({ id: "NAV", maker: "TOWA DENKI", enabled: t < 2.6 }),
+          fittedStage({
+            id: "TILT",
+            maker: "HANSA REGELTECHNIK",
+            safety: true,
+            verb: t > 3.4 ? "AMP" : "CAP",
+            enabled: t < 5.2 || t > 6.0,
+            // A bypassed guard stands at WARN rather than going quiet, so the
+            // relay latches on the way in — and says nothing on the way out.
+            condition: t >= 5.2 && t <= 6.0 ? WARN : NOMINAL,
+          }),
+        ],
+      ),
+      // Acknowledged almost at once, so that what the second half of this
+      // scene measures is the *panel* and not the buzzer sitting on top of it.
+      alarm: t >= 5.2 && t <= 5.5 ? WARN : NOMINAL,
     }),
   },
   {

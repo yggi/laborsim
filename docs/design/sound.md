@@ -4,8 +4,8 @@ Spilled from `docs/design/damage.md`, which is where the machine's voice started
 because the first thing worth hearing was something breaking. It has outgrown a
 table in somebody else's file.
 
-Status: **built** (L-040, L-061). The arithmetic is `src/audio/voices.ts`, the
-graph is `src/audio/engine.ts`, and the manufacturers' half is
+Status: **built** (L-040, L-061, L-063). The arithmetic is `src/audio/voices.ts`,
+the graph is `src/audio/engine.ts`, and the manufacturers' half is
 `src/makers/sound.ts`.
 
 ---
@@ -33,9 +33,10 @@ itself is not only a visual act.
 
 | Owner | What it voices | Where it lives |
 |---|---|---|
-| **the chassis maker** | the drivetrain, the running gear, the loose fittings, the horn | that maker's `SoundHouse` |
-| **a component's maker** | anything a fitted component makes a noise about | that maker's `SoundHouse` — nothing does yet |
+| **the chassis maker** | the drivetrain, the running gear, the loose fittings, the horn, the buzzer, and the cab's own switchgear | that maker's `SoundHouse` |
+| **a component's maker** | its switchgear — and anything it later has to say for itself | that maker's `SoundHouse` |
 | **the material** | everything on the site being struck | the material table in `voices.ts` |
+| **the rig** | nothing, deliberately — the camera and the volume are the training system's furniture and it does not reach into the cab and make noises | — |
 
 The machine's house is read off the **chassis slot on the recording**, exactly
 as the dash reads its panel colours from it, so a replay sounds like the machine
@@ -74,10 +75,49 @@ had thought to apply it to.
 | chain | one knock per track plate, at `commanded / GROUSER_PITCH` — the rate the renderer turns the belt at. Each plate is jittered by the maker's `clankSpread`. | chassis |
 | squeak | `traction` × belt speed × **the reciprocal of speed**: stick-slip is a low-relative-speed phenomenon, so it belongs to a heavy crawl and is gone by working speed. | chassis |
 | rattle | the hull's **jerk**, from the accelerometer in `MachineState.shake`. The only voice that renders the *ground* rather than the drivetrain. | chassis |
+| horn | a **decision**, and the only voice here that renders one. A chord of trumpets on one air line: the valve chuffs, the diaphragms bend up into pitch, the tank sags when you let go. It ducks everything else by 7 dB while it is down. | chassis |
+| panel | a control being operated: a **click** for the button and a **clunk** for the contactor behind it, a fraction apart. | whoever built the kit |
+| buzzer | the master condition, at the master lamp's own blink rates. Acknowledging stops the noise and leaves the light on. | chassis |
 | grind | `slip`, and only where `contacts > 0` — the largest slip reading on the machine belongs to a track in mid-air, rubbing against nothing. | chassis |
 | impact | joules, as **amplitude ∝ √energy**. The ring is the material, the strike is the energy, and the wobble is `seq`. | material |
 | hull | the machine's own collisions, on a scale of its own — 140 kJ lands from 2.4 m and a real hit on a pipe stack is 15 J. | material |
-| horn | the master condition, at the master lamp's own blink rates. Acknowledging stops the noise and leaves the light on. | chassis |
+
+### The horn and the buzzer are not the same object
+
+They shared a name until the machine got a horn, and separating them is the
+clearest statement of the difference: **the buzzer is the machine talking to
+you** — it sounds by itself, it is the audible half of the master lamp, and it
+stops when you acknowledge it. **The horn is you talking to everyone else.** It
+sounds because you pressed it, it is the loudest thing the machine can do on
+purpose, and nothing acknowledges it.
+
+An air horn is a *chord* — two or three trumpets on one air line — and that is
+why it is satisfying rather than merely loud. The mechanism around the chord is
+shared by every maker's horn and lives in `voices.ts`: nothing is quite in tune
+with anything else, the diaphragms take a moment to speak and bend up into
+pitch, the valve chuffs before the note arrives, and the tank sags through the
+release. That last one is the *owp*, and it is the half people whistle.
+
+It **ducks the rest of the machine** by about 7 dB while it is down, which is
+not a mixing trick borrowed from records: three trumpets at arm's length are all
+you can hear. It is also what keeps the mix inside its ceiling — see below.
+
+### The panel is switchgear
+
+Two events, because a real control is two events: a **click** for the button
+bottoming out and a **clunk** for the contactor behind it letting go, a fraction
+of a second later and much lower. The gap between them is the difference between
+a panel and a website, and it is the only way to hear that a switch did *not* do
+anything.
+
+Almost all of it is heard **off the recording**. Switching a component off
+changes its slot on the snapshot; the engine notices that by itself and plays
+it, exactly as the scene notices that a prop moved. Nothing was added to the
+event channel and no part of the cockpit tells the ear that it was pressed — and
+because what you switched is on the recording, **a replay clicks too**. What is
+left over is cab furniture the machine does not record: the cabinet latch, the
+acknowledgement, an instrument clamping home on its arm. Those go through
+`Audio.panel`, and they are voiced by the maker whose furniture it is.
 
 ### Three consequences worth keeping
 
@@ -101,11 +141,25 @@ brightness at each end, which is enough to make a claim falsifiable: *labouring
 gets brighter at constant track speed*, *rough ground is louder and brighter
 than smooth*, *the alarm scene gets quieter when it is acknowledged*.
 
-It has now caught more defects than review has, and the same one three times:
+`everything-at-once` — rutted ground, the horn down, a pipe stack at speed and
+the master alarming — exists because the limiter's whole justification is summed
+transients, and it **clipped at 1.04 on its first run**, which is the scene
+doing its job. The horn's duck and its level were set against it; the worst case
+now peaks 0.88.
+
+It has now caught more defects than review has, and the same one four times:
 **a filtered voice's level is not what you hear — its bandwidth is.** A bandpass
 around a narrow band throws away almost all of white noise's energy, so the
-strike, the squeak and the rattle were each written at a "sensible" number and
-were each inaudible. Set a filtered voice by measuring it.
+strike, the squeak, the rattle and then the panel clicks were each written at a
+"sensible" number and were each inaudible — the panel measured *identical* to no
+panel at all with the switches firing correctly. Set a filtered voice by
+measuring it.
+
+One caveat about the measure itself: **RMS over a fifth of a scene cannot see a
+transient.** Four clicks in a 1.6-second window move it by a thousandth. For a
+scene about transients the honest number is the whole-scene peak — `switchgear`
+peaks 0.33 with the panel and 0.16 without — and, as ever, the file is there to
+be played.
 
 Two more, both about *scenes* rather than about the machine:
 
@@ -126,5 +180,12 @@ Two more, both about *scenes* rather than about the machine:
 - **The running gear has no suspension voice** (L-062), because it has no
   suspension travel to render. The nearest honest quantity is a track's
   `contacts` changing as samples find and lose ground.
-- **Nothing fitted makes a noise.** The arrangement for it exists — a component
-  is voiced by its own maker's house — and no component has asked yet.
+- **Nothing fitted makes a noise of its own.** A component's *switchgear* is in
+  its maker's voice now, which is the arrangement working, but no component has
+  yet had something to say — a guard's servo, a relay chattering as it hunts.
+  The `NOTES.md` thread asks the shape question: is a voice a fourth part of the
+  triptych, or a thing a component *does*?
+- **The horn tells nobody anything.** Nothing on the site can hear it, because
+  nothing on the site can hear. When a citizen can, the horn stops being a cab
+  state and becomes a sim input, and it joins the recording where the levers
+  are.

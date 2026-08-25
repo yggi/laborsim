@@ -298,6 +298,19 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-063] The horn, and the panel that clicks — **closed**
+The old `horn` was the annunciator's **buzzer** — the machine talking to you —
+and it had the name of the thing it was not. It is `alarm` now, and the horn is
+a horn: a chord of two or three trumpets on one air line, never quite in tune
+with each other, with the valve chuffing before the note and the tank sagging
+after it. It is the loudest thing the machine can do on purpose and the only
+voice that renders a **decision**, and it ducks everything else 7 dB while it is
+down. On the panel it is a rubber dome, held rather than toggled, outside the
+masters group. The panel became switchgear: a **click** for the button and a
+**clunk** for the contactor, in the voice of whoever built the kit — and almost
+all of it is heard off the *snapshot*, so a replay clicks too. Found by a new
+`everything-at-once` scene: the mix clipped at 1.04 before the duck existed.
+
 ### [L-061] A machine is voiced by whoever built it — **closed**
 Sound gets an owner. A manufacturer's house is colours, words **and sound**, in
 one object at `src/makers/` above both renderers; the machine's voices are its
@@ -310,32 +323,6 @@ a heavy crawl and is gone by working speed; and the **rattle**, keyed to the
 hull's jerk, which is the only voice that renders the ground. `MachineState`
 gained an accelerometer. Rejected: a suspension voice (L-062), because nothing
 simulates suspension travel.
-
-### [L-040] The machine symphony — synthesised sound — **closed**
-Five voices, none sampled: the drive note carrying load (filter, droop and
-loudness off `traction`), the grind carrying slip and only where there is
-ground, impacts whose amplitude is the square root of the joules, the hull on
-its own scale, and the horn as the audible half of the master lamp. `voices.ts`
-is arithmetic with no WebAudio in it and `engine.ts` is the only file that knows
-an oscillator exists, so the graph builds on an `OfflineAudioContext` exactly as
-on a live one — which is `npm run listen`. It earned the event channel on the
-way in (`core/events.ts`), and the master condition moved out of `DashPanel`
-into the shell so the lamp and the horn are one fact. Rejected: a mute on the
-dash — a Labor's horn has no cut-out, so volume is the rig's control and sits
-with the camera.
-
-### [L-059] The pod joins the registry, and the seam moves — **closed**
-The triptych's third part was hand-wired into the shell: a branch and a position
-variable per component, and a live `Autonav` held so the scope could call
-`setTarget`. Now one `Packet` per component (cell, face, pod, units, amps) and
-one contract for all three postures — a part is handed the slot it is drawn from
-and the style it is drawn in, and commands cross back through `Controls`
-(`toggle`, `setParam`, inert for a component nothing is driving). NAV-1's target
-became a declared param, so the plate grew a TARGET slider and the scope stopped
-being a second wire. The route rides the snapshot. `cockpit/` is now what the
-manufacturers made and `ui/` what the rig made; both style bans scan all of
-`src/`, and custom properties carry `--mfg-` or `--cab-`. Rejected: `controls`
-on a face, which has nothing to command.
 
 ### [L-055] GRIP and SLIP become one head — **closed**
 TRACTION: the plan view, nose up, a channel per track. Channel colour is the

@@ -143,6 +143,24 @@ $effect(() => {
 let sound = $state(true);
 let audio: Audio | undefined;
 
+/**
+ * The cab's own switchgear, for the few controls the machine does not record.
+ *
+ * Almost every switch is already audible without anyone asking: flipping a
+ * component off changes its slot on the snapshot and the engine hears that by
+ * itself, which is why a replay clicks in all the right places. What is left is
+ * furniture — the cabinet latch, the acknowledgement, an instrument clamping
+ * home — and it is voiced by the maker whose furniture it is, which is the
+ * chassis maker for everything bolted to the cab.
+ *
+ * The camera and the volume are deliberately **silent**: they belong to the
+ * training rig rather than to the machine, and the rig does not reach into the
+ * cab and make noises (`docs/design/training-frame.md`).
+ */
+const CAB_MAKER = "KIBA WORKS";
+const click = (maker = CAB_MAKER) => audio?.panel("click", maker);
+const clunk = (maker = CAB_MAKER) => audio?.panel("clunk", maker);
+
 function toggleSound() {
   sound = !sound;
   audio?.setVolume(sound ? 1 : 0);
@@ -267,6 +285,10 @@ function setEstop(next: boolean) {
  * already in, and a latched stop is not a toggle.
  */
 function hitEstop() {
+  // The mushroom itself. Every module it disables clunks on its own, off the
+  // snapshot, so hitting the stop is one deliberate clack followed by the whole
+  // bank letting go — which is what a stop actually sounds like.
+  clunk();
   setEstop(true);
   report = true;
 }
@@ -493,7 +515,12 @@ $effect(() => {
     the price of fitting it. This file knows neither of those things.
   -->
   {#if mode === "cab" && !rackOpen}
-    <Glass snapshot={latest} {controls} bottomKeepOut={dashHeight + 12} />
+    <Glass
+      snapshot={latest}
+      {controls}
+      bottomKeepOut={dashHeight + 12}
+      onSettle={(maker) => clunk(maker)}
+    />
   {/if}
 
   <!--
@@ -515,9 +542,17 @@ $effect(() => {
         {master}
         {acked}
         bind:height={dashHeight}
-        onOpenRack={() => (rackOpen = !rackOpen)}
+        onOpenRack={() => {
+          rackOpen = !rackOpen;
+          // A cabinet door, not a switch: the latch is the heaviest thing on
+          // the panel and it is the same sound going both ways.
+          clunk();
+        }}
         onEstop={hitEstop}
-        onAck={() => (acked = master)}
+        onAck={() => {
+          acked = master;
+          click();
+        }}
         onHorn={(down) => (honking = down)}
         {controls}
       />

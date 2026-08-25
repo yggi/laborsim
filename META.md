@@ -13,18 +13,15 @@ has probably stopped being true.
 
 ## Diagnosis
 
-**Ask when it appeared, before asking what it is.**
+**Ask when it appeared, and build the experiment that halves it.**
 A dark slab across the site got four diagnoses; three were wrong. It had
 appeared *exactly* when `terrainMaterial` landed and survived every lighting
-change — the cheapest possible signal, ignored for three rounds. The cause was
-the contour shader: on flat ground both the distance to a contour and its
-derivative vanish, and the graded pad sits at exactly 0 m, so it rendered as one
-enormous contour line.
-
-**Build the isolating experiment before proposing the next hypothesis.**
-In that hunt, `receiveShadow = false` took one build and settled whether it was
-a shadow. It was run third. With two plausible causes, the move is the test that
-eliminates half — not a third hypothesis.
+change — the cheapest possible signal, ignored for three rounds. In that same
+hunt, `receiveShadow = false` took one build and settled whether it was a
+shadow at all; it was run third. With two plausible causes the move is the test
+that eliminates half, never a third hypothesis. (The cause was the contour
+shader: on flat ground both the distance to a contour and its derivative vanish,
+and the graded pad sits at exactly 0 m.)
 
 **Probe the API; do not trust the prose.**
 Rapier's docs say `createSnapshot()`; the JS method is `takeSnapshot()`. Its
@@ -44,14 +41,13 @@ the meter's `.bar` in the same scoped stylesheet. Reading is a hypothesis;
 measuring is an answer.
 
 **Suspect the probe before the system.**
-A grade probe reported zero climb at every angle with ten tests passing and the
-machine fine: the *probe* was wrong, its ramp 30 m away and the machine good for
-11 m in five seconds. Re-earned harder — a probe read the site "after one step"
-and found a marker pole flipped over and moved 40 cm in 1/60 s. Impossible, and
-it was: `createWorld` settles for 120 steps before it hands anything back, so
-the first observable state is two seconds old. Two hypotheses and one
-measured-worse fix went into explaining a launch that never happened. **Ask what
-ran before your first observation.**
+A grade probe reported zero climb at every angle, with ten tests passing and the
+machine fine: its ramp was 30 m away and the machine covers 11 m in five
+seconds. Re-earned harder — a probe read the site "after one step" and found a
+pole flipped over and moved 40 cm in 1/60 s. Impossible, and it was:
+`createWorld` settles for 120 steps before it hands anything back, so two
+hypotheses and a measured-worse fix went into a launch that never happened.
+**Ask what ran before your first observation.**
 
 ## Verification
 
@@ -69,17 +65,21 @@ on spawn. A bite check proves the code path ran, not that the scenario happened.
 Assert the scenario too — here, that the impact speed was non-zero.
 
 **A check that cannot fail is not a check.**
-Four scars, one shape: the thing you judge by is the broken thing. Two
+Scars enough, one shape: the thing you judge by is the broken thing. Two
 `str.replace` edits matched nothing, because the formatter had reflowed the file
-— one blanked the dash and everything stayed green, since nothing was *wrong*. A deploy failed on formatting because the local check
-grepped output for `lint/`, which a formatter diagnostic does not match. A bench
-measured brightness as zero-crossing rate, which does not move when a filter
-opens on a periodic waveform. And a bench *scene* built from sines, then from
-spikes too sharp for its own 60 Hz sampling, reported rough ground identical to
-smooth both times — until the real machine was probed and the fixture fitted to
-what it measured. Assert the edit matched; verify by exit code; move the
-instrument before you trust it; **fit a fixture to a measurement rather than to
-your idea of one.** No difference is indisputable and means nothing.
+— one blanked the dash and everything stayed green, since nothing was *wrong*. A
+deploy failed on formatting because the local check grepped output for `lint/`,
+which a formatter diagnostic does not match. A bench measured brightness as
+zero-crossing rate, which cannot move when a filter opens on a periodic
+waveform. A bench *scene* built from sines, then from spikes too sharp for its
+own 60 Hz sampling, called rough ground identical to smooth both times, until
+the machine was probed and the fixture fitted to what it measured. Assert the
+edit matched; verify by exit code; move the instrument before you trust it;
+**fit a fixture to a measurement, not to your idea of one.**
+And **prove a new thing by taking it away**: a panel of switches was finished,
+firing at the right instants, and inaudible — the scene measured the same with
+its gain zeroed. That null test cost a minute and nothing else would have caught
+it. If silencing what you added changes nothing, you did not add it.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both
@@ -98,13 +98,13 @@ closes.
 Build green, tests green, and the cab view was a solid black wall: an ink shell
 seen from inside. Then a cyan wall — a windscreen 0.47 m from the eye. Re-earned
 on the dash, written blind for an hour, typechecked, 104 tests green, and the
-whole cluster off-screen at 390 px. None of it is expressible as an assertion,
-and perception is only reliable when it costs nothing — so when the work is
-visual, or audible, build the bench *first*. The audio bench paid for itself
-three times in its first run: a limiter crushing every impact, a strike filter
-tied backwards to the ring, and a cue that measured beautifully and could not be
-heard. It pays twice, because the readout a developer needs to diagnose a
-failure is the readout the player needs.
+cluster off-screen at 390 px. None of it is expressible as an assertion, and
+perception is only reliable when it costs nothing — so when the work is visual,
+or audible, build the bench *first*. The audio bench paid for itself three times
+in its first run: a limiter crushing every impact, a strike filter tied
+backwards to the ring, and a cue that measured beautifully and could not be
+heard. It pays twice: the readout a developer needs is the readout the player
+needs.
 
 ## Design
 

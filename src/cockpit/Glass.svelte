@@ -33,12 +33,21 @@ const {
   snapshot,
   controls,
   bottomKeepOut,
+  onSettle,
 }: {
   snapshot: Snapshot | undefined;
   /** The one channel a part commands through. See `control/controls.ts`. */
   controls: (id: string) => Controls;
   /** How much glass the dash is taking along the bottom edge, px. */
   bottomKeepOut: number;
+  /**
+   * An instrument has been let go somewhere legal, and its clamp has taken it.
+   *
+   * Only a legal drop reports — `Draggable` refuses the others silently — so
+   * the knock is the sound of it *landing*, never of it being refused. In its
+   * own maker's voice: it is their instrument on their arm.
+   */
+  onSettle?: (maker: string) => void;
 } = $props();
 
 /** Every fitted component that brought an instrument, in rack order. */
@@ -77,7 +86,10 @@ const startX = typeof window === "undefined" ? 280 : innerWidth - COLUMN_X;
     startX={placed[stage.id]?.x ?? startX}
     startY={placed[stage.id]?.y ?? FIRST_Y + i * PITCH}
     {bottomKeepOut}
-    onplace={(x, y) => (placed[stage.id] = { x, y })}
+    onplace={(x, y) => {
+      placed[stage.id] = { x, y };
+      onSettle?.(stage.maker);
+    }}
   >
     <Pod {stage} style={styleOf(stage.maker)} {snapshot} controls={controls(stage.id)} />
   </Draggable>

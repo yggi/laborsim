@@ -24,6 +24,7 @@ import {
   impactVoice,
   isSilent,
   loudness,
+  panelVoice,
   rattleVoice,
   squeakVoice,
 } from "../src/audio/voices.ts";
@@ -453,6 +454,42 @@ describe("the horn is a chord with a mechanism in it", () => {
     expect(kiba.chuff).toBeGreaterThan(0);
     // TOWA's is a moulded sounder with no air in it at all, and says so.
     expect(hornVoice(styleOf("TOWA DENKI").sound).chuff).toBe(0);
+  });
+});
+
+/**
+ * Two events, because a real control is two events: the button, and the load
+ * letting go a fraction later. Almost every switch on the machine is heard off
+ * the snapshot rather than reported by the cockpit, so these are the tests for
+ * the *voices*; that the engine notices a slot changing is what the bench's
+ * `switchgear` scene is for.
+ */
+describe("the panel is switchgear, not a website", () => {
+  it("gives the load a lower, longer voice than the button", () => {
+    const click = panelVoice("click", KIBA);
+    const clunk = panelVoice("clunk", KIBA);
+    expect(clunk.hz).toBeLessThan(click.hz);
+    expect(clunk.decay).toBeGreaterThan(click.decay);
+    // A contactor is an armature hitting a stop, not a finger on plastic.
+    expect(clunk.strikeHz).toBeLessThan(click.strikeHz);
+  });
+
+  it("sounds like the maker who built the kit", () => {
+    const kiba = panelVoice("click", KIBA);
+    const towa = panelVoice("click", styleOf("TOWA DENKI").sound);
+    // A membrane over a dome switch is higher and shorter than sprung steel —
+    // which is timbre. It is not allowed to be quieter, because level is not a
+    // house decision.
+    expect(towa.hz).toBeGreaterThan(kiba.hz);
+    expect(towa.decay).toBeLessThan(kiba.decay);
+    expect(towa.gain).toBe(kiba.gain);
+  });
+
+  it("stays under the machine it is bolted to", () => {
+    // These happen under your hand rather than out on the site. A panel louder
+    // than an impact would be a cockpit made of noise.
+    const bang = impactVoice(impact({ what: "pipes", joules: 550 }));
+    expect(panelVoice("clunk", KIBA).gain).toBeLessThan(bang.gain);
   });
 });
 

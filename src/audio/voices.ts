@@ -527,6 +527,59 @@ export function rattleVoice(shake: Shake, house: SoundHouse): RattleVoice {
   };
 }
 
+/* -- the panel ------------------------------------------------------------- */
+
+/**
+ * A switch under a thumb, and the contactor behind it.
+ *
+ * These reuse `Knock` and the transient that plays it, which is the same one an
+ * impact and a track plate use. That is not a saving, it is the honest shape: a
+ * switch bottoming out is a small thing being struck, and there is no reason
+ * for the machine to have two ideas of what being struck sounds like.
+ *
+ * **Two events, because a real control is two events.** The click is the
+ * pushbutton; the clunk is the load actually letting go, a fraction of a second
+ * later and much lower. Pressing a cell gives you both, and the gap between
+ * them is the difference between a panel and a website — it is also the only
+ * way to hear that a switch did *not* do anything, which is a state this
+ * machine can genuinely be in.
+ *
+ * Deliberately quiet. These happen under your hand rather than out on the site,
+ * and a panel louder than the machine would be a cockpit made of noise.
+ */
+export type PanelEvent = "click" | "clunk";
+
+/**
+ * Louder than they look, for the bandwidth reason at `SQUEAK_GAIN`: a click is
+ * a few milliseconds of lowpassed noise, and almost all of it is thrown away by
+ * the filter that shapes it. Set by measuring — at a quarter of these numbers
+ * the whole panel was inaudible under an *idling* machine, and the bench
+ * measured a scene of switches identical to a scene of none.
+ */
+const CLICK_GAIN = 0.5;
+const CLUNK_GAIN = 0.65;
+
+export function panelVoice(event: PanelEvent, house: SoundHouse): Knock {
+  const panel = house.panel;
+  return event === "click"
+    ? {
+        hz: panel.clickHz,
+        gain: CLICK_GAIN,
+        decay: panel.clickDecay,
+        grit: panel.clickGrit,
+        strikeHz: strikeOf(0.9),
+      }
+    : {
+        hz: panel.clunkHz,
+        gain: CLUNK_GAIN,
+        decay: panel.clunkDecay,
+        grit: panel.clunkGrit,
+        // A contactor is a dull, heavy event: the strike is the armature
+        // hitting its stop, not a finger on plastic.
+        strikeHz: strikeOf(0.25),
+      };
+}
+
 /* -- the annunciator -------------------------------------------------------- */
 
 /**

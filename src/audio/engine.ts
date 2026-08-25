@@ -27,7 +27,7 @@
  * Architecture rule 3: snapshot in, nothing out. Nothing here can reach the sim.
  */
 
-import { type Condition, chassisOf } from "../control/bus.ts";
+import { type Condition, chassisOf, WARN } from "../control/bus.ts";
 import { createEventReader } from "../core/events.ts";
 import { makeRng } from "../core/rng.ts";
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
@@ -45,6 +45,8 @@ import {
   impactVoice,
   isSilent,
   type Knock,
+  type PanelEvent,
+  panelVoice,
   rattleVoice,
   squeakVoice,
 } from "./voices.ts";
@@ -168,6 +170,17 @@ export interface Audio {
    * happened yet and the whole timeline is laid out in advance.
    */
   render(snapshot: Snapshot | undefined, cab: CabState, at?: number): void;
+  /**
+   * A control the pilot operated that the machine did not record.
+   *
+   * Almost every switch on this machine *is* recorded — flipping a component
+   * off changes its slot on the snapshot, and the engine hears that by itself
+   * and plays it, which is why a replay clicks in all the right places. This is
+   * for the rest: the cabinet latch, the acknowledgement, an instrument
+   * clamping home on its arm. They are cab furniture, so they are voiced by the
+   * maker whose furniture it is.
+   */
+  panel(event: PanelEvent, maker: string): void;
   /** 0–1, straight onto the master. */
   setVolume(volume: number): void;
   readonly volume: number;
@@ -675,6 +688,18 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   const reader = createEventReader();
   /** Whether the horn was down last frame, so only the edges are played. */
   let honking = false;
+  /**
+   * Each slot as it was last frame, so a change can be *heard*.
+   *
+   * The rack is a state on the snapshot, not an event, and that is right — an
+   * instrument shows what is fitted and how it is set. But switching something
+   * off is a *happening*, and the honest place to notice it is here, in the
+   * renderer, exactly as the scene notices that a prop moved. Doing it this way
+   * has a property worth the bookkeeping: **a replay clicks too**, because what
+   * you switched is on the recording. Nothing had to be added to the event
+   * channel, and nothing in the cockpit had to tell the ear it pressed a button.
+   */
+  let slots = new Map<string, { enabled: boolean; verb: string; condition: number }>();
   let volume = 1;
   /**
    * Sim seconds at the last frame, so the belt can be advanced by the clock the
@@ -760,6 +785,10 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
 
       // How much *sim* time this frame covers. Clamped, because a tab that was
       // in the background for a minute must not owe a minute of chain.
+      // A rewind is a new run: nothing that happened in the old one is played,
+      // and nothing about the old rack is compared against the new one.
+      const { events, rewound } = reader.take(snapshot);
+
       const seconds = snapshot?.simSeconds;
       const dt =
         seconds === undefined || lastSeconds === undefined || seconds < lastSeconds
@@ -769,6 +798,50 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
 
       left.update(snapshot?.machine.left, house, now, dt);
       right.update(snapshot?.machine.right, house, now, dt);
+
+      /**
+       * What the rack did since the last frame.
+       *
+       * A fresh map on a rewind, and on the first frame of a run: a RESET
+       * rebuilds every module, and playing a contactor for each of them would
+       * be the machine clattering at the exercise it has not started yet.
+       */
+      const stages = snapshot?.stages ?? [];
+      if (rewound || slots.size === 0) {
+        slots = new Map(
+          stages.map((s) => [
+            s.id,
+            { enabled: s.enabled, verb: s.verb, condition: s.condition },
+          ]),
+        );
+      } else {
+        for (const stage of stages) {
+          const was = slots.get(stage.id);
+          if (!was) continue;
+          const voice = (event: PanelEvent) =>
+            knock(panelVoice(event, styleOf(stage.maker).sound), now, 0);
+          // The load letting go, which is the sound of something having
+          // actually happened rather than of a button having been pressed.
+          if (was.enabled !== stage.enabled) voice("clunk");
+          // A selector finding its detent. Order changes make no noise: sliding
+          // a plate up the rail is not a switch, it is rewiring.
+          if (was.verb !== stage.verb) voice("click");
+          // A relay latching a lamp — and only on the way *up*. A condition
+          // clearing is the absence of a fault, and absences are silent.
+          if (stage.condition > was.condition && stage.condition >= WARN)
+            voice("click");
+          was.enabled = stage.enabled;
+          was.verb = stage.verb;
+          was.condition = stage.condition;
+        }
+      }
+
+      // The horn is a decision rather than a state, so only its edges are
+      // played. Holding it costs nothing: the envelope is already running.
+      if (cab.horn !== honking) {
+        honking = cab.horn;
+        sound(hornVoice(house), honking, now);
+      }
 
       /**
        * The rattle is the one voice that must **not** glide.
@@ -782,13 +855,6 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
        * and rutted. So: fast up, slower down, which is a thing being struck and
        * then ringing rather than a level being chased.
        */
-      // The horn is a decision rather than a state, so only its edges are
-      // played. Holding it costs nothing: the envelope is already running.
-      if (cab.horn !== honking) {
-        honking = cab.horn;
-        sound(hornVoice(house), honking, now);
-      }
-
       const shake = snapshot?.machine.shake;
       const shaking = shake
         ? rattleVoice(shake, house)
@@ -829,12 +895,9 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         }
       }
 
-      // A rewind is a new run: nothing that happened in the old one is played.
-      const { events, rewound } = reader.take(snapshot);
-      if (rewound) {
-        lastSeconds = seconds;
-        return;
-      }
+      // A rewind is a new run: the rack has already been re-primed above, and
+      // nothing that happened in the old run is played.
+      if (rewound) return;
       for (const event of events) {
         // Impacts are centred for now. Panning them by where they happened
         // relative to the hull is a real cue and a separate decision — it wants
@@ -844,6 +907,10 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         // The hull is you, so it is never off to one side.
         else if (event.kind === "hull") knock(hullVoice(event), now, 0);
       }
+    },
+    panel(event, maker) {
+      if (disposed) return;
+      knock(panelVoice(event, styleOf(maker).sound), context.currentTime, 0);
     },
     setVolume(next) {
       volume = next < 0 ? 0 : next > 1 ? 1 : next;

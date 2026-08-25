@@ -212,12 +212,41 @@ export interface RattleSound {
   readonly q: number;
 }
 
+/**
+ * Switchgear: what the panel does under a thumb, and what the thing behind the
+ * panel does a moment later.
+ *
+ * Two sounds cover every control on the machine, because there are only two
+ * events: **the click** is the control itself — a pushbutton bottoming out, a
+ * selector finding its detent, a relay latching a lamp — and **the clunk** is
+ * the contactor behind it actually letting go of the load. Pressing a cell
+ * gives you both, a fraction apart, and that gap is the whole difference
+ * between a panel and a website.
+ *
+ * A maker's switchgear is one of the most recognisable things about its kit and
+ * costs nothing to characterise: heavy sprung steel, a moulded membrane, or
+ * something machined and certified sound completely unalike under one finger.
+ * Level is still not a house decision — a soft touch is *higher, shorter and
+ * more damped*, which is timbre, not volume.
+ */
+export interface PanelSound {
+  readonly clickHz: number;
+  readonly clickDecay: number;
+  /** 0–1, noise against tone. A plastic key is nearly all click and no ring. */
+  readonly clickGrit: number;
+  readonly clunkHz: number;
+  readonly clunkDecay: number;
+  readonly clunkGrit: number;
+}
+
 export interface SoundHouse {
   readonly drive: DriveSound;
   readonly gear: GearSound;
   readonly rattle: RattleSound;
   /** What the machine says to you. */
   readonly alarm: AlarmSound;
+  /** What its switches do under a thumb. */
+  readonly panel: PanelSound;
   /** What you say to everyone else. */
   readonly horn: HornSound;
 }

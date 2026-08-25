@@ -88,13 +88,13 @@ at all**. Not v0; do not let the reset design (L-038) foreclose it.
 
 ## Does a component ship a voice?
 
-A manufacturer's house now has a sound in it, and the arrangement says a fitted
-component is voiced by *its own* maker rather than by the chassis
-(`docs/design/sound.md`). Nothing has asked yet, and the unresolved half is not
-*whose* noise it is but **when** one happens: a component is a triptych today —
-plate, cell, pod — and a voice is either a fourth part of it, which the triptych
-argument would have to survive, or it is not a part at all but a thing a
-component *does*, closer to a condition changing than to a surface. TILT-GUARD
-winding you down is the case to decide it against: a relay you hear cost
-nothing, and a relay you hear is also a component telling you what it did before
-the panel does.
+Half answered. A component's **switchgear** is in its own maker's voice now, and
+it needed no new machinery at all — the engine hears a slot change on the
+snapshot and plays it. So *whose* noise it is was never the hard part.
+
+Still open is **a voice of its own**: TILT-GUARD winding you down, a servo
+hunting, a relay chattering. That is not a control being operated, it is a
+component saying something about its state — either a fourth part of the
+triptych, which the plate/cell/pod argument would have to survive, or not a part
+at all but a thing a component *does*. The switchgear is evidence for the
+second: it arrived as an event on the recording, not as a surface to fit.
