@@ -123,6 +123,8 @@ $effect(() => {
  * a lamp changes colour.
  */
 let hornLevel = NOMINAL as Condition;
+/** The horn is down. A cab state, not sim state — nothing can hear it yet. */
+let honking = $state(false);
 $effect(() => {
   // Silent while the folder is open. Hitting the stop lights the master at
   // ALARM and opens the debrief in the same press, and a horn blaring under
@@ -389,7 +391,7 @@ $effect(() => {
       // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
       // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
       // after you watched it land is heard as a second event.
-      audio?.render(current, hornLevel);
+      audio?.render(current, { alarm: hornLevel, horn: honking });
     };
     frame = requestAnimationFrame(tick);
 
@@ -516,6 +518,7 @@ $effect(() => {
         onOpenRack={() => (rackOpen = !rackOpen)}
         onEstop={hitEstop}
         onAck={() => (acked = master)}
+        onHorn={(down) => (honking = down)}
         {controls}
       />
       {#if rackOpen}

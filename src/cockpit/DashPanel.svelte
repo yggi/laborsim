@@ -63,6 +63,7 @@ let {
   onOpenRack,
   onEstop,
   onAck,
+  onHorn,
   controls,
 }: {
   snapshot: Snapshot | undefined;
@@ -87,11 +88,21 @@ let {
   onOpenRack: () => void;
   onEstop: () => void;
   onAck: () => void;
+  /** Held, not toggled. A horn is a button you lean on. */
+  onHorn: (down: boolean) => void;
   /** The one channel a part commands through. See `control/controls.ts`. */
   controls: (id: string) => Controls;
 } = $props();
 
 const stages = $derived(snapshot?.stages ?? []);
+
+/** Mirrored so the button can look pressed. The horn itself is the shell's. */
+let honking = $state(false);
+function press(down: boolean) {
+  if (down === honking) return;
+  honking = down;
+  onHorn(down);
+}
 
 /** The vehicle's manufacturer owns this panel. Read it off the chassis slot. */
 const chassis = $derived(chassisOf(stages));
@@ -212,6 +223,33 @@ const cells = $derived(
         </button>
         <span class="mfg-legend" data-danger="true">EMERGENCY STOP</span>
       </div>
+    </div>
+
+    <!-- The horn. Not in the masters group and never in it: that group is what
+         the machine has to say about itself, and this is the one control on the
+         panel aimed at somebody *outside* the cab. It is also the only control
+         here whose entire output is sound.
+
+         Held rather than toggled, because a horn is a button you lean on — so
+         it takes pointer down and up rather than a click, and the keyboard gets
+         the same behaviour rather than a shortcut that latches. -->
+    <div class="inst">
+      <button
+        class="horn"
+        class:down={honking}
+        aria-label="horn"
+        aria-pressed={honking}
+        onpointerdown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          press(true);
+        }}
+        onpointerup={() => press(false)}
+        onpointercancel={() => press(false)}
+        onkeydown={(e) => (e.key === " " || e.key === "Enter") && press(true)}
+        onkeyup={(e) => (e.key === " " || e.key === "Enter") && press(false)}
+        onblur={() => press(false)}
+      ></button>
+      <span class="mfg-legend">HORN</span>
     </div>
 
     <!-- The fitted components, behind a seam: a gap wider than the one between
@@ -360,6 +398,36 @@ const cells = $derived(
   .sn {
     color: #4c4840;
     letter-spacing: 0.12em;
+  }
+
+  /* -- the horn ----------------------------------------------------------- */
+  /* A rubber dome on a steel collar. Deliberately not red and not a mushroom:
+     it must not read as an emergency control, because leaning on it is a normal
+     part of driving and hitting the stop by mistake is not. */
+  .horn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    background:
+      radial-gradient(circle at 38% 30%, #6a7276 0 12%, transparent 55%),
+      radial-gradient(circle at 50% 62%, #23282a, #14181a 70%);
+    box-shadow:
+      inset 0 -2px 3px rgba(0, 0, 0, 0.75),
+      inset 0 2px 2px rgba(255, 255, 255, 0.14),
+      0 0 0 3px var(--mfg-bezel, #0d1012),
+      0 3px 5px rgba(0, 0, 0, 0.5);
+    transition: transform 0.05s ease;
+  }
+  /* It goes *in*, and the highlight goes with it. Nothing else moves. */
+  .horn.down {
+    transform: translateY(2px) scale(0.97);
+    box-shadow:
+      inset 0 -1px 2px rgba(0, 0, 0, 0.8),
+      inset 0 3px 6px rgba(0, 0, 0, 0.5),
+      0 0 0 3px var(--mfg-bezel, #0d1012);
   }
 
   /* -- the masters -------------------------------------------------------- */

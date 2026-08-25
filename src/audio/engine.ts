@@ -33,7 +33,9 @@ import { makeRng } from "../core/rng.ts";
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
 import { styleOf } from "../makers/houses.ts";
 import type { SoundHouse } from "../makers/sound.ts";
+import type { HornVoice } from "./voices.ts";
 import {
+  alarmVoice,
   chainLink,
   chainVoice,
   driveVoice,
@@ -80,6 +82,20 @@ const GLIDE = 0.05;
 const TWIN = 0.5;
 const UNISON = 1 / Math.hypot(1, TWIN);
 
+/**
+ * How far the rest of the machine drops while the horn is down, and how long it
+ * takes to get out of the way and come back.
+ *
+ * A little over half, which is about 7 dB. Enough that the horn owns the moment
+ * and not so much that the machine stops existing — you are still driving it,
+ * and a bed that vanished entirely would read as a cut rather than as a horn.
+ * Measured against the worst case: with the duck and the horn's own level set
+ * here, `everything-at-once` peaks 0.88 where it clipped at 1.04 without them.
+ */
+const DUCK = 0.45;
+const DUCK_IN = 0.03;
+const DUCK_OUT = 0.28;
+
 /** How fast the cab's rattle rises to a knock, and how long it rings after. */
 const RATTLE_ATTACK = 0.008;
 const RATTLE_RELEASE = 0.06;
@@ -122,19 +138,36 @@ const MAX_LINKS_PER_FRAME = 8;
 const LEFT_PAN = -0.55;
 const RIGHT_PAN = 0.55;
 
+/**
+ * What the operator is doing right now, which is **not on the recording**.
+ *
+ * The snapshot is what the machine did; this is what the hands did, and the two
+ * are separate because the sim does not know about either of these yet. The
+ * acknowledgement is a lamp the pilot has pressed, and the horn has no
+ * consequence in the world at all — nothing on the site can hear it, because
+ * nothing on the site can hear. When a citizen can, the horn stops being a cab
+ * state and becomes an input, and it joins the recording where the levers are.
+ */
+export interface CabState {
+  /** The master condition the pilot has *not* pressed. */
+  readonly alarm: Condition;
+  /** Whether the horn is down. */
+  readonly horn: boolean;
+}
+
 export interface Audio {
   /**
    * Play one frame.
    *
-   * `unacknowledged` is the master condition the pilot has *not* pressed. The
-   * horn is the audible half of that lamp, so acknowledging silences the noise
-   * and leaves the light on, exactly as an annunciator panel does.
+   * The buzzer is the audible half of the master lamp, so acknowledging
+   * silences the noise and leaves the light on, exactly as an annunciator panel
+   * does.
    *
    * `at` is the context time to schedule against. It defaults to now, which is
    * right for a live context and wrong for an offline one, where nothing has
    * happened yet and the whole timeline is laid out in advance.
    */
-  render(snapshot: Snapshot | undefined, unacknowledged: Condition, at?: number): void;
+  render(snapshot: Snapshot | undefined, cab: CabState, at?: number): void;
   /** 0–1, straight onto the master. */
   setVolume(volume: number): void;
   readonly volume: number;
@@ -416,10 +449,26 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   master.gain.value = 1;
   master.connect(limiter);
 
-  const left = createSide(context, master, noiseBuffer, LEFT_PAN, CHAIN_SEED, knock);
+  /**
+   * The bed: everything the machine and the site do, on one bus that the horn
+   * is **not** on.
+   *
+   * It exists so the horn can duck it. That is not a mixing trick borrowed from
+   * records — it is what a horn does: three trumpets at arm's length are all
+   * you can hear, and the drivetrain you were listening to a moment ago is
+   * simply gone until you let go. It is also the only thing that keeps the mix
+   * inside its ceiling. The `everything-at-once` bench scene — rutted ground,
+   * the horn down, a pipe stack at speed and the master alarming — clipped at
+   * 1.04 on its first run, which is precisely the scene's job.
+   */
+  const bed = context.createGain();
+  bed.gain.value = 1;
+  bed.connect(master);
+
+  const left = createSide(context, bed, noiseBuffer, LEFT_PAN, CHAIN_SEED, knock);
   const right = createSide(
     context,
-    master,
+    bed,
     noiseBuffer,
     RIGHT_PAN,
     // Two chains with two histories. One seed for both would make the sides
@@ -440,7 +489,7 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
    */
   const rattleGain = context.createGain();
   rattleGain.gain.value = 0;
-  rattleGain.connect(master);
+  rattleGain.connect(bed);
 
   const rattleFilter = context.createBiquadFilter();
   rattleFilter.type = "bandpass";
@@ -454,7 +503,7 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   rattleSource.connect(rattleFilter);
   rattleSource.start();
 
-  /* -- the horn ----------------------------------------------------------- */
+  /* -- the annunciator ---------------------------------------------------- */
   /**
    * Pulsed by a square LFO into the gain rather than by scheduling each beep:
    * the rate is then a continuous parameter like any other, and changing it
@@ -465,27 +514,96 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
    * between a negative gain and a positive one.
    *
    * The phase is not locked to the lamp's CSS blink. Same rate, whatever phase
-   * each of them started at, which is what a horn and a lamp on one relay
+   * each of them started at, which is what a buzzer and a lamp on one relay
    * actually do once you have watched the panel for a few seconds.
+   */
+  const buzzerGain = context.createGain();
+  buzzerGain.gain.value = 0;
+  buzzerGain.connect(bed);
+
+  const buzzer = context.createOscillator();
+  buzzer.type = "square";
+  buzzer.frequency.value = 990;
+  buzzer.connect(buzzerGain);
+  buzzer.start();
+
+  const buzzerPulse = context.createOscillator();
+  buzzerPulse.type = "square";
+  buzzerPulse.frequency.value = 1;
+  const buzzerDepth = context.createGain();
+  buzzerDepth.gain.value = 0;
+  buzzerPulse.connect(buzzerDepth);
+  buzzerDepth.connect(buzzerGain.gain);
+  buzzerPulse.start();
+
+  /* -- the horn ----------------------------------------------------------- */
+  /**
+   * Built once and held, envelopes scheduled on the edges.
+   *
+   * Everything else on the machine chases a target, because everything else is
+   * a state being interpolated. The horn is not a state — it is a *press*, and
+   * what makes it satisfying is entirely in the two edges: the diaphragms
+   * taking a moment to speak and bending up into pitch, and the tank sagging
+   * when you let go. A chased gain would smear both into a fade.
    */
   const hornGain = context.createGain();
   hornGain.gain.value = 0;
   hornGain.connect(master);
 
-  const horn = context.createOscillator();
-  horn.type = "square";
-  horn.frequency.value = 990;
-  horn.connect(hornGain);
-  horn.start();
+  const hornFilter = context.createBiquadFilter();
+  hornFilter.type = "lowpass";
+  hornFilter.frequency.value = 3400;
+  hornFilter.Q.value = 5;
+  hornFilter.connect(hornGain);
 
-  const hornPulse = context.createOscillator();
-  hornPulse.type = "square";
-  hornPulse.frequency.value = 1;
-  const hornDepth = context.createGain();
-  hornDepth.gain.value = 0;
-  hornPulse.connect(hornDepth);
-  hornDepth.connect(hornGain.gain);
-  hornPulse.start();
+  /** One trumpet per element of the maker's chord. Three is the most anyone
+   *  plumbs, so three are built and the unused ones simply stay silent. */
+  const TRUMPETS = 3;
+  const trumpets = Array.from({ length: TRUMPETS }, () => {
+    const level = context.createGain();
+    level.gain.value = 0;
+    level.connect(hornFilter);
+    const osc = context.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.value = 220;
+    osc.connect(level);
+    osc.start();
+    return { osc, level };
+  });
+
+  /**
+   * The waver, on one LFO into every trumpet's detune at once.
+   *
+   * A real horn is not steady — the diaphragms flutter, and the flutter is
+   * shared because they are on one air line. Separate LFOs would be three horns
+   * bolted together; one is a horn.
+   */
+  const waverDepth = context.createGain();
+  waverDepth.gain.value = 0;
+  for (const { osc } of trumpets) waverDepth.connect(osc.detune);
+
+  const waver = context.createOscillator();
+  waver.type = "sine";
+  waver.frequency.value = 5.4;
+  waver.connect(waverDepth);
+  waver.start();
+
+  /** The valve. Air, not tone, and only in the first moment. */
+  const chuffGain = context.createGain();
+  chuffGain.gain.value = 0;
+  chuffGain.connect(master);
+
+  const chuffFilter = context.createBiquadFilter();
+  chuffFilter.type = "bandpass";
+  chuffFilter.frequency.value = 2400;
+  chuffFilter.Q.value = 0.8;
+  chuffFilter.connect(chuffGain);
+
+  const chuffSource = context.createBufferSource();
+  chuffSource.buffer = noiseBuffer;
+  chuffSource.loop = true;
+  chuffSource.connect(chuffFilter);
+  chuffSource.start();
 
   /* -- transients --------------------------------------------------------- */
 
@@ -503,7 +621,7 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
 
     const panner = context.createStereoPanner();
     panner.pan.value = pan;
-    panner.connect(master);
+    panner.connect(bed);
 
     const body = context.createGain();
     body.gain.setValueAtTime(Math.max(0.0002, voice.gain * (1 - voice.grit)), start);
@@ -555,6 +673,8 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   /* -- the frame ---------------------------------------------------------- */
 
   const reader = createEventReader();
+  /** Whether the horn was down last frame, so only the edges are played. */
+  let honking = false;
   let volume = 1;
   /**
    * Sim seconds at the last frame, so the belt can be advanced by the clock the
@@ -566,14 +686,70 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
   let rattle = 0;
   let rattleHz = 900;
   let rattleQ = 1.2;
-  let hornBase = 0;
-  let hornHz = 990;
-  let hornRate = 1;
-  let hornWave: OscillatorType = "square";
+  let buzzerBase = 0;
+  let buzzerHz = 990;
+  let buzzerRate = 1;
+  let buzzerWave: OscillatorType = "square";
   let disposed = false;
 
+  /**
+   * Press and release, which is the whole horn.
+   *
+   * On the way in: the chord is retuned to the maker's, the valve chuffs, the
+   * trumpets bend up a bend's worth into pitch, and the level arrives over the
+   * house's attack. On the way out the pitch sags through the release, because
+   * the tank behind it is emptying — that fall is the half people whistle.
+   */
+  function sound(voice: HornVoice, on: boolean, at: number) {
+    const start = Math.max(at, context.currentTime);
+    hornFilter.frequency.setValueAtTime(voice.cutoff, start);
+    hornFilter.Q.setValueAtTime(voice.resonance, start);
+    waver.frequency.setValueAtTime(voice.waverHz, start);
+
+    trumpets.forEach(({ osc, level }, i) => {
+      const hz = voice.trumpets[i];
+      osc.frequency.cancelScheduledValues(start);
+      level.gain.cancelScheduledValues(start);
+      if (hz === undefined) {
+        // A house with two trumpets leaves the third silent rather than
+        // pretending. Nothing here decides how many a horn has.
+        level.gain.setTargetAtTime(0, start, 0.01);
+        return;
+      }
+      if (on) {
+        osc.type = voice.wave;
+        osc.frequency.setValueAtTime(hz * (1 - voice.bend), start);
+        osc.frequency.exponentialRampToValueAtTime(hz, start + voice.attack);
+        level.gain.setValueAtTime(Math.max(0.0001, level.gain.value), start);
+        level.gain.exponentialRampToValueAtTime(voice.gain, start + voice.attack);
+      } else {
+        osc.frequency.setValueAtTime(osc.frequency.value, start);
+        osc.frequency.exponentialRampToValueAtTime(
+          hz * (1 - voice.bend),
+          start + voice.release,
+        );
+        level.gain.setValueAtTime(Math.max(0.0001, level.gain.value), start);
+        level.gain.exponentialRampToValueAtTime(0.0001, start + voice.release);
+      }
+    });
+
+    hornGain.gain.setValueAtTime(1, start);
+    waverDepth.gain.setTargetAtTime(on ? voice.waver : 0, start, 0.04);
+    // Out of the way fast, back slowly — the machine fades in behind the horn's
+    // own tail rather than snapping back the instant the button comes up.
+    bed.gain.setTargetAtTime(on ? DUCK : 1, start, on ? DUCK_IN : DUCK_OUT);
+
+    if (on && voice.chuff > 0) {
+      chuffFilter.frequency.setValueAtTime(voice.chuffHz, start);
+      chuffGain.gain.cancelScheduledValues(start);
+      chuffGain.gain.setValueAtTime(voice.chuff, start);
+      // Shorter than the attack: the valve is open before the horn has spoken.
+      chuffGain.gain.exponentialRampToValueAtTime(0.0001, start + voice.attack * 1.4);
+    }
+  }
+
   return {
-    render(snapshot, unacknowledged, at) {
+    render(snapshot, cab, at) {
       if (disposed) return;
       const now = at ?? context.currentTime;
 
@@ -606,6 +782,13 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
        * and rutted. So: fast up, slower down, which is a thing being struck and
        * then ringing rather than a level being chased.
        */
+      // The horn is a decision rather than a state, so only its edges are
+      // played. Holding it costs nothing: the envelope is already running.
+      if (cab.horn !== honking) {
+        honking = cab.horn;
+        sound(hornVoice(house), honking, now);
+      }
+
       const shake = snapshot?.machine.shake;
       const shaking = shake
         ? rattleVoice(shake, house)
@@ -624,25 +807,25 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         rattleQ = shaking.q;
       }
 
-      const alarm = hornVoice(unacknowledged, house);
+      const alarm = alarmVoice(cab.alarm, house);
       const depth = isSilent(alarm) ? 0 : alarm.gain / 2;
-      if (Math.abs(depth - hornBase) > 1e-4) {
-        hornDepth.gain.setTargetAtTime(depth, now, GLIDE);
-        hornGain.gain.setTargetAtTime(depth, now, GLIDE);
-        hornBase = depth;
+      if (Math.abs(depth - buzzerBase) > 1e-4) {
+        buzzerDepth.gain.setTargetAtTime(depth, now, GLIDE);
+        buzzerGain.gain.setTargetAtTime(depth, now, GLIDE);
+        buzzerBase = depth;
       }
       if (!isSilent(alarm)) {
-        if (alarm.wave !== hornWave) {
-          horn.type = alarm.wave;
-          hornWave = alarm.wave;
+        if (alarm.wave !== buzzerWave) {
+          buzzer.type = alarm.wave;
+          buzzerWave = alarm.wave;
         }
-        if (alarm.hz !== hornHz) {
-          horn.frequency.setValueAtTime(alarm.hz, now);
-          hornHz = alarm.hz;
+        if (alarm.hz !== buzzerHz) {
+          buzzer.frequency.setValueAtTime(alarm.hz, now);
+          buzzerHz = alarm.hz;
         }
-        if (alarm.rate !== hornRate) {
-          hornPulse.frequency.setValueAtTime(alarm.rate, now);
-          hornRate = alarm.rate;
+        if (alarm.rate !== buzzerRate) {
+          buzzerPulse.frequency.setValueAtTime(alarm.rate, now);
+          buzzerRate = alarm.rate;
         }
       }
 
@@ -675,8 +858,11 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
       left.stop();
       right.stop();
       rattleSource.stop();
-      horn.stop();
-      hornPulse.stop();
+      for (const { osc } of trumpets) osc.stop();
+      waver.stop();
+      chuffSource.stop();
+      buzzer.stop();
+      buzzerPulse.stop();
       master.disconnect();
       limiter.disconnect();
     },

@@ -156,7 +156,26 @@ const MAKERS: Record<string, MakerStyle> = {
       // Sheet steel panels and a toolbox nobody latched.
       rattle: { hz: 900, q: 1.2 },
       // A pressed-steel buzzer wired straight to the annunciator relay.
-      horn: { wave: "square", warnHz: 620, alarmHz: 990 },
+      alarm: { wave: "square", warnHz: 620, alarmHz: 990 },
+      // Three trumpets on the cab roof, plumbed into the same air line as the
+      // brakes, tuned to a major triad by somebody who did not think of it as
+      // tuning. It is the loudest thing the machine can do on purpose, and the
+      // only one aimed at other people.
+      horn: {
+        hz: 214,
+        chord: [1, 1.25, 1.5],
+        wave: "sawtooth",
+        cutoff: 3400,
+        resonance: 5,
+        spread: 8,
+        waver: 11,
+        waverHz: 5.4,
+        attack: 0.05,
+        release: 0.26,
+        bend: 0.07,
+        chuff: 0.55,
+        chuffHz: 2400,
+      },
     },
   },
   // Navigation electronics. Lighter, newer, sold separately — and it looks it.
@@ -215,7 +234,25 @@ const MAKERS: Record<string, MakerStyle> = {
       // Moulded trim on clips. It does not clank, it buzzes.
       rattle: { hz: 1600, q: 2.1 },
       // A moulded piezo sounder. Polite, and impossible to take seriously.
-      horn: { wave: "sine", warnHz: 700, alarmHz: 1180 },
+      alarm: { wave: "sine", warnHz: 700, alarmHz: 1180 },
+      // Not an air horn at all: a moulded sounder behind a grille, an octave
+      // apart, with an electronic attack and no air to let go of. It carries
+      // about as far as a doorbell, which TOWA would describe as considerate.
+      horn: {
+        hz: 660,
+        chord: [1, 2],
+        wave: "triangle",
+        cutoff: 5200,
+        resonance: 2,
+        spread: 2,
+        waver: 0,
+        waverHz: 6,
+        attack: 0.012,
+        release: 0.09,
+        bend: 0.01,
+        chuff: 0,
+        chuffHz: 4000,
+      },
     },
   },
   // Safety kit from a maker with lawyers. Orange, boxed, and slightly smug —
@@ -277,7 +314,26 @@ const MAKERS: Record<string, MakerStyle> = {
       },
       rattle: { hz: 1200, q: 1.6 },
       // Two tones a fifth apart, to a standard, as klaxons have been since 1954.
-      horn: { wave: "square", warnHz: 660, alarmHz: 880 },
+      alarm: { wave: "square", warnHz: 660, alarmHz: 880 },
+      // The same interval again, in brass this time, because the standard is
+      // the standard. Harder-edged and quicker to speak than the KIBA, with the
+      // shortest release of the three: HANSA does not believe in a note that
+      // carries on after the switch has been let go.
+      horn: {
+        hz: 330,
+        chord: [1, 1.5],
+        wave: "square",
+        cutoff: 4200,
+        resonance: 7,
+        spread: 3,
+        waver: 4,
+        waverHz: 6.8,
+        attack: 0.03,
+        release: 0.14,
+        bend: 0.04,
+        chuff: 0.3,
+        chuffHz: 3200,
+      },
     },
   },
 };

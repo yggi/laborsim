@@ -84,8 +84,8 @@ export async function renderScene(scene: Scene): Promise<AudioBuffer> {
   const audio = createAudio(context);
 
   for (let t = 0; t < scene.seconds; t += FRAME_SECONDS) {
-    const { snapshot, alarm } = scene.frame(t);
-    audio.render(snapshot, alarm, t);
+    const { snapshot, alarm, horn } = scene.frame(t);
+    audio.render(snapshot, { alarm, horn: horn === true }, t);
   }
   return context.startRendering();
 }

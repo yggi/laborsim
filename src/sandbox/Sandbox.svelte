@@ -104,6 +104,7 @@ const dead = () => inertControls();
         onOpenRack={noop}
         onEstop={noop}
         onAck={noop}
+        onHorn={noop}
         controls={dead}
       />
     </div>

@@ -14,6 +14,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  alarmVoice,
   chainLink,
   chainVoice,
   driveVoice,
@@ -76,11 +77,11 @@ const hullHit = (joules: number): HullEvent => ({
 describe("a machine is voiced by the maker of its chassis", () => {
   it("gives every maker a complete sound house", () => {
     for (const name of MAKER_NAMES) {
-      const { drive, horn } = styleOf(name).sound;
+      const { drive, alarm } = styleOf(name).sound;
       expect(drive.idleHz, `${name} idle`).toBeGreaterThan(0);
       expect(drive.spanHz, `${name} span`).toBeGreaterThan(0);
-      expect(horn.warnHz, `${name} warn`).toBeGreaterThan(0);
-      expect(horn.alarmHz, `${name} alarm`).toBeGreaterThan(0);
+      expect(alarm.warnHz, `${name} warn`).toBeGreaterThan(0);
+      expect(alarm.alarmHz, `${name} alarm`).toBeGreaterThan(0);
       // A house may not cut its note to silence and back: past a half the
       // pulse inverts the note instead of shaping it.
       expect(drive.beat, `${name} beat`).toBeLessThanOrEqual(0.5);
@@ -402,15 +403,68 @@ describe("nothing is struck twice in the same place", () => {
   });
 });
 
-describe("the horn is the audible half of the master lamp", () => {
+/**
+ * The horn is the one voice that renders a **decision** rather than a quantity,
+ * and the only one aimed at somebody outside the cab. What can be asserted
+ * about it is that it is a chord, that a maker's chord is a maker's, and that
+ * having three trumpets is not a way to be louder than a maker with two.
+ */
+describe("the horn is a chord with a mechanism in it", () => {
+  it("sounds every trumpet the maker plumbed", () => {
+    expect(hornVoice(KIBA).trumpets).toHaveLength(3);
+    expect(hornVoice(styleOf("HANSA REGELTECHNIK").sound).trumpets).toHaveLength(2);
+  });
+
+  it("tunes them to the maker's interval", () => {
+    // A major triad on KIBA: the classic three-trumpet rig. The spread is a few
+    // cents either side of exact, so nothing lands on the ratio precisely.
+    const [root, third, fifth] = hornVoice(KIBA).trumpets as [number, number, number];
+    expect(third / root).toBeCloseTo(1.25, 1);
+    expect(fifth / root).toBeCloseTo(1.5, 1);
+  });
+
+  it("is out of tune with itself, on purpose", () => {
+    // Exactly in tune is a synthesiser. The beating between trumpets is what a
+    // pair of diaphragms on one air line actually does.
+    const house = styleOf("KIBA WORKS").sound;
+    const [root, third] = hornVoice(house).trumpets as [number, number];
+    expect(third / root).not.toBe(house.horn.chord[1]);
+  });
+
+  it("does not let a third trumpet buy loudness", () => {
+    // Power, not amplitude — the same rule as the drive note's twin. Three
+    // trumpets at a full share would make a KIBA half again as loud as a HANSA
+    // for having plumbed one more pipe.
+    const kiba = hornVoice(KIBA);
+    const hansa = hornVoice(styleOf("HANSA REGELTECHNIK").sound);
+    const power = (v: typeof kiba) => v.gain ** 2 * v.trumpets.length;
+    expect(power(kiba)).toBeCloseTo(power(hansa), 6);
+  });
+
+  it("is the loudest thing the machine can do on purpose", () => {
+    // Every other level leaves room for the site. This one takes the room.
+    const drive = driveVoice(track({ commanded: MAX_TRACK_SPEED, traction: 1 }), KIBA);
+    expect(hornVoice(KIBA).gain).toBeGreaterThan(Math.hypot(drive.gain, drive.pulse));
+  });
+
+  it("bends and chuffs, or is honest about being a doorbell", () => {
+    const kiba = hornVoice(KIBA);
+    expect(kiba.bend).toBeGreaterThan(0);
+    expect(kiba.chuff).toBeGreaterThan(0);
+    // TOWA's is a moulded sounder with no air in it at all, and says so.
+    expect(hornVoice(styleOf("TOWA DENKI").sound).chuff).toBe(0);
+  });
+});
+
+describe("the buzzer is the audible half of the master lamp", () => {
   it("says nothing until something is wrong", () => {
-    expect(isSilent(hornVoice(NOMINAL, KIBA))).toBe(true);
-    expect(isSilent(hornVoice(ACTIVE, KIBA))).toBe(true);
+    expect(isSilent(alarmVoice(NOMINAL, KIBA))).toBe(true);
+    expect(isSilent(alarmVoice(ACTIVE, KIBA))).toBe(true);
   });
 
   it("beats faster and higher for an alarm than for a caution", () => {
-    const caution = hornVoice(WARN, KIBA);
-    const alarm = hornVoice(ALARM, KIBA);
+    const caution = alarmVoice(WARN, KIBA);
+    const alarm = alarmVoice(ALARM, KIBA);
     expect(isSilent(caution)).toBe(false);
     expect(alarm.rate).toBeGreaterThan(caution.rate);
     expect(alarm.hz).toBeGreaterThan(caution.hz);
@@ -419,7 +473,7 @@ describe("the horn is the audible half of the master lamp", () => {
   it("beats at the lamp's own rates, so the two do not fight", () => {
     // `substrate.css` blinks at 1.1 s and 0.34 s. The duplication is deliberate
     // and flagged; this is the test that notices when one side moves.
-    expect(hornVoice(WARN, KIBA).rate).toBeCloseTo(1 / 1.1, 6);
-    expect(hornVoice(ALARM, KIBA).rate).toBeCloseTo(1 / 0.34, 6);
+    expect(alarmVoice(WARN, KIBA).rate).toBeCloseTo(1 / 1.1, 6);
+    expect(alarmVoice(ALARM, KIBA).rate).toBeCloseTo(1 / 0.34, 6);
   });
 });

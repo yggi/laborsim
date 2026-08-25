@@ -527,10 +527,10 @@ export function rattleVoice(shake: Shake, house: SoundHouse): RattleVoice {
   };
 }
 
-/* -- the horn -------------------------------------------------------------- */
+/* -- the annunciator -------------------------------------------------------- */
 
 /**
- * The annunciator's horn — the audible half of the master lamp.
+ * The annunciator's buzzer — the audible half of the master lamp.
  *
  * It sounds while the master is **unacknowledged**, and stops when the pilot
  * presses it, exactly as a real annunciator panel does. Acknowledging is not
@@ -542,7 +542,7 @@ export function rattleVoice(shake: Shake, house: SoundHouse): RattleVoice {
  * flagged rather than hidden because a shared value would mean CSS reaching
  * into a module or a custom property carrying a frequency.
  */
-export interface HornVoice {
+export interface AlarmVoice {
   readonly hz: number;
   readonly gain: number;
   /** Pulses per second. Zero means silent. */
@@ -550,15 +550,94 @@ export interface HornVoice {
   readonly wave: Wave;
 }
 
-const SILENT: HornVoice = { hz: 0, gain: 0, rate: 0, wave: "square" };
+const SILENT: AlarmVoice = { hz: 0, gain: 0, rate: 0, wave: "square" };
 
-export function hornVoice(unacknowledged: Condition, house: SoundHouse): HornVoice {
-  const horn = house.horn;
+export function alarmVoice(unacknowledged: Condition, house: SoundHouse): AlarmVoice {
+  const alarm = house.alarm;
   if (unacknowledged >= ALARM)
-    return { hz: horn.alarmHz, gain: 0.12, rate: 1 / 0.34, wave: horn.wave };
+    return { hz: alarm.alarmHz, gain: 0.12, rate: 1 / 0.34, wave: alarm.wave };
   if (unacknowledged >= WARN)
-    return { hz: horn.warnHz, gain: 0.08, rate: 1 / 1.1, wave: horn.wave };
+    return { hz: alarm.warnHz, gain: 0.08, rate: 1 / 1.1, wave: alarm.wave };
   return SILENT;
 }
 
-export const isSilent = (horn: HornVoice): boolean => horn.rate === 0;
+export const isSilent = (alarm: AlarmVoice): boolean => alarm.rate === 0;
+
+/* -- the horn -------------------------------------------------------------- */
+
+/**
+ * The horn, which is a **chord with a mechanism in it**.
+ *
+ * Everything else on this machine renders a simulated quantity. The horn
+ * renders a **decision**, and it is the only voice here that does — you press
+ * it, deliberately, to tell somebody you are coming. That is why it is allowed
+ * to be the loudest thing the machine can do, and why it is worth the trouble:
+ * the one control whose entire output is sound had better be satisfying.
+ *
+ * Four things make it a horn rather than a synthesiser holding a chord, and all
+ * four are mechanism rather than taste:
+ *
+ * - **it is several trumpets**, tuned to an interval and blown off one air
+ *   line, and never quite in tune with each other;
+ * - **the diaphragms take a moment to speak**, and bend up into pitch as the
+ *   pressure behind them builds;
+ * - **the valve chuffs** at the moment it opens, which is air and not tone;
+ * - **the tank sags** when you let go, so the whole chord falls as it dies.
+ *   That fall is the *owp* at the end, and it is the half people whistle.
+ */
+export interface HornVoice {
+  /** One frequency per trumpet, Hz, already spread off the exact ratios. */
+  readonly trumpets: readonly number[];
+  /** Per trumpet, before the master. Divided down, so a triad is not louder. */
+  readonly gain: number;
+  readonly wave: Wave;
+  readonly cutoff: number;
+  readonly resonance: number;
+  /** Cents of wander while held, and how fast it wanders. */
+  readonly waver: number;
+  readonly waverHz: number;
+  readonly attack: number;
+  readonly release: number;
+  /** Fraction of pitch bent up into the attack and down through the release. */
+  readonly bend: number;
+  /** The valve: a burst of air at the moment it opens. */
+  readonly chuff: number;
+  readonly chuffHz: number;
+}
+
+/**
+ * The horn is **loud**, and that is the point.
+ *
+ * Every other level in this file is set to leave room for the site. This one is
+ * set to take the room, because a horn nobody flinches at is not a horn — and
+ * because it is the only sound on the machine that the operator chose. The
+ * limiter on the master is what keeps it from clipping, and what it does to the
+ * rest of the mix while the horn is down is exactly what a horn does to
+ * everything else in earshot.
+ */
+const HORN_GAIN = 0.36;
+
+export function hornVoice(house: SoundHouse): HornVoice {
+  const horn = house.horn;
+  // Trumpets are spread alternately sharp and flat off their exact ratios, so
+  // the chord beats against itself rather than drifting as a block.
+  const cents = (n: number) => 2 ** ((n * horn.spread) / 1200);
+  return {
+    trumpets: horn.chord.map(
+      (ratio, i) => horn.hz * ratio * cents(i % 2 === 0 ? 1 : -1),
+    ),
+    // Split across the trumpets in power, as the drive note's twin is: three
+    // trumpets and two are the same horn, not one half again as loud.
+    gain: HORN_GAIN / Math.sqrt(horn.chord.length),
+    wave: horn.wave,
+    cutoff: horn.cutoff,
+    resonance: horn.resonance,
+    waver: horn.waver,
+    waverHz: horn.waverHz,
+    attack: horn.attack,
+    release: horn.release,
+    bend: horn.bend,
+    chuff: horn.chuff * HORN_GAIN,
+    chuffHz: horn.chuffHz,
+  };
+}

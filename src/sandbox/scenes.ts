@@ -74,8 +74,12 @@ export interface Scene {
   /** What you are listening for. Printed by the bench beside the file. */
   readonly note: string;
   readonly seconds: number;
-  /** The machine at time `t`, and how loudly it is complaining. */
-  frame(t: number): { snapshot: Snapshot; alarm: Condition };
+  /**
+   * The machine at time `t`, what it is complaining about, and whether a hand
+   * is on the horn. The last one is not on the recording and never was — it is
+   * a cab state, which is exactly why a scene has to be able to say it.
+   */
+  frame(t: number): { snapshot: Snapshot; alarm: Condition; horn?: boolean };
 }
 
 /**
@@ -391,6 +395,49 @@ export const SCENES: readonly Scene[] = [
         alarm: NOMINAL,
       };
     },
+  },
+  {
+    name: "horn",
+    note: "two presses: a short one and a long lean. Listen for the valve chuffing before the chord speaks, and for the pitch sagging as the tank lets go — the *owp* is the half people whistle.",
+    seconds: 6,
+    frame: (t) => ({
+      snapshot: both(t, { commanded: 0.8, traction: 0.3 }),
+      alarm: NOMINAL,
+      horn: (t > 0.8 && t < 1.15) || (t > 2.2 && t < 4.4),
+    }),
+  },
+  {
+    name: "horn-towa",
+    note: "the same two presses on a TOWA chassis. Not an air horn at all — a moulded sounder an octave apart, with no air to let go of. It carries about as far as a doorbell.",
+    seconds: 6,
+    frame: (t) => ({
+      snapshot: both(t, { commanded: 0.8, traction: 0.3 }, [], "TOWA DENKI"),
+      alarm: NOMINAL,
+      horn: (t > 0.8 && t < 1.15) || (t > 2.2 && t < 4.4),
+    }),
+  },
+  {
+    name: "everything-at-once",
+    note: "the mix's worst case, and the reason there is a limiter: rutted ground, the horn down, a pipe stack at speed and the master alarming, all inside a second. If anything clips, it clips here.",
+    seconds: 6,
+    frame: (t) => ({
+      snapshot: both(
+        t,
+        { commanded: MAX_TRACK_SPEED, traction: 0.9, slip: 0.8 },
+        [
+          hit(150, "pipes", 550, 1),
+          hit(156, "barrier", 46, 2),
+          hit(162, "cone", 12, 3),
+        ],
+        undefined,
+        shakeAt(
+          t,
+          rough(() => 1),
+        ),
+      ),
+      alarm: t > 1.5 ? ALARM : NOMINAL,
+      horn: t > 2.2 && t < 4.5,
+    }),
   },
   {
     name: "caution",

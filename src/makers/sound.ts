@@ -101,17 +101,70 @@ export interface DriveSound {
 }
 
 /**
- * The annunciator's horn.
+ * The annunciator's buzzer — the machine talking **to you**.
  *
  * The chassis maker's, because the annunciator is on the chassis maker's dash.
  * Only the pitch and the waveform are here: the **rates** are the master lamp's
- * own blink rates and belong to the panel, so a horn beats with its lamp rather
- * than against it (`audio/voices.ts`).
+ * own blink rates and belong to the panel, so the buzzer beats with its lamp
+ * rather than against it (`audio/voices.ts`).
+ *
+ * It was called the horn until the machine got one. They are not the same
+ * object and never were: this is a fault annunciator, it sounds by itself, and
+ * it stops when you acknowledge it. The horn below sounds when you press it and
+ * is aimed at everyone else on the site.
  */
-export interface HornSound {
+export interface AlarmSound {
   readonly wave: Wave;
   readonly warnHz: number;
   readonly alarmHz: number;
+}
+
+/**
+ * The horn — **you** talking to the world.
+ *
+ * An air horn is a chord. A truck's is two or three trumpets on one air line,
+ * tuned to an interval and blown together, and that is the whole reason the
+ * sound is satisfying rather than merely loud: it is a *chord with a mechanism
+ * in it*. So a house declares a root and the ratios stacked on it, and the
+ * mechanism — the valve chuffing, the diaphragms taking a moment to speak, the
+ * pitch sagging as the tank drops — is in `audio/voices.ts` where it belongs,
+ * because it is the same mechanism on everybody's horn.
+ *
+ * The three houses are three different objects: a chorded air horn, a certified
+ * two-tone klaxon, and something moulded that goes *ping*.
+ */
+export interface HornSound {
+  /** The lowest trumpet, Hz. */
+  readonly hz: number;
+  /**
+   * What is stacked on it, as frequency ratios including the root.
+   *
+   * `[1, 1.25, 1.5]` is a major triad — the classic three-trumpet rig. `[1,
+   * 1.5]` is the two-tone fifth every European klaxon has used since the war.
+   * A single-element chord is a machine that beeps, and is a real choice.
+   */
+  readonly chord: readonly number[];
+  readonly wave: Wave;
+  /** Brass is bright and it is not *pure*: a low cut here is a horn in a box. */
+  readonly cutoff: number;
+  readonly resonance: number;
+  /** Cents each trumpet sits off its exact ratio. Nothing is ever in tune. */
+  readonly spread: number;
+  /** How much the note wanders while it is held, in cents, and how fast. */
+  readonly waver: number;
+  readonly waverHz: number;
+  /** Seconds for the diaphragms to speak, and for the tank to let go. */
+  readonly attack: number;
+  readonly release: number;
+  /**
+   * How far the pitch bends, as a fraction: up into the attack as the pressure
+   * builds, down through the release as it falls away. This is the *owp* at the
+   * end, and a horn without it is a synthesiser holding a chord.
+   */
+  readonly bend: number;
+  /** The valve letting go: how much noise is in the first moment, and how high. */
+  readonly chuff: number;
+  readonly chuffHz: number;
 }
 
 /**
@@ -163,5 +216,8 @@ export interface SoundHouse {
   readonly drive: DriveSound;
   readonly gear: GearSound;
   readonly rattle: RattleSound;
+  /** What the machine says to you. */
+  readonly alarm: AlarmSound;
+  /** What you say to everyone else. */
   readonly horn: HornSound;
 }
