@@ -18,7 +18,7 @@ import {
   type EventSource,
   type SimEvent,
 } from "../src/core/events.ts";
-import { CLEARANCE, MAX_TRACK_SPEED, TRACK } from "../src/core/spec.ts";
+import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
 import { isBreakable } from "../src/world/props.ts";
 import { makeRampTerrain } from "../src/world/terrain.ts";
@@ -54,9 +54,13 @@ function lever(): { module: Module; set(v: number): void } {
  * trick `damage.test.ts` uses: the drive is a minute of sim time that proves
  * nothing the test is about.
  *
- * The teleport itself lands the hull from 5 cm up, which is a real fall and
- * shows up on the channel as one hull jolt. Measured, not assumed — a bare
- * teleport with no props anywhere near emits exactly that and nothing else.
+ * The teleport itself lands the machine from 5 cm up, which is a real fall and
+ * shows up on the channel as a hull jolt. Five centimetres *is* five
+ * centimetres: the body's origin is the bottom of the tracks, and that is where
+ * a machine sitting on its springs is (`sim/tracked.ts`). It used to read
+ * `TRACK.height + CLEARANCE + 0.05`, a metre of fall wearing a teleport's
+ * clothes — invisible while the belts were rigid boxes and a bounce once they
+ * were not.
  */
 function aimAt(
   world: ReturnType<typeof createWorld>,
@@ -71,11 +75,7 @@ function aimAt(
   const uz = target.z / range;
   const bearing = Math.atan2(ux, uz);
   world.machine.body.setTranslation(
-    {
-      x: target.x - ux * gap,
-      y: TRACK.height + CLEARANCE + 0.05,
-      z: target.z - uz * gap,
-    },
+    { x: target.x - ux * gap, y: 0.05, z: target.z - uz * gap },
     true,
   );
   world.machine.body.setRotation(
@@ -206,10 +206,17 @@ describe("the sim publishes on it", () => {
 
     const snap = world.snapshot();
     const impacts = snap.events.filter((e) => e.kind === "impact");
-    expect(impacts).toHaveLength(1);
-    expect(impacts[0]?.prop).toBe(index);
-    expect(impacts[0]?.what).toBe("pipes");
-    expect(impacts[0]?.joules).toBeGreaterThan(0);
+    // At least one, rather than exactly one: the machine keeps creeping into
+    // the stack, so how many separate nudges that becomes is an accident of
+    // how the pipes rock and settle — it was one before the running gear had
+    // springs and it is three now, at 22 J, 19 J and 26 J. What the test is
+    // about is that they are announced and none of them is billed.
+    expect(impacts.length).toBeGreaterThan(0);
+    for (const hit of impacts) {
+      expect(hit.kind === "impact" && hit.prop).toBe(index);
+      expect(hit.kind === "impact" && hit.what).toBe("pipes");
+      expect(hit.kind === "impact" && hit.joules).toBeGreaterThan(0);
+    }
     // And the whole point of the test: nothing was billed for it.
     expect(snap.events.filter((e) => e.kind === "ledger")).toHaveLength(0);
     expect(world.ledger.total).toBe(0);
@@ -286,12 +293,25 @@ describe("the hull speaks only when it was hit", () => {
     for (let i = 0; i < 120; i++) world.step();
 
     const jolts = world.snapshot().events.filter((e) => e.kind === "hull");
-    expect(jolts).toHaveLength(1);
-    const landing = jolts[0];
-    if (landing?.kind !== "hull") throw new Error("expected a hull jolt");
-    // Free fall from 2.4 m arrives at about 6.9 m/s, and it is all lost at once.
-    expect(landing.jolt).toBeGreaterThan(6);
-    expect(landing.joules).toBeGreaterThan(0);
+    // **A landing is no longer one step, because the machine has springs.**
+    // It used to arrive at 6.9 m/s and lose all of it against a rigid belt, in
+    // a single tick. Now the bogies take it over three: measured at 1.57, 2.58
+    // and 1.84 m/s on consecutive ticks, which is 139 kJ of the 146 kJ the fall
+    // put in. So the test asks what it always meant — the machine spoke, it
+    // spoke about the whole fall, and it spoke about *one* landing rather than
+    // three scattered events.
+    expect(jolts.length).toBeGreaterThan(0);
+    const energy = jolts.reduce(
+      (sum, e) => sum + (e.kind === "hull" ? e.joules : 0),
+      0,
+    );
+    expect(energy).toBeGreaterThan(100_000);
+    const first = jolts[0]?.tick ?? 0;
+    const last = jolts[jolts.length - 1]?.tick ?? 0;
+    expect(last - first).toBeLessThanOrEqual(6);
+    expect(
+      Math.max(...jolts.map((e) => (e.kind === "hull" ? e.jolt : 0))),
+    ).toBeGreaterThan(2);
     world.free();
   }, 30_000);
 });

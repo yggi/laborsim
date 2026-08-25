@@ -44,16 +44,17 @@ all (L-057, measured: most furniture is lying flat before the exercise starts).
 What stays a thread is what "composed" means **as a generator**: footing,
 clearances, an unsurveyed obstruction on the route you were actually given.
 
-## Does equal-share normal load hold up for the load chart?
+## The suspension is simulated and heard, and neither drawn nor shown
 
-The track model splits weight equally across every sample touching ground. Enough
-for rung 1, and it produced a textbook friction limit — but it ignores **load
-transfer**, and a machine nose-down on a grade or braking hard really does put
-more weight on one end of the track. The load chart (L-021) is about precisely
-that: payload against reach, with tipping as a named failure mode, and
-equal-share cannot express it. The fix — weight each sample's normal load by hull
-attitude and acceleration — is contained to one function, and wants doing when
-the load chart lands, not speculatively before.
+Two halves of one gap. **No instrument:** travel is on the developer's telemetry
+line and nowhere else, and an instrument costs view (§ 6) — so does compression
+earn a head, join TRACTION's plan view as a third channel, or is it the first
+quantity the machine deliberately refuses to show you? That last is defensible
+and is either a good rule or a hole in principle 5. **Not drawn:** the bogies
+move and the belt is one rigid loop bolted to the hull, so under a big enough
+hit it passes through the ground — bounded by the bump stop, rare, visible if
+you look. A real track drapes over its wheels; the honest fix is a bottom run
+that follows the six compressions, which nobody has costed.
 
 ## What does "multi-layer" cut along, for the player?
 
@@ -84,10 +85,9 @@ plays it. So *whose* noise it is was never the hard part.
 
 Still open is **a voice of its own**: TILT-GUARD winding you down, a servo
 hunting, a relay chattering. Not a control being operated but a component saying
-something about its state — either a fourth part of the triptych, which the
-plate/cell/pod argument would have to survive, or not a part at all but a thing a
-component *does*. The switchgear is evidence for the second: it arrived as an
-event on the recording, not as a surface to fit.
+something about its state — either a fourth part of the triptych, or a thing a
+component *does*. The switchgear is evidence for the second, and so are the
+bogies: both arrived as readings on the recording, not as surfaces to fit.
 
 ## How much of the cab should a glance cost you?
 

@@ -113,15 +113,15 @@ priced line item. Model, numbers and build order: `docs/design/damage.md`.
 
 ### 4.1 Rung 1 is built
 
-**The track friction model is ours** — Rapier has no anisotropic friction and
-its vehicle controller models wheels — and that is the design rather than a
-workaround: the friction model is the teaching layer. **One tuned constant**
-(`MU = 0.95`); everything else is a dimension or a mass, and the 43.5° climb
-limit is `atan(MU)` rather than a number chosen to feel right. **Slip is rung
-1's teaching quantity**, alongside traction, which is **`null` and never 0 for a
-track with no ground** — nothing measured is not a low reading, and every
-consumer has to decide what to show for it. Detail, and what falls out of the
-model: `docs/design/tracked-platform.md`.
+**The running gear is ours** — Rapier has no anisotropic friction and its
+vehicle controller models wheels — so it is the teaching layer. **Two tuned
+constants**: `MU = 0.95` and the bogies' damping ratio; the rest are dimensions
+and masses, and the 43.5° climb limit is `atan(MU)`. **All twelve contact points
+are sprung**, so a contact's normal load is measured off its own spring, not
+shared equally. **Slip is rung 1's teaching quantity**, alongside traction and
+now suspension travel; traction is **`null` and never 0 for a track with no
+ground** — nothing measured is not a low reading, and every consumer has to
+decide what to show for it. Detail: `docs/design/tracked-platform.md`.
 
 ## 5. The machinery ladder
 

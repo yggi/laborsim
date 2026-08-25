@@ -40,11 +40,17 @@ const track = (over: Partial<Snapshot["machine"]["left"]> = {}) => {
     surface: 0,
     slip: 0,
     traction: 0.2,
+    // Sitting on its springs: the static sag, nothing moving. A track in the
+    // air is hanging, which is what zero compression means.
+    suspension:
+      contacts === 0 ? HANGING : { compression: 0.45, damping: 0, bottomed: 0 },
     ...over,
     contacts,
     ...(contacts === 0 ? { traction: null } : {}),
   };
 };
+
+const HANGING = { compression: 0, damping: 0, bottomed: 0 };
 
 interface StageSpec {
   readonly id: string;

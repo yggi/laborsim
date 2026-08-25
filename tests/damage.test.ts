@@ -9,7 +9,7 @@
 
 import { beforeAll, describe, expect, it } from "vitest";
 import { ACTIVE, NOMINAL, type Stage } from "../src/control/bus.ts";
-import { CLEARANCE, MAX_TRACK_SPEED, TRACK } from "../src/core/spec.ts";
+import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import {
   createLedger,
   impactFloor,
@@ -196,10 +196,12 @@ describe("driving into things", () => {
     const startZ = target.z - uz * 6;
     // Yaw that points +Z at the target, as a half-angle quaternion.
     const bearing = Math.atan2(ux, uz);
-    world.machine.body.setTranslation(
-      { x: startX, y: TRACK.height + CLEARANCE + 0.05, z: startZ },
-      true,
-    );
+    // Five centimetres up, which on flat ground is five centimetres: the body's
+    // origin is the bottom of the tracks and that is exactly where a machine on
+    // its springs sits (`sim/tracked.ts`). It used to read
+    // `TRACK.height + CLEARANCE`, which was a metre of fall dressed up as a
+    // teleport — harmless while the belts were rigid boxes, and a bounce now.
+    world.machine.body.setTranslation({ x: startX, y: 0.05, z: startZ }, true);
     world.machine.body.setRotation(
       { x: 0, y: Math.sin(bearing / 2), z: 0, w: Math.cos(bearing / 2) },
       true,

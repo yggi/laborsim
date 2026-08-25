@@ -78,14 +78,20 @@ const pct = (value) => `${(value * 100).toFixed(0).padStart(3)}%`;
 // over a whole scene answers almost nothing about a voice that is supposed to
 // change while you listen to it.
 console.warn(
-  `\n${pad("scene", 25)}${pad("peak", 8)}${pad("rms  (open → close)", 24)}bright (open → close)`,
+  `\n${pad("scene", 25)}${pad("peak", 8)}${pad("rms  (open → close)", 24)}` +
+    `${pad("bright (open → close)", 24)}louder L / R`,
 );
-console.warn("-".repeat(78));
+console.warn("-".repeat(104));
+// The last column is the one that can fail a claim about *sides*: the tracks
+// are panned, so a scene that says "the left one took it" has to peak on the
+// left, at the second it says.
+const moment = (m) => `${m.by.toFixed(3)}@${m.at.toFixed(1)}s`;
 for (const row of rows) {
   console.warn(
     `${pad(row.name, 25)}${num(row.peak)}  ` +
       `${num(row.opens.rms)} → ${num(row.closes.rms)}     ` +
-      `${pct(row.opens.bright)} → ${pct(row.closes.bright)}`,
+      `${pad(`${pct(row.opens.bright)} → ${pct(row.closes.bright)}`, 24)}` +
+      `${pad(moment(row.sides.left), 14)} ${moment(row.sides.right)}`,
   );
 }
 console.warn(`\n${rows.length} render(s) → renders/`);

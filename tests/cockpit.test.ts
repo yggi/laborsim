@@ -87,6 +87,16 @@ const module = (over: Partial<Module> = {}): Module => ({
   ...over,
 });
 
+/** A track standing on its springs: sagged, nothing travelling, nothing bottomed. */
+const PARKED: TrackState = {
+  commanded: 0,
+  surface: 0,
+  slip: 0,
+  contacts: 6,
+  traction: 0,
+  suspension: { compression: 0.45, damping: 0, bottomed: 0 },
+};
+
 describe("severity crosses the boundary as a number", () => {
   it("reads a module's own condition when it publishes one", () => {
     const { stages } = runRack([module({ condition: () => ALARM })]);
@@ -163,8 +173,8 @@ describe("the masters are derived, never hand-wired", () => {
         distance: 0,
         machine: {
           pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
-          left: { commanded: 0, surface: 0, slip: 0, contacts: 6, traction: 0 },
-          right: { commanded: 0, surface: 0, slip: 0, contacts: 6, traction: 0 },
+          left: { ...PARKED },
+          right: { ...PARKED },
           speed: 0,
           pitch: 0,
           roll: 0,
@@ -215,6 +225,7 @@ describe("the tells point at an instrument that can show the thing", () => {
       surface: 0,
       slip: 0,
       traction: contacts === 0 ? null : 0.2,
+      suspension: PARKED.suspension,
       ...over,
       contacts,
       ...(contacts === 0 ? { traction: null } : {}),

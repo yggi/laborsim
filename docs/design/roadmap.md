@@ -141,9 +141,10 @@ number, on a real phone, before the scene grows again.
 ### Later — the second rung, and the first real curriculum
 
 Rung 2 (excavator) is where the load chart (`L-021`) stops being an analogy and
-starts being the Δv, and where equal-share normal load has to give way to load
-transfer (open NOTES thread). It is also the first machine that needs the part
-model, which is the honest place for `L-006`.
+starts being the Δv. Its old blocker is gone: normal load used to be shared
+equally across contacts and could not express load transfer, and the sprung
+running gear measures it off each bogie's own spring instead. It is also the
+first machine that needs the part model, which is the honest place for `L-006`.
 
 `L-008` (cockpit editor), `L-026` (LOTO hot-patching) and `L-027` (job site
 generator) all belong to this stretch — each one wants two rungs of evidence

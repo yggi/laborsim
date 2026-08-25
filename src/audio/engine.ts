@@ -36,6 +36,7 @@ import type { SoundHouse } from "../makers/sound.ts";
 import type { HornVoice } from "./voices.ts";
 import {
   alarmVoice,
+  bogieVoice,
   chainLink,
   chainVoice,
   driveVoice,
@@ -98,9 +99,17 @@ const DUCK = 0.45;
 const DUCK_IN = 0.03;
 const DUCK_OUT = 0.28;
 
-/** How fast the cab's rattle rises to a knock, and how long it rings after. */
-const RATTLE_ATTACK = 0.008;
-const RATTLE_RELEASE = 0.06;
+/**
+ * How fast a knock arrives, and how long it rings after.
+ *
+ * Shared by the cab's rattle and the running gear's bogies, because they are
+ * the same shape of thing: a level that is struck rather than a state that is
+ * chased. Everything else in this file glides over 50 ms, which is what keeps
+ * a *state* honest across a dropped frame and what would turn a series of
+ * knocks into a steady hiss.
+ */
+const KNOCK_ATTACK = 0.008;
+const KNOCK_RELEASE = 0.06;
 
 /** Seconds of noise in the shared buffer, looped. Long enough not to buzz. */
 const NOISE_SECONDS = 2;
@@ -327,6 +336,32 @@ function createSide(
   squeakSource.connect(squeakFilter);
   squeakSource.start();
 
+  /* -- the bogies -------------------------------------------------------- */
+  /**
+   * This side's running gear taking the ground: band-passed noise, struck.
+   *
+   * It sits beside the grind and the squeak because it belongs to *this track*
+   * — that is the whole point of it. And like the cab's rattle it must **not**
+   * glide: the damper power it answers to is mostly nothing punctuated by
+   * single-step spikes, and 50 ms of glide would turn a rut into a hiss. Fast
+   * up, slower down, which is a thing being struck and then ringing.
+   */
+  const bogieGain = context.createGain();
+  bogieGain.gain.value = 0;
+  bogieGain.connect(panner);
+
+  const bogieFilter = context.createBiquadFilter();
+  bogieFilter.type = "bandpass";
+  bogieFilter.frequency.value = 155;
+  bogieFilter.Q.value = 1.1;
+  bogieFilter.connect(bogieGain);
+
+  const bogieSource = context.createBufferSource();
+  bogieSource.buffer = noiseBuffer;
+  bogieSource.loop = true;
+  bogieSource.connect(bogieFilter);
+  bogieSource.start();
+
   /** Fraction of a plate travelled but not yet clanked. See `MAX_LINKS`. */
   let linkPhase = 0;
   const rng = makeRng(seed);
@@ -345,12 +380,22 @@ function createSide(
     pulseHz: 28,
     detune: 0,
     q: 3,
+    bogie: 0,
+    bogieHz: 155,
+    bogieQ: 1.1,
     wave: "sawtooth" as OscillatorType,
   };
 
   const chase = (param: AudioParam, target: number, at: number, last: number) => {
     if (Math.abs(target - last) < 1e-4) return last;
     param.setTargetAtTime(target, at, GLIDE);
+    return target;
+  };
+
+  /** A level that arrives fast and rings out — a knock, not a state. */
+  const strike = (param: AudioParam, target: number, at: number, last: number) => {
+    if (Math.abs(target - last) < 1e-4) return last;
+    param.setTargetAtTime(target, at, target > last ? KNOCK_ATTACK : KNOCK_RELEASE);
     return target;
   };
 
@@ -363,6 +408,7 @@ function createSide(
         held.pulse = chase(pulseDepth.gain, 0, at, held.pulse);
         held.grind = chase(grindGain.gain, 0, at, held.grind);
         held.squeak = chase(squeakGain.gain, 0, at, held.squeak);
+        held.bogie = strike(bogieGain.gain, 0, at, held.bogie);
         linkPhase = 0;
         return;
       }
@@ -386,6 +432,12 @@ function createSide(
       held.q = chase(driveFilter.Q, voice.resonance, at, held.q);
       held.grind = chase(grindGain.gain, grind.gain, at, held.grind);
       held.grindCut = chase(grindFilter.frequency, grind.cutoff, at, held.grindCut);
+
+      // The running gear, struck rather than chased. See `bogieGain`.
+      const bogie = bogieVoice(track, house);
+      held.bogie = strike(bogieGain.gain, bogie.gain, at, held.bogie);
+      held.bogieHz = chase(bogieFilter.frequency, bogie.hz, at, held.bogieHz);
+      held.bogieQ = chase(bogieFilter.Q, bogie.q, at, held.bogieQ);
 
       const squeal = squeakVoice(track, house);
       held.squeak = chase(squeakGain.gain, squeal.gain, at, held.squeak);
@@ -426,6 +478,7 @@ function createSide(
       noise.stop();
       sweep.stop();
       squeakSource.stop();
+      bogieSource.stop();
     },
   };
 }
@@ -860,7 +913,7 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         ? rattleVoice(shake, house)
         : { gain: 0, hz: rattleHz, q: rattleQ };
       if (Math.abs(shaking.gain - rattle) > 1e-4) {
-        const glide = shaking.gain > rattle ? RATTLE_ATTACK : RATTLE_RELEASE;
+        const glide = shaking.gain > rattle ? KNOCK_ATTACK : KNOCK_RELEASE;
         rattleGain.gain.setTargetAtTime(shaking.gain, now, glide);
         rattle = shaking.gain;
       }

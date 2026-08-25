@@ -96,17 +96,6 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
-### [L-062] The running gear has no suspension
-- **what:** the chain clanks and the cab rattles, and between them is a knock
-  nothing renders: the bogies taking a rut. It was refused rather than invented,
-  because suspension travel is not simulated and a voice with no quantity behind
-  it is a sound effect wearing a simulation's clothes. The nearest honest
-  quantity already exists — a track's `contacts` rising and falling as its six
-  samples find and lose ground — and the reason it was not used is that no bench
-  scene can vary it over time yet, so it would ship unheard.
-- **done-when:** riding over a rut knocks on the side that took it, from a
-  quantity the sim publishes, with a scene that shows it.
-
 ### [L-057] The site stands up
 - **what:** most of the furniture falls over on its own. Measured on the default
   seed, inside `createWorld`'s 120 settle steps where nothing can see it:
@@ -296,6 +285,22 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-062] The running gear is sprung, and you can hear the side — **closed**
+Refused as a voice, built as a machine: **one spring and damper per contact
+point**, twelve of them, and the belts no longer touch the ground at all. The
+rate is not a number anybody picked — it is the weight divided by the sag the
+machine is specified to sit at, which puts the parked ride height exactly where
+it already was, so nothing in `render/` moved. Two consequences bigger than the
+card: normal load is now **measured off each spring** rather than shared out
+equally, which was the load chart's blocker (L-021); and the friction model's
+long-standing over-correction surfaced the moment the machine could roll —
+impulses at ground level were sized against an equal mass share, ignoring that
+the centre of mass is 1.3 m up, and the fix is the textbook **effective mass**.
+The voice is the watts the dampers dissipate, per side, floor and ceiling
+measured off 80 m of the default site. The bench learned to hear sides to prove
+it: silenced it reads 0.008, playing 0.048, at the seconds the scene puts the
+ruts.
+
 ### [L-050] Pods on arms, and the view that recentres — **closed**
 The whole cab sweeps, 1:1 with the look: pods, cage, levers and dash are one
 rigid object and the head is the only hinge. Placement moved into cage space and
@@ -380,8 +385,3 @@ verdict, RESUME and RESET SIMULATOR; auto-opens on a citizen. RESET rebuilds the
 world by re-keying the sim effect, resetting the rack in place so modules do not
 duplicate — the canvas is reused for the new renderer.
 
-### [L-008] Inline edit — draggable instruments — **closed**
-Instruments move by a titlebar, free to place but refused if they leave the
-glass or overlap another; they snap back to the last legal spot. All three rules
-(free move, no-overlap, in-bounds) verified in the browser. The scope for L-025
-(a real glass budget) is now visible.

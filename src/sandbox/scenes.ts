@@ -26,7 +26,7 @@ import {
 } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import type { SimEvent } from "../core/events.ts";
-import type { Shake, Snapshot, TrackState } from "../core/snapshot.ts";
+import type { Shake, Snapshot, Suspension, TrackState } from "../core/snapshot.ts";
 import { G, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { PropKind } from "../world/props.ts";
 
@@ -36,6 +36,10 @@ const REST: TrackState = {
   slip: 0,
   contacts: 6,
   traction: 0,
+  // Standing on its springs: the static sag, and nothing moving. A damper only
+  // dissipates while the wheel is travelling, so a parked machine is silent
+  // there — and the sim agrees, to the last decimal (`sim/tracked.ts`).
+  suspension: { compression: 0.45, damping: 0, bottomed: 0 },
 };
 
 /** Linear from `a` to `b` between times `from` and `to`, held at both ends. */
@@ -185,12 +189,9 @@ const labour = (t: number): Partial<TrackState> => ({
  * the sampler happened to catch.
  *
  * The sim has no such problem: it *is* a 60 Hz signal, and a probe over the
- * default site says what it looks like. Parked reads exactly zero. At full
- * ahead the median step is 0.13 m/s², the ninetieth percentile is 8.6, the
- * ninety-ninth is 69 and the worst is 80. So this draws one value per frame
- * from a curve fitted to those three points — `86·u^21.8`, which passes through
- * 8.6 at u=0.9 and 69 at u=0.99 — and the result is a bench that is *mostly
- * nothing, punctuated*, exactly as the machine is.
+ * default site says what it looks like. Parked reads exactly zero; at full
+ * ahead the percentiles are in the note on `rough` below, where the curve
+ * fitted to them lives.
  */
 const FRAME_HZ = 60;
 
@@ -239,15 +240,21 @@ function shakeAt(t: number, reading: (at: number) => Reading): Shake {
  *
  * The sim has no such problem: it *is* a 60 Hz signal, and a probe over the
  * default site says what it looks like. So this draws one reading per frame
- * from a curve fitted to the measured percentiles — `86·u^21.8`, which passes
- * through the ninetieth at 8.6 m/s² and the ninety-ninth at 69 — and the
- * differencing above turns that into the jerk the cab answers to.
+ * from a curve fitted to the measured percentiles, and the differencing above
+ * turns that into the jerk the cab answers to.
+ *
+ * **Refitted when the running gear got springs**, because they changed the
+ * ride and a fixture fitted to the old one would have gone on describing a
+ * machine that no longer exists. The knocks came out and a constant wobble
+ * went in: the median step rose from 0.13 m/s² to 0.76 while the ninetieth
+ * percentile *fell* from 8.6 to 1.85 and the ninety-ninth from 69 to 15.9. The
+ * curve is `0.76 + 20·u^27.6`, through those last two.
  */
 const rough =
   (amount: (at: number) => number) =>
   (t: number): Reading => {
     const frame = Math.round(t * FRAME_HZ);
-    const jolt = amount(t) * (0.13 + 86 * dither(frame) ** 21.8);
+    const jolt = amount(t) * (0.76 + 20 * dither(frame) ** 27.6);
     return {
       // A tracked machine walks sideways over a rut rather than riding across
       // it, so the vertical knock arrives with some of itself in the other two.
@@ -256,6 +263,55 @@ const rough =
       sway: jolt * 0.24 * (dither(frame + 313) - 0.5),
     };
   };
+
+/* -- the running gear ------------------------------------------------------ */
+
+/**
+ * What one side's dampers are dissipating, shaped like the measured thing.
+ *
+ * The same method as `rough` above and the same reason: a probe drove the
+ * machine 80 m across the default site at full ahead and recorded both sides
+ * every step. Parked is exactly zero, a crawl over the same ground reaches 7 W
+ * at the ninetieth percentile, and at working speed the median step is 192 W,
+ * the ninetieth 735 and the ninety-ninth 3400. The curve `937·u^2.29` passes
+ * through the first two, which makes an ordinary drive a busy floor rather
+ * than a series of bangs — because that is what an ordinary drive is. The
+ * bangs are ruts, and a scene should put those where it means them.
+ */
+function riding(rough: number, frame: number, apart: number): Suspension {
+  const u = dither(frame + apart);
+  return {
+    // Springs breathe either side of the static sag as the ground passes.
+    compression: 0.45 + rough * (u - 0.5) * 0.3,
+    damping: rough * 937 * u ** 2.29,
+    bottomed: 0,
+  };
+}
+
+/**
+ * One rut, taken by one side: 0 either side of it, 1 at the bottom.
+ *
+ * A tenth of a second, which is what 0.16 m of travel at working speed is.
+ */
+function rut(t: number, at: number): number {
+  const into = (t - at) / 0.12;
+  return into < 0 || into > 1 ? 0 : 1 - Math.abs(2 * into - 1);
+}
+
+/** A side's running gear, with a rut in it. */
+const took = (rough: number, frame: number, apart: number, hit: number): Suspension => {
+  const base = riding(rough, frame, apart);
+  if (hit <= 0) return base;
+  return {
+    // Past 1 is past the end of the travel: the reading that says the ground
+    // won rather than that the ground was rough.
+    compression: base.compression + hit * 0.75,
+    // Nine kilowatts is the order of the worst single step the probe caught
+    // (13 kW) — a bogie driven into its stop at working speed.
+    damping: base.damping + hit * 9000,
+    bottomed: Math.round(hit * 4),
+  };
+};
 
 export const SCENES: readonly Scene[] = [
   {
@@ -365,6 +421,41 @@ export const SCENES: readonly Scene[] = [
     }),
   },
   {
+    name: "the-rut",
+    note: "a graded pad, then rutted ground, and twice a single track is driven into its stops — the **left** at 3.2 s and the **right** at 5.4 s. Listen for which side knocks: that is the whole card. The bogies are the only voice on the machine that can say it, because the damper doing the work belongs to one track.",
+    seconds: 8,
+    frame: (t) => {
+      const frame = Math.round(t * FRAME_HZ);
+      const gone = ramp(t, 1.6, 2.6, 0, 1);
+      const left = rut(t, 3.2);
+      const right = rut(t, 5.4);
+      const driving = { commanded: MAX_TRACK_SPEED * 0.8, traction: 0.5 };
+      return {
+        snapshot: frameOf(
+          t,
+          track({ ...driving, suspension: took(gone, frame, 0, left) }),
+          track({ ...driving, suspension: took(gone, frame, 977, right) }),
+          [],
+          undefined,
+          // The cab hears the same ground through the springs, which is why it
+          // is so much quieter than it used to be: what the bogies take is what
+          // the rattle does not get.
+          // A rut reaches the cab too, and much less than it used to: what the
+          // bogies take is what the rattle does not get. Kept small on purpose
+          // — the rattle is centred, so a scene where it dominated the ruts
+          // would be a scene that could not tell you which side took one.
+          shakeAt(t, (at) =>
+            rough(
+              (from) =>
+                ramp(from, 1.6, 2.6, 0, 1) + 1.2 * (rut(from, 3.2) + rut(from, 5.4)),
+            )(at),
+          ),
+        ),
+        alarm: NOMINAL,
+      };
+    },
+  },
+  {
     name: "the-site",
     note: "a pole tipping over on its own (1.6 J), a cone, a barrier, then a pipe stack at speed (550 J). One scale, no thresholds.",
     seconds: 7,
@@ -398,10 +489,24 @@ export const SCENES: readonly Scene[] = [
         heave: at > 1.0 && at < 1.5 ? 0 : at >= 1.5 && at < 1.52 ? G + 78 : G,
         sway: 0,
       });
+      // Hanging in the air, then every bogie driven through its travel and on
+      // to the stops at once. The hull event is the same 140 kJ it always was;
+      // what is new is that the running gear is what *takes* it, and says so.
+      const arriving = t >= 1.5 && t < 1.62;
+      const suspension = falling
+        ? { compression: 0, damping: 0, bottomed: 0 }
+        : arriving
+          ? { compression: 1.45, damping: 13_000, bottomed: 6 }
+          : { compression: 0.45, damping: 0, bottomed: 0 };
       return {
         snapshot: both(
           t,
-          { commanded: 0.6, traction: falling ? null : 0.2, contacts: falling ? 0 : 6 },
+          {
+            commanded: 0.6,
+            traction: falling ? null : 0.2,
+            contacts: falling ? 0 : 6,
+            suspension,
+          },
           [{ kind: "hull", seq: 1, tick: 90, joules: 140_000, jolt: 6.7 }],
           undefined,
           shakeAt(t, reading),
@@ -437,7 +542,14 @@ export const SCENES: readonly Scene[] = [
     frame: (t) => ({
       snapshot: both(
         t,
-        { commanded: MAX_TRACK_SPEED, traction: 0.9, slip: 0.8 },
+        {
+          commanded: MAX_TRACK_SPEED,
+          traction: 0.9,
+          slip: 0.8,
+          // …and the running gear working the whole time, with a rut in the
+          // middle of the pile-up. If the mix has a ceiling, this finds it.
+          suspension: took(1, Math.round(t * FRAME_HZ), 0, rut(t, 2.7)),
+        },
         [
           hit(150, "pipes", 550, 1),
           hit(156, "barrier", 46, 2),
@@ -446,7 +558,7 @@ export const SCENES: readonly Scene[] = [
         undefined,
         shakeAt(
           t,
-          rough(() => 1),
+          rough((at) => 1 + 3 * rut(at, 2.7)),
         ),
       ),
       alarm: t > 1.5 ? ALARM : NOMINAL,

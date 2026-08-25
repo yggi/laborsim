@@ -35,9 +35,21 @@ function tractionClass(track: TrackState): string {
     <!-- Identity, speed, slip and grip are all on the panel now, in the
          chassis maker's own instruments. What is left here is the one thing
          the panel cannot show: the signal at every stage of the rack. -->
+    <!--
+      Suspension travel is here and nowhere else, on purpose. It is the newest
+      thing the sim publishes and it has no instrument, because an instrument
+      costs glass and what the running gear should cost the operator's view is
+      a design decision rather than a line of markup. Until then the quantity is
+      surfaceable rather than surfaced — which principle 5 allows and this line
+      is the proof of. `SUS` is the mean compression of that side's six bogies
+      as a percentage of travel: 45% is the static sag, and past 100% the
+      bogies are on their stops.
+    -->
     {#each [["L", m.left], ["R", m.right]] as const as [side, track] (side)}
       <div class="row {tractionClass(track)}">
-        {side} {num(track.commanded)} &middot; {track.contacts}/6
+        {side} {num(track.commanded)} &middot; {track.contacts}/6 &middot; SUS {Math.round(
+          track.suspension.compression * 100,
+        )}%{#if track.suspension.bottomed > 0}!{/if}
         {#if track.contacts === 0}&middot; NO CONTACT{/if}
       </div>
     {/each}

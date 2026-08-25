@@ -20,6 +20,48 @@ export interface BodyPose {
 }
 
 /**
+ * What one side's springs are doing — six bogies, summarised.
+ *
+ * The running gear is sprung **per contact point**: each of a track's six
+ * samples hangs off the frame on its own spring and damper, and what holds the
+ * machine up is the sum of them rather than a rigid block resting on the
+ * ground. That is why this is a state rather than a decoration — the load a
+ * bogie carries is what caps the friction it can deliver, so the springs are
+ * upstream of `traction`, and the ground under one corner is now something the
+ * machine can *feel* differently from the ground under another.
+ *
+ * It is a per-side summary and not per-bogie, because a side is what anything
+ * downstream can act on: the ear hears left and right, an instrument would show
+ * left and right, and six numbers a side would be a telemetry dump rather than
+ * a quantity.
+ */
+export interface Suspension {
+  /**
+   * Mean compression across the side's six bogies, as a fraction of travel.
+   *
+   * Zero is fully extended — hanging in a hollow, carrying nothing. A parked
+   * machine reads the static sag, which is 0.45 by construction (`spec.ts`).
+   * **It can read past 1**: past the end of the travel the rubber stop takes
+   * over, and clamping it here would hide the one reading that says the ground
+   * won.
+   */
+  readonly compression: number;
+  /**
+   * Watts this side's dampers are turning into heat, right now.
+   *
+   * The honest quantity behind a suspension knock, and the reason there is one
+   * at all. A spring stores and gives back; a **damper** is where a rut is
+   * destroyed, and the power it dissipates is `c · v²` over the side's bogies —
+   * so it is large exactly when the wheels are moving fast against the frame,
+   * which is the moment you hear. It is zero standing still, zero rolling over
+   * a graded pad, and zero in the air, none of which needed a special case.
+   */
+  readonly damping: number;
+  /** Bogies past the end of their travel, of 6. These are on the rubber. */
+  readonly bottomed: number;
+}
+
+/**
  * Everything one track is doing. `slip` is rung 1's teaching quantity: the
  * difference between the speed the track is turning at and the speed the
  * ground is actually going past. Every rung-1 failure is legible in it —
@@ -46,6 +88,15 @@ export interface TrackState {
    * decide what to show for it.
    */
   readonly traction: number | null;
+  /**
+   * What this side's springs are doing.
+   *
+   * It sits on the track rather than on the machine because the two sides are
+   * genuinely independent: one bogie dropping into a rut is a fact about the
+   * left-hand running gear, and a machine-wide average would throw away the
+   * only thing about it worth hearing.
+   */
+  readonly suspension: Suspension;
 }
 
 /**

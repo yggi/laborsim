@@ -20,9 +20,11 @@ a stationary machine; sound is the channel that reaches you when your eyes are
 on the ground.
 
 It follows that **if a voice cannot be traced back to a quantity, it does not
-belong.** That rule has already refused things — a suspension knock, most
-recently, because suspension travel is not simulated and inventing one would be
-a sound effect wearing a simulation's clothes.
+belong.** That rule refused a suspension knock outright, because suspension
+travel was not simulated and inventing one would have been a sound effect
+wearing a simulation's clothes. The way it was eventually built is the rule
+working rather than bending: **the springs were built first**, and the knock is
+a rendering of the watts their dampers dissipate.
 
 ## Who owns a sound
 
@@ -74,7 +76,8 @@ had thought to apply it to.
 | drive note | commanded track speed for pitch, `traction` for filter, droop and loudness. Two oscillators `detune` cents apart and cut by a firing pulse at `beats` × the note. Per track, panned to its side. | chassis |
 | chain | one knock per track plate, at `commanded / GROUSER_PITCH` — the rate the renderer turns the belt at. Each plate is jittered by the maker's `clankSpread`. | chassis |
 | squeak | `traction` × belt speed × **the reciprocal of speed**: stick-slip is a low-relative-speed phenomenon, so it belongs to a heavy crawl and is gone by working speed. | chassis |
-| rattle | the hull's **jerk**, from the accelerometer in `MachineState.shake`. The only voice that renders the *ground* rather than the drivetrain. | chassis |
+| bogies | the **watts a side's dampers are dissipating**, with the count on the bump stops moving it up toward the stop's own ring. Per track: the only voice that can say *which side* took something. | chassis |
+| rattle | the hull's **jerk**, from the accelerometer in `MachineState.shake`. What the ground gets through the springs, in the cab, centred. | chassis |
 | horn | a **decision**, and the only voice here that renders one. A chord of trumpets on one air line: the valve chuffs, the diaphragms bend up into pitch, the tank sags when you let go. It ducks everything else by 7 dB while it is down. | chassis |
 | panel | a control being operated: a **click** for the button and a **clunk** for the contactor behind it, a fraction apart. | whoever built the kit |
 | buzzer | the master condition, at the master lamp's own blink rates. Acknowledging stops the noise and leaves the light on. | chassis |
@@ -119,6 +122,22 @@ left over is cab furniture the machine does not record: the cabinet latch, the
 acknowledgement, an instrument clamping home on its arm. Those go through
 `Audio.panel`, and they are voiced by the maker whose furniture it is.
 
+### The ground now speaks twice
+
+The springs sit between the ground and the cab, so the ground reaches you along
+two paths and each has its own voice. **The bogies** are outside, per track,
+keyed to the work the dampers are doing — that is the rut. **The rattle** is
+inside, centred, keyed to what survives the springs.
+
+The second half of that is measured rather than asserted. Re-running the ride
+probe after the running gear was sprung, the ninetieth-percentile step fell from
+a jerk of **416 m/s³ to 23** — eighteen times less — with the median almost
+unchanged. The suspension is not smoothing the ride evenly, it is taking the
+*knocks* out of it, which is what a suspension is for. The rattle's two
+constants were refitted to the new ride rather than turned up to hide the
+change: what the bogies take is what the cab does not get, and that is the thing
+worth hearing.
+
 ### Three consequences worth keeping
 
 - **`traction: null` survives into the sound.** A track with no ground does not
@@ -161,6 +180,16 @@ scene about transients the honest number is the whole-scene peak — `switchgear
 peaks 0.33 with the panel and 0.16 without — and, as ever, the file is there to
 be played.
 
+And one about what it was *blind* to. For its whole life the bench measured
+channel 0, which made it unable to see the thing half these voices exist for:
+the tracks are panned to the sides they are on. The bogie knock's null test —
+silence it and see whether anything changes — duly reported peak 0.634 against
+0.606 and an identical RMS, which reads as *this voice does not exist*. It did.
+The bench now reports **the widest gap each way between the channels and when**,
+in 12 ms windows, and the same pair reads 0.008 silenced against 0.048 playing,
+at the exact seconds `the-rut` puts a rut under each track. A null test only
+answers if the instrument can see the claim.
+
 Two more, both about *scenes* rather than about the machine:
 
 - A scene built out of sines cannot show a rattle, because the ride is not a
@@ -177,9 +206,10 @@ Two more, both about *scenes* rather than about the machine:
 - **Impacts are centred** (L-060). The event carries a world position and
   hearing which side you clipped something on is a real cue; it wants the hull
   pose and a decision about what "left" means in the chase camera.
-- **The running gear has no suspension voice** (L-062), because it has no
-  suspension travel to render. The nearest honest quantity is a track's
-  `contacts` changing as samples find and lose ground.
+- **The suspension has no instrument** — it is heard and felt, and read only on
+  the developer's telemetry line. An instrument costs glass (`docs/design/cockpit.md`),
+  so what the running gear should cost the operator's view is a design decision
+  rather than a line of markup.
 - **Nothing fitted makes a noise of its own.** A component's *switchgear* is in
   its maker's voice now, which is the arrangement working, but no component has
   yet had something to say — a guard's servo, a relay chattering as it hunts.

@@ -125,6 +125,35 @@ export function makeRampTerrain(degrees: number, flat = 30): Terrain {
   return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent };
 }
 
+/**
+ * Flat ground with **one bank across one half of it** — a rut for one track.
+ *
+ * The sibling of the ramp, and it exists for the same reason: a claim about the
+ * running gear needs ground with a known shape rather than whatever the noise
+ * happened to produce. The bank runs along +X only, so a machine driving up +Z
+ * puts its **left** track over it and its right track on the flat — which is
+ * the one thing a suspension can say that nothing else on the machine can.
+ *
+ * `depth` is signed: negative digs a trench, positive raises a kerb. The band
+ * is one heightfield cell wide, which is the narrowest a rut can be — 2 m at
+ * `CELL`, against a 1.78 m gauge.
+ */
+export function makeRutTerrain(depth: number, at = 12): Terrain {
+  const n = GRID + 1;
+  const extent = GRID * CELL;
+  const heights = new Float32Array(n * n);
+  const step = Math.round(depth / QUANTUM) * QUANTUM;
+  for (let ix = 0; ix < n; ix++) {
+    const x = (ix / GRID - 0.5) * extent;
+    for (let iz = 0; iz < n; iz++) {
+      const z = (iz / GRID - 0.5) * extent;
+      const inside = x > 0 && z >= at && z < at + CELL;
+      heights[ix * n + iz] = inside ? step : 0;
+    }
+  }
+  return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent };
+}
+
 export function generateTerrain(seed: number): Terrain {
   const n = GRID + 1;
   const extent = GRID * CELL;

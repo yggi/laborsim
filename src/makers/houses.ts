@@ -152,6 +152,11 @@ const MAKERS: Record<string, MakerStyle> = {
         squeakHz: 2400,
         squeakQ: 14,
         squeakSweep: 0.22,
+        // Steel bogie arms on torsion bars, and stops that were rubber in
+        // 1987. Low, broad and heavy: you hear the undercarriage, not a wheel.
+        bogieHz: 155,
+        bogieQ: 1.1,
+        stopHz: 420,
       },
       // Sheet steel panels and a toolbox nobody latched.
       rattle: { hz: 900, q: 1.2 },
@@ -241,6 +246,12 @@ const MAKERS: Record<string, MakerStyle> = {
         squeakHz: 3200,
         squeakQ: 20,
         squeakSweep: 0.08,
+        // A lighter machine on rubber-bushed bogies: higher, tighter, and
+        // barely different when it runs out of travel. Refined, and it tells
+        // you less — the same trade as its drive.
+        bogieHz: 250,
+        bogieQ: 1.9,
+        stopHz: 430,
       },
       // Moulded trim on clips. It does not clank, it buzzes.
       rattle: { hz: 1600, q: 2.1 },
@@ -334,6 +345,11 @@ const MAKERS: Record<string, MakerStyle> = {
         squeakHz: 1900,
         squeakQ: 12,
         squeakSweep: 0.12,
+        // Machined arms and steel stops, to a standard. Narrow, and the stop
+        // is unmistakable: a guard's maker would not let you mistake it.
+        bogieHz: 195,
+        bogieQ: 1.5,
+        stopHz: 700,
       },
       rattle: { hz: 1200, q: 1.6 },
       // Two tones a fifth apart, to a standard, as klaxons have been since 1954.

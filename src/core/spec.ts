@@ -50,6 +50,33 @@ export const RIGHT_X = -GAUGE / 2;
 /** Belly clearance above the bottom of the tracks. This is what beaches you. */
 export const CLEARANCE = 0.42;
 
+/**
+ * The running gear's springs, in metres. **One bogie per contact sample.**
+ *
+ * Both numbers are dimensions rather than gains — they are what a spec sheet
+ * quotes about an undercarriage, and they are here for the same reason the hull
+ * is: the sim builds the springs from them, and what the machine *sounds* like
+ * over a rut is a rendering of what they do (`audio/voices.ts`).
+ *
+ * `sag` is the half that is easy to get wrong. It is how far the machine's own
+ * weight compresses one bogie **standing still**, and it is what sets the spring
+ * rate: the rate is not a number anybody picked, it is
+ * `weight ÷ bogies ÷ sag`. Choosing the sag rather than the rate is how a real
+ * machine is specified, and it has a consequence worth the trouble — at rest the
+ * wheel sits exactly at the bottom of the track, so the machine parked on a pad
+ * sits precisely where it did before it had any suspension at all.
+ *
+ * Travel is small on purpose. This is a six-tonne work machine on a
+ * bogie-sprung undercarriage, not a rally car: it takes the edge off a rut and
+ * it runs out, and running out is the interesting part.
+ */
+export const SUSPENSION = {
+  /** Full droop to the bump stop, one bogie. */
+  travel: 0.16,
+  /** How much of that travel the machine's own weight uses, standing still. */
+  sag: 0.072,
+};
+
 export const MASS = 6200;
 
 /** Top track speed, m/s. About 8 km/h — a working speed, not a driving one. */

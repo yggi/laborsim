@@ -46,6 +46,32 @@ export interface Rendered {
    */
   readonly opens: Segment;
   readonly closes: Segment;
+  /**
+   * When the two channels differ most, and by how much — **the sides**.
+   *
+   * The bench measured channel 0 and nothing else for its whole life, which
+   * made it blind to the thing half these voices exist for: the tracks are
+   * panned to the sides they are on, and *which side* is a real cue on a
+   * machine you steer with two independent levers. A mono measurement cannot
+   * fail the claim "the knock is on the side that took the rut", and a check
+   * that cannot fail is not a check (`META.md`).
+   *
+   * It is a **difference** and not each channel's own peak, which was the
+   * first attempt and was useless: the loudest instant in a mix is loud on
+   * both channels, so both peaked at the same moment and the answer was always
+   * "yes, and also yes". What says a knock was on the left is that the left
+   * channel was *louder than the right* at that instant, so this reports the
+   * widest gap each way, over 12 ms windows so a waveform's own zero crossings
+   * do not decide it.
+   */
+  readonly sides: { readonly left: Moment; readonly right: Moment };
+}
+
+/** How far one channel led the other, and the second it happened in. */
+export interface Moment {
+  /** Difference in short-window RMS. Zero means the mix was centred. */
+  readonly by: number;
+  readonly at: number;
 }
 
 export interface Segment {
@@ -155,13 +181,42 @@ function segment(
   return { rms, bright: rms > 1e-6 ? topRms / rms : 0 };
 }
 
+/**
+ * The widest gap each way between the two channels, in short-window RMS.
+ *
+ * 12 ms of window: long enough that the measurement is a loudness rather than
+ * a sample, short enough to sit inside a knock — the bogies rise in 8 ms and
+ * ring out in 60.
+ */
+const SIDES_WINDOW = 0.012;
+
+function sidesOf(buffer: AudioBuffer): { left: Moment; right: Moment } {
+  const rate = buffer.sampleRate;
+  const l = buffer.getChannelData(0);
+  const r = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : l;
+  const hop = Math.max(1, Math.round(rate * SIDES_WINDOW));
+  let left: Moment = { by: 0, at: 0 };
+  let right: Moment = { by: 0, at: 0 };
+  for (let from = 0; from + hop <= l.length; from += hop) {
+    const gap = rmsOf(l, from, from + hop) - rmsOf(r, from, from + hop);
+    const at = from / rate;
+    if (gap > left.by) left = { by: gap, at };
+    if (-gap > right.by) right = { by: -gap, at };
+  }
+  return { left, right };
+}
+
 function measure(buffer: AudioBuffer) {
   const channel = buffer.getChannelData(0);
   const rate = buffer.sampleRate;
+  const sides = sidesOf(buffer);
   let peak = 0;
-  for (let i = 0; i < channel.length; i++) {
-    const a = Math.abs(channel[i] ?? 0);
-    if (a > peak) peak = a;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const data = buffer.getChannelData(c);
+    for (let i = 0; i < data.length; i++) {
+      const a = Math.abs(data[i] ?? 0);
+      if (a > peak) peak = a;
+    }
   }
   // A fifth at each end, and never the very first frames — the voices glide in
   // from silence and a scene's opening 50 ms is the glide, not the state.
@@ -172,6 +227,7 @@ function measure(buffer: AudioBuffer) {
     rms: rmsOf(channel, 0, channel.length),
     opens: segment(channel, settle, settle + fifth, rate),
     closes: segment(channel, channel.length - 2 * fifth, channel.length - fifth, rate),
+    sides,
   };
 }
 

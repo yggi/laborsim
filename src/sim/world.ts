@@ -18,7 +18,7 @@ import {
   type Shake,
   type Snapshot,
 } from "../core/snapshot.ts";
-import { CLEARANCE, G, TRACK } from "../core/spec.ts";
+import { G } from "../core/spec.ts";
 import { conjugate, rotate, vec } from "../core/vec.ts";
 import {
   generateProps,
@@ -36,7 +36,7 @@ import {
 } from "../world/terrain.ts";
 import { generateWaypoints, type Pin } from "../world/waypoints.ts";
 import { createLedger, impactOf, kineticEnergy, type Ledger } from "./damage.ts";
-import { spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
+import { GROUND_GROUP, spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
 
 /**
  * Rapier ships as wasm and must be initialised once before any world exists.
@@ -111,7 +111,13 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     })
       // The ground supplies normal support only. Every horizontal force on the
       // machine comes from the track model, so that it stays inspectable.
-      .setFriction(0),
+      .setFriction(0)
+      // …and, since the running gear got springs, no support to the belts
+      // either: they pass through this collider and ride on their bogies
+      // instead, so a rut is something one corner of the machine finds rather
+      // than something a rigid box spans. Everything else on the site — props,
+      // the machine's own hull — collides with the ground normally.
+      .setCollisionGroups(GROUND_GROUP),
   );
 
   /**
@@ -154,8 +160,17 @@ export function createWorld(options: SimOptions = {}): SimWorld {
 
   const ledger = createLedger(props);
 
-  const startY =
-    (options.terrain ? 0 : heightAt(0, 0, seed)) + TRACK.height + CLEARANCE + 0.1;
+  /**
+   * Spawned a few centimetres over its own ride height, not a metre above it.
+   *
+   * The body's origin is the bottom of the tracks, and that is exactly where a
+   * sprung machine sits at rest — the springs are specified by the sag that
+   * puts it there (`spec.ts`). It used to be dropped `TRACK.height + CLEARANCE`
+   * because a rigid belt had to clear the heightfield's triangles; the belts do
+   * not touch them any more, so all that drop bought was a metre of fall to
+   * absorb before anybody could be accountable for the machine.
+   */
+  const startY = (options.terrain ? 0 : heightAt(0, 0, seed)) + 0.05;
   const machine = spawnTrackedMachine(world, vec(0, startY, 0));
 
   /**
@@ -175,7 +190,16 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * furniture to stand where it cannot. Carded as L-057 — the fix is footing in
    * the generator, not a number here.
    */
-  for (let i = 0; i < SETTLE_STEPS; i++) world.step();
+  //
+  // **The machine settles too, and it has to be driven to do it.** Its weight
+  // is carried by twelve springs that only exist while `drive` is running, so a
+  // settle loop that stepped the world without it would drop the machine
+  // through its own running gear and land it on its belly. Held at HALT: this
+  // is the machine standing on its suspension, not the machine going anywhere.
+  for (let i = 0; i < SETTLE_STEPS; i++) {
+    machine.drive(0, 0, STEP_SECONDS);
+    world.step();
+  }
   for (let i = 0; i < propBodies.length; i++) {
     const body = propBodies[i];
     if (!body) continue;

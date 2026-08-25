@@ -67,19 +67,20 @@ Assert the scenario too — here, that the impact speed was non-zero.
 **A check that cannot fail is not a check.**
 Scars enough, one shape: the thing you judge by is the broken thing. Two
 `str.replace` edits matched nothing, because the formatter had reflowed the file
-— one blanked the dash and everything stayed green, since nothing was *wrong*. A
-deploy failed on formatting because the local check grepped output for `lint/`,
-which a formatter diagnostic does not match. A bench measured brightness as
-zero-crossing rate, which cannot move when a filter opens on a periodic
-waveform. A bench *scene* built from sines, then from spikes too sharp for its
-own 60 Hz sampling, called rough ground identical to smooth both times, until
-the machine was probed and the fixture fitted to what it measured. Assert the
-edit matched; verify by exit code; move the instrument before you trust it;
-**fit a fixture to a measurement, not to your idea of one.**
-And **prove a new thing by taking it away**: a panel of switches was finished,
-firing at the right instants, and inaudible — the scene measured the same with
-its gain zeroed. That null test cost a minute and nothing else would have caught
-it. If silencing what you added changes nothing, you did not add it.
+— one blanked the dash and everything stayed green. A deploy failed on
+formatting because the local check grepped output for `lint/`, which a formatter
+diagnostic does not match. A bench measured brightness as zero-crossing rate,
+blind to the filter opening it existed to see. A bench *scene* built from sines,
+then from spikes too sharp for its own 60 Hz sampling, called rough ground
+identical to smooth both times, until the machine was probed and the fixture
+fitted to what it measured. Assert the edit matched; verify by exit code; move
+the instrument before you trust it; **fit a fixture to a measurement, not to
+your idea of one.** And **prove a new thing by taking it away**: a panel of
+switches was finished, firing at the right instants, and inaudible — the scene
+measured the same with its gain zeroed. If silencing what you added changes
+nothing you did not add it, *unless the instrument cannot see the claim* — the
+bogie knock's null test said so and was wrong, because the bench measured one
+channel and the claim was about **sides**.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both
@@ -145,6 +146,5 @@ Trimming under pressure produces worse cuts than trimming on purpose. The
 sections that spilled well were the ones spilled early.
 
 **Write the log entry as if the next session has no context.**
-Because it does not. The entries that proved useful later were the ones that
-recorded *why a thing was rejected*, not what was built — the build is in the
-diff.
+Because it does not. The entries that proved useful later recorded *why a thing
+was rejected*, not what was built — the build is in the diff.

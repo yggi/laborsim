@@ -198,6 +198,27 @@ export interface GearSound {
   readonly squeakHz: number;
   readonly squeakQ: number;
   readonly squeakSweep: number;
+  /**
+   * The bogies — a wheel on a spring, and the damper that stops it ringing.
+   *
+   * What a house owns is what one knock is *made of*: an undercarriage on
+   * rubber-bushed bogies is a dull low thud, and a set of steel arms on
+   * torsion bars is a sharper one you hear the metal in. The knock's **level**
+   * is not here and cannot be — it is the watts the damper is dissipating,
+   * which is the sim (`audio/voices.ts`).
+   */
+  readonly bogieHz: number;
+  readonly bogieQ: number;
+  /**
+   * Where it rings when the bogie runs out of travel and hits the stop.
+   *
+   * Always higher and harder than `bogieHz`: a bump stop is a small hard thing
+   * being hit by a big soft one. It is the only cue that says *the ground won*
+   * rather than *the ground was rough*, and a maker whose stops are rubber
+   * against a maker whose stops are steel is the difference between a thump
+   * and a bang.
+   */
+  readonly stopHz: number;
 }
 
 /**

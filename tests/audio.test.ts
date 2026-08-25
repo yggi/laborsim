@@ -15,6 +15,7 @@
 import { describe, expect, it } from "vitest";
 import {
   alarmVoice,
+  bogieVoice,
   chainLink,
   chainVoice,
   driveVoice,
@@ -47,8 +48,14 @@ const track = (over: Partial<TrackState> = {}): TrackState => ({
   slip: 0,
   contacts: 6,
   traction: 0,
+  // Standing on its springs: the static sag, nothing travelling.
+  suspension: { compression: 0.45, damping: 0, bottomed: 0 },
   ...over,
 });
+
+/** A side's running gear, working. `damping` is watts, and it is the voice. */
+const bogies = (damping: number, bottomed = 0) =>
+  track({ suspension: { compression: 0.45, damping, bottomed } });
 
 const impact = (over: Partial<ImpactEvent> = {}): ImpactEvent => ({
   kind: "impact",
@@ -371,11 +378,11 @@ describe("the rattle is the ground, not the drivetrain", () => {
   });
 
   it("rises with the jerk, and saturates", () => {
-    const soft = rattleVoice(shake(200), KIBA).gain;
-    const hard = rattleVoice(shake(900), KIBA).gain;
+    const soft = rattleVoice(shake(30), KIBA).gain;
+    const hard = rattleVoice(shake(120), KIBA).gain;
     expect(hard).toBeGreaterThan(soft);
     expect(rattleVoice(shake(50_000), KIBA).gain).toBeCloseTo(
-      rattleVoice(shake(1200), KIBA).gain,
+      rattleVoice(shake(160), KIBA).gain,
       6,
     );
   });
@@ -384,6 +391,75 @@ describe("the rattle is the ground, not the drivetrain", () => {
     // Measured on the machine: the median step at full ahead is a jerk of 4,
     // and the floor sits above the hum so that only the ruts speak.
     expect(rattleVoice(shake(4), KIBA).gain).toBe(0);
+  });
+
+  it("is quieter than it was, because the machine got springs", () => {
+    // The numbers this voice is fitted to were re-measured when the running
+    // gear was sprung, and the ride changed shape: the ninetieth-percentile
+    // step fell from a jerk of 416 to 23. A rattle still fitted to the old
+    // ride would have gone silent — 23 is 2% of the way up the old range and
+    // most of the way up this one — which is a suspension being installed and
+    // the cab pretending nothing happened.
+    expect(rattleVoice(shake(23), KIBA).gain).toBeGreaterThan(0.2);
+  });
+});
+
+/**
+ * The knock a rut makes, which is the voice this project **refused to build**
+ * until there was a quantity behind it (`docs/design/sound.md`). What makes it
+ * honest now is the springs, and what makes it useful is that it belongs to one
+ * track: nothing else on the machine can tell you which side took something.
+ */
+describe("the bogies are the ground, one track at a time", () => {
+  it("says nothing standing still, whatever the machine weighs", () => {
+    // The reason the voice reads the **damper** and not the spring. A spring is
+    // loudest when the machine is heaviest, which is when it is parked; a
+    // damper can only speak while the wheel is moving against the frame.
+    expect(bogieVoice(track(), KIBA).gain).toBe(0);
+    expect(bogieVoice(bogies(0), KIBA).gain).toBe(0);
+  });
+
+  it("ignores an ordinary drive and answers a rut", () => {
+    // Measured across 80 m of the default site at full ahead: the median step
+    // dissipates 192 W a side, the ninetieth 735 and the ninety-ninth 3400.
+    expect(bogieVoice(bogies(192), KIBA).gain).toBe(0);
+    expect(bogieVoice(bogies(735), KIBA).gain).toBeGreaterThan(0);
+    expect(bogieVoice(bogies(3400), KIBA).gain).toBeGreaterThan(
+      bogieVoice(bogies(735), KIBA).gain,
+    );
+  });
+
+  it("saturates rather than running away with the mix", () => {
+    const full = bogieVoice(bogies(3400), KIBA).gain;
+    expect(bogieVoice(bogies(13_000), KIBA).gain).toBeCloseTo(full, 6);
+  });
+
+  it("changes what it sounds like on the stops, never how loud it is", () => {
+    // Running out of travel is the one thing that says *the ground won* rather
+    // than *the ground was rough*. It is a timbre, because how hard you were
+    // hit is already the watts — letting it add level would be counting the
+    // same event twice.
+    const rough = bogieVoice(bogies(2000), KIBA);
+    const stopped = bogieVoice(bogies(2000, 6), KIBA);
+    expect(stopped.hz).toBeGreaterThan(rough.hz);
+    expect(stopped.gain).toBe(rough.gain);
+  });
+
+  it("sounds like the undercarriage its maker built", () => {
+    const towa = bogieVoice(bogies(2000), styleOf("TOWA DENKI").sound);
+    const kiba = bogieVoice(bogies(2000), KIBA);
+    // Rubber-bushed bogies on a lighter machine: higher and tighter than steel
+    // arms on torsion bars. Not quieter — level is not a house decision.
+    expect(towa.hz).toBeGreaterThan(kiba.hz);
+    expect(towa.q).toBeGreaterThan(kiba.q);
+    expect(towa.gain).toBe(kiba.gain);
+  });
+
+  it("gives every maker a bogie that hits its stop harder than it rides", () => {
+    for (const name of MAKER_NAMES) {
+      const { gear } = styleOf(name).sound;
+      expect(gear.stopHz, `${name} stop`).toBeGreaterThan(gear.bogieHz);
+    }
   });
 });
 

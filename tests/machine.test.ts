@@ -14,7 +14,7 @@ import { SLIPPING } from "../src/cockpit/annunciator.ts";
 import type { Module, TrackCommand, Verb } from "../src/control/bus.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
-import { makeRampTerrain } from "../src/world/terrain.ts";
+import { makeRampTerrain, makeRutTerrain } from "../src/world/terrain.ts";
 
 beforeAll(async () => {
   await initPhysics();
@@ -65,6 +65,110 @@ describe("the machine sits on the ground", () => {
     expect(end.machine.left.contacts).toBeGreaterThan(3);
     expect(end.machine.right.contacts).toBeGreaterThan(3);
   });
+});
+
+describe("the running gear is sprung, one bogie per contact point", () => {
+  it("settles at the ride height its sag was specified for", () => {
+    // The body's origin is the bottom of the tracks, so a machine at rest has
+    // it at ground level — the springs are specified by the sag that puts it
+    // there. This is why nothing in `render/` had to move: the belt is drawn
+    // where it has always been drawn, and now something holds it there.
+    const world = createWorld({ terrain: makeRampTerrain(0) });
+    for (let i = 0; i < 120; i++) world.step();
+    const m = world.snapshot().machine;
+    world.free();
+    expect(m.pose.position[1]).toBeCloseTo(0, 2);
+    // 0.45 of the travel is the static sag, by construction (`core/spec.ts`).
+    expect(m.left.suspension.compression).toBeCloseTo(0.45, 2);
+    expect(m.right.suspension.compression).toBeCloseTo(0.45, 2);
+  });
+
+  it("is silent standing still, which is the check on the whole derivation", () => {
+    // A damper turns energy into heat only while the wheel is travelling
+    // against the frame. Parked, that is *exactly* zero — not nearly zero.
+    // It read 122 W here once, permanently, because the compression rate was
+    // taken from the hull's velocity and gravity is integrated half a step
+    // away from an impulse. Measuring the travel itself fixed both that and a
+    // parked machine clocking 3.7 metres a minute onto its own odometer.
+    const world = createWorld({ terrain: makeRampTerrain(0) });
+    for (let i = 0; i < 300; i++) world.step();
+    const snap = world.snapshot();
+    world.free();
+    expect(snap.machine.left.suspension.damping).toBe(0);
+    expect(snap.machine.right.suspension.damping).toBe(0);
+    expect(snap.machine.left.suspension.bottomed).toBe(0);
+    expect(snap.distance).toBeLessThan(0.01);
+  });
+
+  it("knocks on the side that took the rut, and not on the other", () => {
+    // The card's whole claim, at the level the sound is a rendering of. One
+    // bank, under the left track only: the left side's dampers do the work and
+    // the right side's have nothing to do. Nothing else on the machine can
+    // say which side something happened on — the accelerometer is one reading
+    // for the whole hull, and an impact does not know where it landed.
+    const world = createWorld({
+      terrain: makeRutTerrain(0.22),
+      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+    });
+    let left = 0;
+    let right = 0;
+    for (let i = 0; i < 15 * 60; i++) {
+      world.step();
+      const m = world.snapshot().machine;
+      left = Math.max(left, m.left.suspension.damping);
+      right = Math.max(right, m.right.suspension.damping);
+    }
+    world.free();
+    // Measured: 933 W on the left against 362 W on the right. The right is not
+    // *nothing*, and should not be — a bank under one track rolls the machine,
+    // and rolling travels the other side's springs too. It is the difference
+    // that carries the cue: through the voice's square root that is about six
+    // decibels, which is a knock plainly on one side rather than in front of
+    // you.
+    expect(left).toBeGreaterThan(700);
+    expect(left).toBeGreaterThan(right * 2);
+  });
+
+  it("takes the ground it drives over, and takes it harder the faster you go", () => {
+    // The suspension answers to the ground rather than to the drivetrain: the
+    // same rut, crossed at a crawl, is a fraction of the work. Measured over
+    // the default site: 735 W at the ninetieth percentile at full ahead and
+    // 7 W at a crawl.
+    const worked = (speed: number) => {
+      const world = createWorld({
+        terrain: makeRutTerrain(0.22),
+        modules: [fixedLevers(speed, speed)],
+      });
+      let peak = 0;
+      for (let i = 0; i < 25 * 60; i++) {
+        world.step();
+        const m = world.snapshot().machine;
+        peak = Math.max(peak, m.left.suspension.damping);
+      }
+      world.free();
+      return peak;
+    };
+    expect(worked(MAX_TRACK_SPEED)).toBeGreaterThan(worked(0.35) * 2);
+  }, 60_000);
+
+  it("hangs, rather than reading a compressed spring, with no ground under it", () => {
+    // A track in the air has no travel and no load, and the pair of readings
+    // has to say so together: zero compression is a wheel at full droop, and
+    // it is the only honest thing to report when the ray finds nothing.
+    const world = createWorld({
+      terrain: makeRampTerrain(55, 5),
+      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+    });
+    for (let i = 0; i < 20 * 60; i++) world.step();
+    const m = world.snapshot().machine;
+    world.free();
+    for (const side of [m.left, m.right]) {
+      if (side.contacts > 0) continue;
+      expect(side.suspension.compression).toBe(0);
+      expect(side.suspension.damping).toBe(0);
+      expect(side.suspension.bottomed).toBe(0);
+    }
+  }, 60_000);
 });
 
 describe("tank steering", () => {
@@ -189,29 +293,49 @@ describe("grades, and where traction runs out", () => {
 
   it("runs out of margin before it runs out of grip — why the dash shows both", () => {
     // The load-bearing claim behind putting traction and slip on one head
-    // instead of keeping slip alone. On a hard-but-climbable grade the machine
-    // is nearly out of friction and has *not* started sliding: the traction
-    // reading says so and the slip reading says nothing. Delete this property
-    // and the panel has no instrument that warns before the failure.
-    const world = createWorld({
-      terrain: makeRampTerrain(40, 5),
-      modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
-    });
-    for (let i = 0; i < 60; i++) world.step();
-    let warned = 0;
-    let steps = 0;
-    for (let i = 0; i < 20 * 60; i++) {
-      world.step();
-      const m = world.snapshot().machine;
-      const use = Math.max(m.left.traction ?? 0, m.right.traction ?? 0);
-      const slip = Math.max(Math.abs(m.left.slip), Math.abs(m.right.slip));
-      steps++;
-      if (use > 0.8 && slip <= SLIPPING) warned++;
-    }
-    world.free();
-    // Measured at about two-thirds of the climb. Well clear of a fluke.
-    expect(warned / steps).toBeGreaterThan(0.4);
-  });
+    // instead of keeping slip alone: as the ground gets harder, the machine is
+    // out of *friction* before it is out of *grip*. Delete this property and
+    // the panel has no instrument that warns before the failure.
+    //
+    // Stated as the two thresholds crossing rather than as a fraction of steps
+    // at one chosen grade, which is what it used to be — and which was an
+    // accident of layout waiting to happen. It duly happened: the springs
+    // transfer weight off the front bogies on a climb, so they saturate while
+    // the rear ones still have margin and the machine slides at a gentler
+    // grade than before. Measured as a fraction of steps, the old assertion
+    // read 0.78 at 34°, 0.04 at 35° and 0.77 at 36° — a coin toss on which
+    // side of `SLIPPING` the median step fell, testing nothing.
+    const at = (degrees: number) => {
+      const world = createWorld({
+        terrain: makeRampTerrain(degrees, 5),
+        modules: [fixedLevers(MAX_TRACK_SPEED, MAX_TRACK_SPEED)],
+      });
+      for (let i = 0; i < 60; i++) world.step();
+      const traction: number[] = [];
+      const slip: number[] = [];
+      for (let i = 0; i < 15 * 60; i++) {
+        world.step();
+        const m = world.snapshot().machine;
+        traction.push(Math.max(m.left.traction ?? 0, m.right.traction ?? 0));
+        slip.push(Math.max(Math.abs(m.left.slip), Math.abs(m.right.slip)));
+      }
+      world.free();
+      const median = (xs: number[]) =>
+        xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? 0;
+      return { traction: median(traction), slip: median(slip) };
+    };
+
+    const grades = [20, 26, 30, 34, 38, 42];
+    const climbs = grades.map(at);
+    const firstOver = (pick: (c: { traction: number; slip: number }) => boolean) =>
+      grades[climbs.findIndex(pick)] ?? Number.POSITIVE_INFINITY;
+
+    const outOfMargin = firstOver((c) => c.traction > 0.8);
+    const sliding = firstOver((c) => c.slip > SLIPPING);
+    // Measured: 34° for the first, 38° for the second. Four degrees of grade
+    // in which the machine is telling you it is about to let go, and has not.
+    expect(outOfMargin).toBeLessThan(sliding);
+  }, 60_000);
 
   it("cannot climb past the friction limit, and ends up back down", () => {
     const gentle = climb(15, 20).gained;

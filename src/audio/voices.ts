@@ -478,6 +478,99 @@ export function squeakVoice(track: TrackState, house: SoundHouse): SqueakVoice {
   };
 }
 
+/* -- the bogies ------------------------------------------------------------ */
+
+/**
+ * The running gear taking the ground — **the knock a rut makes**.
+ *
+ * This voice was refused once, on the record, and the refusal is worth keeping
+ * because it is the rule working: a suspension knock could not be built while
+ * nothing simulated suspension travel, because a voice with no quantity behind
+ * it is a sound effect wearing a simulation's clothes (`docs/design/sound.md`).
+ * The way to get it was never to relent, it was to build the springs.
+ *
+ * So the quantity is **the watts a side's dampers are dissipating**
+ * (`core/snapshot.ts`), and choosing the damper rather than the spring is the
+ * whole of the design:
+ *
+ * - a **spring** stores energy and gives it back. It is loudest exactly when
+ *   the machine is heaviest — parked — and a voice keyed to it would drone at
+ *   a machine standing still on a level pad.
+ * - a **damper** turns energy into heat, and it can only do that while the
+ *   wheel is moving against the frame. It is silent parked, silent on a graded
+ *   pad at any speed, and it spikes at the instant a bogie is driven up into
+ *   its travel. That is the noise, and it needed no threshold to find it.
+ *
+ * It is **per side**, which is the point of the card: the ear can hear which
+ * track took the rut, because that track's dampers are the ones doing the
+ * work. Nothing else on the machine can say that — the rattle is centred by
+ * design, and an impact does not know it happened to one side (L-060).
+ */
+export interface BogieVoice {
+  readonly gain: number;
+  readonly hz: number;
+  readonly q: number;
+}
+
+/**
+ * The range the running gear works over, watts per side, **measured**.
+ *
+ * A probe drove the machine 80 m across the default site at full ahead and
+ * recorded both sides' damper power every step. Parked reads exactly zero,
+ * which is the check that the derivation is right, and a crawl over the same
+ * ground reaches 7 W at the ninetieth percentile — the undercarriage is
+ * genuinely quiet when it is not being asked anything. At working speed the
+ * median step is 192 W, the ninetieth is 735 and the ninety-ninth is 3400,
+ * with the worst single step at 13 kW.
+ *
+ * So the floor sits at the median — half the steps of an ordinary drive say
+ * something — and the ceiling at the ninety-ninth, which leaves the worst one
+ * per cent saturated and the rare 13 kW slam sharing a level with them. That
+ * is deliberate: past the top of this range the bogie is on its stop, and what
+ * distinguishes those is timbre rather than level.
+ */
+const BOGIE_FLOOR = 200;
+const BOGIE_FULL = 3400;
+/**
+ * Set on the bench, for the bandwidth reason at `SQUEAK_GAIN` — **the fifth
+ * time that lesson has been paid for in this file**, and the first time the
+ * bench could not see the bill.
+ *
+ * Written at 0.85 first, which is a sensible-looking number for a band 140 Hz
+ * wide out of a 22 kHz noise floor and is about a tenth of what it needs to be.
+ * The null test — silence it and see whether anything changes — reported peak
+ * 0.634 against 0.606 and an *identical* RMS, so by the bench's own numbers the
+ * voice did not exist. It did; the bench was measuring channel 0's peak, and a
+ * scene's loudest instant is loud on both channels. What was missing was an
+ * instrument for **sides**, which is the one thing this voice is for. With one
+ * (`sandbox/listen.ts`) the same pair reads 0.008 silenced against 0.048 at
+ * this level, at the exact seconds the scene puts the ruts.
+ *
+ * The level itself is then a mix decision with one constraint: a bogie hitting
+ * its stop is a big noise and it happens **under you**, but the site still has
+ * to be the loudest thing in the exercise. At 2.0 `the-rut` peaked 0.72 against
+ * `the-site`'s 0.62, which is a rut out-shouting a quarter-tonne of steel pipe.
+ * At this it peaks 0.64, just above it, and nothing anywhere clips.
+ */
+const BOGIE_GAIN = 1.6;
+
+export function bogieVoice(track: TrackState, house: SoundHouse): BogieVoice {
+  const gear = house.gear;
+  const { damping, bottomed } = track.suspension;
+  const over = clamp01((damping - BOGIE_FLOOR) / (BOGIE_FULL - BOGIE_FLOOR));
+  // How much of the side is on the rubber. It moves the voice up toward the
+  // stop's own ring and **never** moves the level: how hard the ground hit you
+  // is the watts, and having run out of travel is what it sounds like.
+  const stopped = clamp01(bottomed / 6);
+  return {
+    // Square root, as everywhere else that maps a physical quantity to a
+    // level: amplitude against energy.
+    gain: BOGIE_GAIN * Math.sqrt(over),
+    hz: gear.bogieHz + stopped * (gear.stopHz - gear.bogieHz),
+    q: gear.bogieQ,
+  };
+}
+
 /* -- the rattle ------------------------------------------------------------ */
 
 /**
@@ -500,19 +593,31 @@ export interface RattleVoice {
 }
 
 /**
- * The range the cab rattles over, m/s³, measured rather than chosen.
+ * The range the cab rattles over, m/s³, measured rather than chosen — and
+ * **re-measured when the running gear got springs**, because they changed it.
  *
- * A probe drove the real machine over the default site and recorded the jerk at
- * every step. Parked reads **exactly zero**, which is the check that the whole
- * derivation is right. Driving is not a smooth signal at all: at full ahead the
- * median step is 4, the seventy-fifth percentile is 49, the ninetieth is 416
- * and the tail runs to 5000. The ride is *mostly nothing, punctuated*, which is
- * what a rattle is — so the floor sits above the hum of an ordinary crawl and
- * the ceiling sits an order of magnitude below the worst slam. Everything past
- * the ceiling is a landing, and the hull event already has that.
+ * A probe drove the machine over the default site and recorded the jerk at
+ * every step. Parked reads exactly zero, which is the check that the whole
+ * derivation is right. Driving is not a smooth signal at all: it is *mostly
+ * nothing, punctuated*, which is what a rattle is.
+ *
+ * What the springs did to that is the clearest number in this file. On a rigid
+ * undercarriage the ninetieth-percentile step was a jerk of **416**; on bogies
+ * it is **23** — eighteen times less — with the median almost unchanged at 4.
+ * The suspension is not smoothing the ride evenly, it is taking the *knocks*
+ * out of it, which is exactly what a suspension is for and exactly what the
+ * ninetieth percentile measures.
+ *
+ * So the cab got quiet, and the sensible response is not to turn it back up:
+ * it is to notice that **the ground now speaks twice**, loudly at the running
+ * gear (`bogieVoice`) and faintly in the cab, filtered by the very thing that
+ * separates them. These two numbers are refitted to keep the *shape* the old
+ * pair had — a floor a little above the median so an ordinary drive mutters
+ * rather than hisses, and a ceiling at the ninety-ninth so only a real slam
+ * saturates. Everything past it is a landing, and the hull event has that.
  */
-const RATTLE_FLOOR = 25;
-const RATTLE_FULL = 1200;
+const RATTLE_FLOOR = 10;
+const RATTLE_FULL = 160;
 /** Ten times the drive note's, for the bandwidth reason at `SQUEAK_GAIN`. */
 const RATTLE_GAIN = 1.0;
 
