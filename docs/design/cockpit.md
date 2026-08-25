@@ -169,10 +169,18 @@ between the windscreen and the rack, so looking past it puts it overhead. It is
 one object at one height, and the dash and the rack together are one deck.
 
 The levers themselves are **sticks**, not sliders: a shaft up through a rubber
-boot on a bolted plate, with a moulded grip, moving in a gate with a notch at
-neutral. Same place, same throw, same dead zone — but principle 7 says the cab is
-the real thing you are sitting in, and a slider is a thing on a screen. Pulled
-back is drawn slightly larger, because pulled back is nearer your chest.
+boot, a moulded grip, and a machined mark at neutral. Same place, same throw,
+same dead zone — but principle 7 says the cab is the real thing you are sitting
+in, and a slider is a thing on a screen. Pulled back is drawn slightly larger,
+because pulled back is nearer your chest.
+
+And they have **no housing**. They come up out of the dashboard and stand in the
+open in front of the glass, with their feet behind the panel — a box with a
+border around a control is the last thing left of a widget, and a real travel
+lever is bolted to the console it comes out of. What is left is the hardware:
+shaft, grip, boot, detent. The readout under each lever went with the box; the
+throw is legible as a *position* now, and the panel carries what the tracks are
+actually doing.
 
 The consequence worth keeping: **the levers go with the glass.** Looking down
 puts your hands in the cabinet, not on the controls. The bus keeps carrying

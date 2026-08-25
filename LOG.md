@@ -21,6 +21,38 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — the levers lose their box, and a hand that never let go
+
+Cards: none. [L-051] narrowed again. Merged branches cleaned up — see below.
+
+**A bezel is the last thing left of a widget.** The levers had a housing: a box
+with a border, a background and a slot milled into it. Against a photograph of a
+real cab it is obvious what is wrong — a travel lever stands in the open, in
+front of the glass, bolted to the console it comes out of. So the box is gone.
+The sticks now rise out of the dashboard with their feet behind the panel (the
+deck paints over them, which is the whole trick: a stick that stops cleanly above
+the panel is a stick *resting* on it), the gate went with the housing since there
+is nothing left to cut a slot into, and what remains is shaft, grip, boot and a
+machined mark at neutral so HALT is still a place rather than a number.
+
+The per-lever readout went too. The throw is legible as a position now, the dash
+carries what the tracks are doing, and a label floating on the glass was the last
+piece of UI in a view that is trying to be a cockpit. Longer travel while we were
+here — a housing wants to be compact and a lever wants to be long.
+
+**Found by looking, again, and it was a real defect.** The bench pressed a lever
+and panned the view instead. The cause was not the lever: the *previous* gesture
+had dragged off the left edge of the window, so the canvas never saw its
+`pointerup` and went on believing a hand was on the glass. Before the neck was
+sprung that only meant a look you had to undo. Sprung, it means the cab is parked
+over your shoulder permanently, and a thumb leaving the glass mid-swipe is not an
+edge case on a phone — it is how swipes end. The canvas captures the pointer now,
+and treats a lost capture as a released hand.
+
+Every branch in the repo is merged into `main`; four are dead and this
+environment's git proxy answers 403 to a ref delete, so they need deleting from
+the GitHub UI or a machine with credentials.
+
 ## 2026-08-25 — a cab that goes round you, and levers you can hold
 
 Cards: none closed. [L-051] narrowed — the cab furniture has geometry now and

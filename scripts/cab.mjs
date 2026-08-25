@@ -269,6 +269,20 @@ if (!filter || LOOKS.some(([name]) => name.includes(filter))) {
     await page.waitForTimeout(5600);
     await page.screenshot({ path: `${OUT}app-nag.png` });
     written++;
+
+    // A lever pushed forward, held. Two things at once: the stick is where the
+    // throw says it is — the pointer maths reads the same box the shaft is
+    // drawn in — and the machine has started moving because of it.
+    const stick = await page.locator('[aria-label="L TRACK"]').boundingBox();
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height * 0.14, {
+      steps: 5,
+    });
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${OUT}app-lever.png` });
+    await page.mouse.up();
+    written++;
   }
 }
 

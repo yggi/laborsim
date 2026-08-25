@@ -423,7 +423,13 @@ $effect(() => {
     const pointers = new Map<number, { x: number; y: number }>();
     const down = (e: PointerEvent) => {
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // The neck is sprung, and a hand on the glass is what holds it.
+      // **Capture, or the spring never lets go.** A thumb that leaves the glass
+      // mid-swipe — off the edge of the phone, onto the dash, onto a pod — takes
+      // its `pointerup` with it, and the canvas is left believing a hand is
+      // still on it. Before the neck was sprung that only meant a look you had
+      // to undo; now it means a cab parked over your shoulder for good. Capture
+      // makes every event for this pointer come back here whatever it is over.
+      canvas.setPointerCapture(e.pointerId);
       viewport.hold(true);
     };
     const up = (e: PointerEvent) => {
@@ -444,6 +450,10 @@ $effect(() => {
     canvas.addEventListener("pointermove", drag);
     canvas.addEventListener("pointerup", up);
     canvas.addEventListener("pointercancel", up);
+    // The belt to the braces: a capture can be broken from outside (a system
+    // gesture, another element taking it), and a lost capture is a released
+    // hand as far as the neck is concerned.
+    canvas.addEventListener("lostpointercapture", up);
 
     // `:root`, not the shell: the sweep is written imperatively every frame and
     // the shell's `style` attribute belongs to Svelte, which would overwrite it
@@ -493,6 +503,7 @@ $effect(() => {
       canvas.removeEventListener("pointermove", drag);
       canvas.removeEventListener("pointerup", up);
       canvas.removeEventListener("pointercancel", up);
+      canvas.removeEventListener("lostpointercapture", up);
       root.style.removeProperty("--cab-look-x");
       root.style.removeProperty("--cab-look-y");
       viewport.dispose();
@@ -919,10 +930,14 @@ $effect(() => {
 
   /* Bottom corners, because that is where thumbs are — but above the dash,
      which owns the very bottom of the glass. */
+  /* The levers come *out of* the dash. Their feet run below its top edge and the
+     deck paints over them, which is the whole trick: a stick that stopped
+     cleanly above the panel is a stick resting on it. Hence the z-index below
+     the deck's — and above the cage, which it is bolted in front of. */
   .levers {
     position: fixed;
-    bottom: calc(var(--cab-dash-h) + 14px);
-    z-index: 3;
+    bottom: calc(var(--cab-dash-h) - 22px);
+    z-index: 1;
     /* Bolted to the cab like everything else: look away and your hands go out
        of shot. You cannot find a touchscreen lever by feel, which is the cost
        of a glance and the reason the view comes back on its own. */

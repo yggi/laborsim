@@ -3,12 +3,18 @@
  * One track lever. Two of these, one per thumb, is the whole of rung 1's
  * control surface — tank steering, and you fight it to drive straight.
  *
- * It is a **stick**, not a slider: a shaft coming up out of the console through
- * a rubber boot, with a grip on the end and a gate it moves in. That is not
- * decoration. Principle 7 says the world may look like a simulation because it
- * *is* one, and the cab may not — the cab is the real thing you are sitting in,
- * and a slider is a thing on a screen. Nothing about how it is operated changed:
- * same place, same throw, same dead zone.
+ * It is a **stick**, not a slider: a shaft coming up out of the dashboard
+ * through a rubber boot, with a grip on the end. That is not decoration.
+ * Principle 7 says the world may look like a simulation because it *is* one, and
+ * the cab may not — the cab is the real thing you are sitting in, and a slider is
+ * a thing on a screen. Nothing about how it is operated changed: same place,
+ * same throw, same dead zone.
+ *
+ * **No housing.** It had a bezel — a box with a border and a background — and a
+ * box is the last thing left of a widget. A real travel lever stands in the
+ * open, in front of the glass, bolted to the console it comes out of, and that
+ * is the whole difference between an overlay and a cockpit. What is left is a
+ * shaft, a grip, a boot, and the detent mark that makes HALT a place.
  *
  * Behaviour, decided deliberately and not a default:
  *   - grab on touch, move on drag, **stay where dropped**. Nothing
@@ -91,9 +97,9 @@ const gripScale = $derived(1 - value * 0.08);
     onpointerup={release}
     onpointercancel={release}
   >
-    <!-- The gate the shaft runs in, and the notch that makes HALT a place on it
-         you can see rather than a number you aim at. -->
-    <div class="gate"></div>
+    <!-- The notch that makes HALT a place on the throw you can see rather than a
+         number you aim at. All that is left of the gate: without a housing there
+         is nothing for a slot to be cut into. -->
     <div class="detent"></div>
 
     <!-- The stick: this box spans from the grip down to where the shaft enters
@@ -105,85 +111,66 @@ const gripScale = $derived(1 - value * 0.08);
       </div>
     </div>
 
-    <!-- Where it comes through the deck: a rubber gaiter on a bolted plate. -->
+    <!-- Where it goes through the deck. Its lower half is behind the dash, which
+         is what makes the lever come *out of* the panel rather than sit on it. -->
     <div class="boot"></div>
-    <div class="plate"></div>
-  </div>
-  <div class="label">{label}</div>
-  <div class="value" class:halt={value === 0}>
-    {value === 0 ? "HALT" : (value > 0 ? "+" : "") + value.toFixed(2)}
   </div>
 </div>
 
 <style>
   .lever {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
     touch-action: none;
   }
-  /* Same footprint as the slider it replaces: the hands do not move because the
-     furniture got real. */
+  /* The reach, not a housing: a box the size of a thumb's travel with nothing
+     drawn in it. Same footprint as the bezel it replaces, so the hands do not
+     move because the furniture became real. */
   .console {
     position: relative;
     width: 58px;
-    height: 168px;
-    background: linear-gradient(180deg, #1d2224 0%, #15191b 60%, #0f1315 100%);
-    border: 1px solid #333a3b;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 0 0 3px #0d1012;
+    /* Taller than the bezel was. A housing wanted to be compact; a lever wants
+       to be long, because the throw is the control and a short one is fiddly.
+       The pointer maths reads this box, so the travel grew with it. */
+    height: 196px;
     touch-action: none;
-    overflow: hidden;
   }
-  .dragging .console {
-    border-color: #6fe3c4;
-  }
-  /* A milled slot, dark because it is a hole. */
-  .gate {
-    position: absolute;
-    left: 50%;
-    top: 10%;
-    bottom: 26px;
-    width: 7px;
-    transform: translateX(-50%);
-    border-radius: 4px;
-    background: #080b0c;
-    box-shadow:
-      inset 0 2px 3px rgba(0, 0, 0, 0.9),
-      0 1px 0 rgba(255, 255, 255, 0.06);
-  }
+  /* The notch at neutral, cut into nothing — a machined mark beside the shaft.
+     Short, because it is a mark on a console and not a line across a widget. */
   .detent {
     position: absolute;
-    left: 12px;
-    right: 12px;
+    left: 10px;
+    width: 10px;
     top: 50%;
     height: 2px;
     transform: translateY(-50%);
-    background: #6d7a76;
-    opacity: 0.5;
+    background: linear-gradient(90deg, rgba(190, 205, 200, 0.55), transparent);
+  }
+  .dragging .detent {
+    background: linear-gradient(90deg, #6fe3c4, transparent);
   }
   .stick {
     position: absolute;
     left: 50%;
-    /* Ends inside the boot rather than at the plate: a shaft that stopped where
+    /* Ends inside the boot rather than at its mouth: a shaft that stopped where
        the rubber starts would look like it was resting on it. */
-    bottom: 22px;
-    width: 12px;
+    bottom: 16px;
+    width: 10px;
     transform: translateX(-50%);
+    /* Standing in the open, against sky or against ground — so it carries its
+       own shadow, the way a real object in a cab does. */
+    filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.55));
   }
   /* Turned steel, lit from the left like everything else in the cab. */
   .shaft {
     position: absolute;
-    inset: 0 3px;
+    inset: 0 2px;
     background: linear-gradient(
       90deg,
-      #14181a 0%,
-      #5c6669 30%,
-      #8c9698 42%,
-      #454e51 62%,
-      #12171a 100%
+      #10141600 0%,
+      #191e21 6%,
+      #59636a 34%,
+      #8b979b 46%,
+      #3f484c 66%,
+      #12171a 96%
     );
     border-radius: 1px;
   }
@@ -191,25 +178,22 @@ const gripScale = $derived(1 - value * 0.08);
     position: absolute;
     top: 0;
     left: 50%;
-    width: 28px;
-    height: 32px;
-    transform: translate(-50%, -60%);
+    width: 26px;
+    height: 34px;
+    transform: translate(-50%, -62%);
     /* A moulded handgrip: round over the top, squarer where the hand sits. */
-    border-radius: 14px 14px 9px 9px;
+    border-radius: 13px 13px 8px 8px;
     background:
-      radial-gradient(ellipse at 32% 22%, rgba(255, 255, 255, 0.22), transparent 55%),
-      linear-gradient(90deg, #171c1e 0%, #3f4749 34%, #2b3234 66%, #101416 100%);
-    border: 1px solid #0a0d0e;
-    box-shadow:
-      0 3px 6px rgba(0, 0, 0, 0.55),
-      inset 0 -6px 8px rgba(0, 0, 0, 0.45);
+      radial-gradient(ellipse at 32% 20%, rgba(255, 255, 255, 0.24), transparent 55%),
+      linear-gradient(90deg, #12171a 0%, #3d4548 32%, #282f31 64%, #0d1113 100%);
+    box-shadow: inset 0 -7px 9px rgba(0, 0, 0, 0.5);
   }
   /* The moulded ribs a thumb sits between. Worn shinier than the rest. */
   .knurl {
     position: absolute;
     left: 5px;
     right: 5px;
-    top: 13px;
+    top: 14px;
     height: 13px;
     background: repeating-linear-gradient(
       180deg,
@@ -223,44 +207,17 @@ const gripScale = $derived(1 - value * 0.08);
   .boot {
     position: absolute;
     left: 50%;
-    bottom: 9px;
-    width: 30px;
-    height: 20px;
+    /* Standing proud of the panel, not flush with it: a couple of centimetres
+       of rubber above the deck is what says the shaft goes *through* it. The
+       rest is behind the dash, where it belongs. */
+    bottom: 12px;
+    width: 28px;
+    height: 28px;
     transform: translateX(-50%);
-    clip-path: polygon(28% 0, 72% 0, 100% 100%, 0 100%);
+    clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
     background:
-      repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0 2px, transparent 2px 5px),
-      linear-gradient(90deg, #0e1112 0%, #2a3032 45%, #171b1d 100%);
-  }
-  /* The plate it is bolted to, proud of the console like every other plate. */
-  .plate {
-    position: absolute;
-    left: 6px;
-    right: 6px;
-    bottom: 0;
-    height: 11px;
-    background: linear-gradient(180deg, #3a4245 0%, #232a2c 100%);
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.5);
-  }
-  .plate::after {
-    content: "";
-    position: absolute;
-    inset: 0 5px;
-    background:
-      radial-gradient(circle at 0% 50%, #737d7f 0 1.4px, transparent 1.8px),
-      radial-gradient(circle at 100% 50%, #737d7f 0 1.4px, transparent 1.8px);
-  }
-  .label,
-  .value {
-    font: 9px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.12em;
-    color: #6d7a76;
-  }
-  .value {
-    color: #c6d0cb;
-  }
-  .value.halt {
-    color: #6d7a76;
+      repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0 2px, transparent 2px 5px),
+      linear-gradient(90deg, #0b0e0f 0%, #262c2e 42%, #14181a 100%);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
   }
 </style>
