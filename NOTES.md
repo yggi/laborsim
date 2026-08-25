@@ -46,7 +46,10 @@ driver went ten minutes without touching anything, because 130 props sit in six
 clusters the route never passes. A site-design problem, not a damage one. The
 composed-not-scattered half is carded (L-039, L-027); what stays a thread is what
 "composed" means **as a generator** — footing, clearances, an unsurveyed
-obstruction on the route you were actually given.
+obstruction on the route you were actually given. **Footing turned out to be
+literal**: most of the furniture cannot stand on the ground it is placed on and
+is lying flat before the exercise starts (measured; L-057). A generator that
+cannot put a pole somewhere it stays upright is not composing anything.
 
 ## Does equal-share normal load hold up for the load chart?
 
@@ -81,13 +84,6 @@ subject, and it is the expensive part. The friction model can already express
 most of it, which is suspicious in a good way. Not v0; do not let the reset
 design (L-038) foreclose it.
 
-## Friction feel — props seem to "float"
-
-Hull skate is fixed; this half is not diagnosed. Candidates: the settled rest gap
-between a box collider and bilinear placement height; too little contact shadow;
-or the toon material flattening the ground seam. Measure the actual rest gap
-before theorising further (META: ask the sim what it computed).
-
 ## Pods on arms — deferred, and deliberately separated
 
 Instruments should be **clamped to the cage** and move on screen as you look
@@ -96,5 +92,6 @@ off from the triptych work on purpose, because it drags in three things that are
 each their own decision: look angle has to reach the DOM without going through
 Svelte reactivity; L-008's placement rules move from screen space into cage
 space, where the bound becomes the reach of the arm rather than the screen edge;
-and the view-recentring QoL is entangled with it. None of it is blocked — it is
-just a different problem than "what does a component look like."
+and the view-recentring QoL is entangled with it. Cheaper now than it was:
+`cockpit/Glass.svelte` is the one file that has to learn look angle, and
+placements are already one record keyed by component id.

@@ -6,8 +6,10 @@ Not plans, not open questions.
 **Gate: 1000 lines.** On overflow, cut the oldest year into `docs/log/<year>.md`
 and link it from the archive list below.
 
-Archives: `docs/log/2026-early.md` — the scaffolding and rung 1, up to and
-including the first deploy.
+Archives:
+- `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first deploy.
+- `docs/log/2026-mid.md` — the cab: the pipeline rack, the damage ledger, the
+  dash and the triptych.
 
 Entry format:
 
@@ -18,6 +20,96 @@ What happened, in past tense. Anything tried and rejected, and why.
 ```
 
 ---
+
+## 2026-08-25 — the pod joins the registry, and the seam moves
+
+Cards: closed [L-059]. Opened: [L-057], [L-058]. Threads closed: "props seem to
+float".
+
+**The triptych was two-thirds built.** `parts.ts` registered a component's plate
+and its cell; the pod — the instrument on the glass, the part that costs you view
+— was hand-wired into `App.svelte` as a branch per component, a named position
+variable per component, a title spelled out as a string, and a live `Autonav`
+reference held so the route scope could call `setTarget`. Fitting a component
+with an instrument therefore meant editing the application shell, which is the
+exact defect the registry was built to kill. L-049 has been sitting in `ready`
+asking three blind authors for a maker's plate, cell **and pod**, with nowhere
+for the third one to go.
+
+**One packet per component, not one table per part.** Cells, faces, rack units
+and fuse ratings each had their own `Record` keyed by the same id. They are one
+`Packet` now: what you unpack when you buy the kit, what an author is asked to
+produce, and the single place a component is registered. Unregistered kit still
+gets the base-case cell and now explicitly *no* pod — a dash missing a component
+is lying, but the registry may not invent an instrument on a maker's behalf.
+
+**One contract for all three postures.** Every part is handed the slot it is
+drawn from and the style it is drawn in. Both pods were doing that work
+themselves — `stages.find(s => s.id === "NAV")` and a hardcoded
+`styleOf("TOWA DENKI")` — so neither could be drawn for anything but itself, and
+no maker could re-skin its own instrument. Greps now fail if a part asks for
+either.
+
+**Commands cross back through one channel.** `Controls` is `toggle` and
+`setParam`, handed to a part exactly as its stage is, and inert for a component
+that is not in the live rack — which is what a replay gets. NAV-1's target was
+the last control reachable only by holding the module, so it became what it
+always was: a bounded number with a name and a unit. `setTarget` is gone. The
+visible cost is a TARGET slider on NAV-1's faceplate, and that is the honest
+consequence — the scope is a faster way to do what the plate does, not a second
+wire into the module.
+
+Rejected on the way: giving `FaceProps` a `controls` for symmetry. A face has
+nothing to command — settings are the slot's business — and a container before
+its contents is furniture (META).
+
+**The seam moved.** `MEMORY.md` § 11 claimed `cockpit/` held the instruments and
+`ui/` the shell; in fact every instrument lived in `ui/` while its own
+primitives sat in `cockpit/`. The line is now **the machine against the rig**:
+manufacturers' work in `cockpit/`, the training system's work — debrief, live
+voice, debug telemetry, shell — in `ui/`. Eight files moved; three stayed, now
+for a reason.
+
+That exposed two scanners scoped by accident, which is the `META.md` lesson
+about the `:global` ban landing where nothing was watching. Both style bans now
+scan all of `src/`; the `--mfg-` rule became **two namespaces and no more**
+(`--mfg-` a maker's token, `--cab-` the machine's own structure), because Svelte
+scopes classes and not custom properties. And the half that bites: every
+property something *reads* must be defined, unless it is a `--mfg-` offer with a
+fallback — renaming `--dash-h` had already left a stale `var(--dash-h, 128px)`
+in the toasts, which reads as working.
+
+Bookkeeping, all of it forced rather than chosen: `MEMORY.md` hit 309 and lost
+its § 9 Rapier paragraph to `docs/design/stack.md`, where the same text already
+was, and its coding conventions to a new `docs/design/conventions.md` — each one
+now carries the bug that earned it, which the four-bullet version had lost.
+`META.md` hit 152, so *look at the numbers* and *ask what ran before your first
+observation* merged into **suspect the probe before the system** — they are the
+same lesson and the second one is the harder instance — and *one fact, one
+place* left for `conventions.md`, where both its incidents live. `LOG.md` hit
+1055 and the cab's fortnight went to `docs/log/2026-mid.md`.
+
+**Measured the "props float" thread instead of arguing about it.** The rest gap
+under a settled prop is **1 mm at the median** (n=102, lowest oriented corner
+against the terrain sample beneath it), so the float is not a gap and never was:
+what is left is the ground seam, which is rendering, and is now L-058.
+
+The probe found something much worse on the way, and three wrong turns getting
+there. First reading said poles were being *launched* — flipped over and moved
+40 cm in a single step — which is impossible, and was: `createWorld` runs 120
+settle steps before anything is observable, so "after one step" was never the
+spawn state. Second, the obvious cause — furniture placed by sampling the ground
+under its *centre*, so a 2.4 m barrier on a 15° bank is born 32 cm inside the
+hill — was fixed, measured, and **made it worse**: standing a box on the highest
+point of its own footprint drops it onto one corner, and cones toppled 10 → 23.
+Reverted. What is actually happening is the boring answer: everything stands for
+ten steps and then falls over, because a 3 m pole with a 0.16 m base cannot
+stand on 20° noise. **Seventeen of eighteen marker poles, sixteen of
+twenty-two barriers and ten of forty-five cones are lying flat before the
+exercise begins**, inside the settle window where nobody could see them. Carded
+as L-057; the fix is footing in the site generator, not a number in the sim, and
+the comment in `world.ts` that called this "a small settling twitch" now says
+what it really is.
 
 ## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
 
@@ -718,258 +810,3 @@ Also: maker marks and silkscreen ratings per manufacturer, and an
 **undercarriage** — the 0.42 m belly clearance is real, and with nothing drawn
 in it the tracks read as detached, which is exactly how the first roll-over
 screenshot looked.
-
-## 2026-08-23 — TILT-GUARD, and the rack becomes equipment
-
-Cards: [L-036] [L-037] closed · [L-039] [L-038] [L-040] opened · [L-035]
-demoted · [L-008] [L-015] reworded
-
-**v0's build surface is the rack — confirmed**, and with it the shape of edit
-mode: **inline, in the cab, while it runs.** Instruments moved around the glass;
-modules swapped, reordered and reconfigured in the rack. No separate build
-screen in v0. The NOTES thread closed into `MEMORY.md` § 3.
-
-**TILT-GUARD** — the first safety component, and the second honestly stupid one.
-Caps drive on hull pitch and roll; limits are two sliders on its faceplate.
-
-- Verb **AMP**, and the reasoning is the interesting part. `CAP` clamps a
-  positive intent into the arriving signal's *magnitude*, so a reversing machine
-  would come out going forward — the safety module causing the crash it exists
-  to prevent. `AMP` scales what arrived and keeps the sign. Both directions are
-  under test, and reverting the verb makes the test fail.
-- Attitude comes out of the quaternion as **sines**, not through `asin` — pure
-  arithmetic, so rule 2 holds without an exemption. The one exemption is the
-  degrees→sine conversion of the slider value, quantized to 1e-6 exactly as
-  `makeRampTerrain` does.
-- It ships **enabled** and deliberately timid: 25° pitch against a 43.5° climb
-  limit. Discovering that the thing which stopped you halfway up a hill is your
-  own machine being careful — and then finding its LED — is the best first
-  lesson rung 1 has.
-
-**Module settings** are now a thing modules can have: bounded numbers with
-units, on the faceplate. Explicitly *not* gains — the parameter model cannot
-express one, which is the gain-tuning trap (NOTES) being closed off by
-construction rather than by discipline.
-
-**The rack is a server rack**, not a DIN rail: ears, screws, and a house style
-per manufacturer — KIBA WORKS (chassis yellow), TOWA DENKI (navigation, centred)
-and HANSA REGELTECHNIK (safety, orange, boxed). Cosmetic, and it does real work:
-you find the orange plate, not the third row down.
-
-Also: **ATT-0**, a combined compass/attitude head, the one instrument the bare
-chassis ships. TILT-GUARD's two banded gauges, whose red/amber/green *are* its
-limits rather than a mood. The rack toggle became a **control-panel cover** at
-the seam it opens. The camera became an **item in the instrument column** rather
-than chrome. Tracks are belts wrapped round their wheels instead of boxes — the
-collider stays a box, deliberately, and the mismatch is documented where it is.
-Terrain is steeper.
-
-**One bug worth the entry.** The PILOT faceplate rendered 7 px tall with lint,
-types and 71 tests green. Two rounds of re-reading the stylesheet found nothing;
-one `getComputedStyle` dump found it instantly — the KIBA layout class was named
-`bar` and collided with the meter's `.bar` in the same scoped stylesheet. In
-META as *ask the browser what it computed*.
-
-## 2026-08-23 — META.md, and a fresh look at the critical path
-
-Cards: none closed · board reordered · [L-031] [L-032] [L-033] [L-034] [L-035]
-opened · [L-019] split and demoted · [L-006] [L-021] demoted
-
-**`META.md` — a fifth surface.** Method lessons, each tied to the incident that
-earned it, in four sections (diagnosis, verification, design, bookkeeping). Gate
-150. The rule that keeps it honest: an entry that loses its incident has
-probably stopped being true, because an abstract rule nobody paid for is advice.
-Registered in `CLAUDE.md`'s read and write order. Two stale lines in `CLAUDE.md`
-went with it — the "four surfaces" count, and "no stack is committed yet", which
-had been false since L-013.
-
-**The critical-path review** — `docs/design/roadmap.md`. Four findings drove the
-reordering:
-
-- *Nothing has consequences.* The damage ledger is named in `MEMORY.md` § 3.1 as
-  the core feedback mechanism and does not exist in any form. Everything else is
-  tuning a loop with a missing beat.
-- *The acceptance scenario is already half-built.* Levers and NAV-1 under `CAP`
-  **are** two components fighting over one actuator. So L-018 is not "build the
-  scenario", it is "make it legible" — a smaller, better-defined card.
-- *The ten-minute clause is an onboarding requirement* that no card owned. Now
-  L-033.
-- *L-019 bundled two different things.* Same-engine record/playback is cheap and
-  needed now; cross-browser bit-determinism is expensive, unverifiable in this
-  sandbox (Chromium only, and Node is V8 too), and needed only by missions. Split
-  into L-032 (ready) and L-019 (backlog).
-
-**Rejected: build mode as part assembly in v0.** It drags four non-small cards
-in before the loop closes once. The rack is already a build surface — order,
-verb, enable — so "back to build with a reason" can mean *move NAV-1 below the
-levers*. Recorded as a NOTES thread rather than as MEMORY, because it is a
-recommendation awaiting confirmation, and it is the call that decides whether v0
-finishes. L-006 and L-021 went to backlog behind it.
-
-Also opened L-034: mobile-first is a hard pillar and no frame has ever been
-timed on a phone, with ink shells doubling every mesh. Folded the two overlapping
-NOTES budget threads into one, since bytes, frames and world size are one
-question.
-
-## 2026-08-23 — the dark area was the contour code
-
-Cards: none closed · [L-025] narrowed
-
-**Found it, on the fourth attempt.** The dark slab across the site was the
-contour shader, and the tell was one I should have used first: it appeared
-exactly when `terrainMaterial` landed, and survived every lighting change.
-
-The mechanism is worth writing down. Contours are drawn where the distance to
-the nearest contour multiple, divided by that value's screen-space derivative,
-is under about a pixel. On **perfectly flat ground both terms vanish**: the
-derivative goes to zero *and* the distance goes to zero, if the ground happens
-to sit exactly on a multiple. The graded starting pad is at exactly 0 m, which
-is a multiple of both the 1 m and 5 m spacings — so the entire pad passed the
-line test at once and rendered as one enormous contour line, darkened twice.
-
-Fixed by gating contours on relief, which is also cartographically right: flat
-ground has no contours. Three earlier diagnoses — shadow frustum, hill shading,
-ramp darkness — were all wrong, and each was disproved by an experiment I
-should have run before proposing the next hypothesis. The isolating test
-(`receiveShadow = false`) took one build and settled the shadow question
-permanently; I ran it third instead of first.
-
-**Track grousers** now travel at commanded speed on both runs of the belt, so
-slip is something you *see* — plates racing under a machine that is not moving —
-rather than a number you read. Left and right run independently.
-
-**The rack became a posture rather than a panel.** Looking down slides the
-viewport up until only a strip of windscreen remains, and the rack fills the
-rest. You have dropped your eyes from the glass to the cabinet between your
-knees, the machine keeps running, and reconfiguring on the move costs exactly
-what it should. That makes hot-patching (L-026) a posture rather than a menu.
-
-**Strength meters** on every module slot and both actuator terminals, filled by
-fraction of drivetrain capacity and coloured for direction. The numbers are
-demoted to debug telemetry: a number is something you read, a bar is something
-you notice, and that difference matters when your attention is on the ground.
-
-**NAV-1 ships a route scope**, the machine's first mandatory instrument, and it
-already occludes the windscreen — the panel budget biting for the first time.
-Deliberately not a map: no terrain, no obstacles, just the route and where you
-are on it, nose-up. It shows exactly what the module knows, because an
-instrument that drew the ground would be lying about the component behind it,
-and the player would blame the autopilot for something the *panel* implied it
-could see. Pins are selectable, which is the pilot's one lever on the autopilot
-short of switching it off.
-
-To wire that without breaking rule 3, modules gained a `readout()` of plain
-numbers that travels inside their stage. Instruments read it from the snapshot
-rather than holding a live module, so the boundary holds and the same
-instrument code will drive a replay.
-
-## 2026-08-23 — determinism audit, survey ground, greebles
-
-Cards: none closed · rule 2 now enforced by test
-
-Thinking about L-019 before building it turned up **two live rule-2 violations
-already shipped**. Site furniture was placed with `Math.sin`/`cos` on its yaw,
-which wrote non-portable values straight into collider transforms, and NAV-1's
-route was generated the same way. Both are sim state; both would have broken
-cross-browser replay silently. Neither had been caught by having the rule
-written down and read.
-
-So the rule is now **enforced by a test** rather than documented. It scans
-`src/sim`, `control`, `modules`, `world` and `core` for non-portable maths, with
-`sqrt` and `round` allowed because IEEE-754 requires them to be correctly
-rounded, and a `deterministic-exempt:` comment to justify a line — used twice:
-the quantized ramp slope, and the display-only pitch/roll. The scanner blanks
-comments while preserving line numbers, since the naive strip collapsed them and
-reported the wrong place.
-
-Fixes: prop headings now come from `randomYawQuat`, which rejection-samples a
-unit vector and uses the half-angle identities, so only `sqrt` is involved.
-Waypoints are rejection-sampled from an annulus and ordered by a **pseudo-angle**
-— the diamond-angle trick, monotone in true bearing but pure arithmetic — rather
-than stepping `cos`/`sin` around a circle.
-
-Moving the pins broke an autonav test, which turned out to be the test's fault:
-it asserted raw displacement in a short window, and the new route can start with
-the first pin *behind* the machine, so it spends four seconds turning. Rewritten
-to assert the range to the pin closes, which is what "it navigates" actually
-means and does not encode an accident of layout.
-
-**Visuals.** Ground gets survey contours (minor at 1 m, major at 5 m, `fwidth`
-keeping them a pixel wide at any distance) and slope-based hill shading. The
-contours are the training-rig register showing through, and they do real work: a
-cel-shaded slope otherwise gives almost no cue how steep it is, and steepness is
-the whole of rung 1. The machine gets procedural greebles — deck plates, flank
-ribs, grab rails, exhaust stacks, a dorsal pack, a roof beacon — which matter
-because a bare box has no scale, and hatches and rails are things a human body
-uses.
-
-Two real bugs found on the way. The chase camera had no ground clamp, so
-dragging down put it *under* the heightfield. And hill shading used three's
-fragment-stage `normal`, which is **view space** — so "slope" was measuring
-"faces the camera", and hillsides darkened as the camera tilted. Now derived
-from the world position's screen-space derivatives, which also avoids depending
-on a vertex chunk name.
-
-Worth recording honestly: a dark wedge across the site got diagnosed as a
-shadow-frustum problem, then as hill shading, then as the ramp — three wrong
-calls. Disabling `receiveShadow` on the terrain settled it: the wedge survived,
-so it was never a shadow. It is simply ground facing away from the key light
-landing on the cel ramp's dark band, with the ridge as the boundary — cel
-shading working. Lifted the sky fill so the shade side reads as slope rather
-than hole. The lesson is the one from the probe: an isolating experiment beats
-three plausible hypotheses, and I should have run it first.
-
-## 2026-08-23 — the rack is a pipeline, and NAV-1 drives
-
-Cards: closed [L-007] [L-017] · [L-015] retargeted · arbitration model replaced
-
-**The rack stopped being a priority stack and became a pipeline**, on a
-proposal that turned out to be strictly better than what was settled. Each
-module takes the signal from the module above, folds in its own intent by its
-**verb**, and passes it down to an actuator terminal at the bottom of the rail.
-
-That reframing dissolved three open questions in one move. Per-actuator
-granularity stops needing a mechanism — a module transforms what it cares about
-and passes the rest through. Suppress-versus-inhibit stops needing two entry
-kinds — rung 3's forklift constraint is just `clamp(input, envelope)`, an
-ordinary stage. And suppression itself survives as the verb `SET`, so nothing
-built was lost. Three problems, one model: usually the sign you have found the
-right shape rather than a cleverer one.
-
-Verbs are **SET, CAP, ADD, AMP**, and the three-letter rule is the good part.
-It makes a fifth verb typographically awkward on purpose — a complexity budget
-that enforces itself, aimed squarely at the node-graph-by-accretion danger. The
-verb is a property of the module and switchable on it; every module also has a
-disable toggle, and **a disabled module is a pass-through, not a hole**.
-
-`CAP` produced a mechanic nobody designed: a lever at rest caps to zero, so
-parking the levers above a CAP module stops the machine whatever is driving it.
-A dead-man's throttle, falling out of the verb rather than being a special case.
-Pinned by a test.
-
-**NAV-1 exists** and considers bearing and distance to the pin and nothing
-else — the honesty is the design, not a limitation. Its heading error comes
-from a dot and a cross product rather than `atan2`, because a transcendental
-there would close a loop straight back into sim state; rule 2 doing real work
-rather than being decoration. The sign was derived and pinned by tests before
-running it, having shipped a mirrored control once already.
-
-**Attribution had to be rethought and came out better.** Under a pipeline there
-is no owner to name — everyone shaped the signal — so instead of a banner
-naming a winner, the chain is shown stage by stage down to the terminal:
-`PILOT [SET] +2.20/+2.20 ↓ NAV-1 [CAP] +1.79/+2.20 ↓ TERMINAL`. That is the
-multi-layer inspectability pillar landing where it counts, and it reads the
-same live or in replay.
-
-Built the rail as a working panel rather than the full DIN-rail treatment:
-order, verb and enable all functional, reordering by arrows rather than drag.
-L-015 is retargeted to the drag-and-styling work, which is worth designing once
-there is more than one thing to drag. Each slot carries its module's
-one-sentence statement of what it considers, which turned out to be the most
-valuable thing on it.
-
-Grounding note, since the question was asked before building: what the rack was
-*needed* for was never the rail — it was the second module. A rack with one
-entry is furniture. Building NAV first was right, and it immediately paid: the
-props and terrain added last session became the things a blind autopilot drives
-into.

@@ -114,6 +114,27 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
+### [L-057] The site stands up
+- **what:** most of the furniture falls over on its own. Measured on the default
+  seed, inside `createWorld`'s 120 settle steps where nothing can see it:
+  everything is upright for ten steps, and by step 120 seventeen of eighteen
+  marker poles, sixteen of twenty-two barriers and ten of forty-five cones are
+  flat. Nothing is wrong with the physics — a 3 m pole with a 0.16 m base cannot
+  stand on 20° noise. The fix is **footing**: grade the ground under a work area,
+  or place kit only where it can stand, or give the tall things a base. Rejected
+  already: placing a box on the highest point of its own footprint, which drops
+  it onto one corner and toppled 13 more cones.
+- **done-when:** an untouched site is still standing when the exercise begins,
+  and the first line in the ledger came from the machine.
+- **needs:** NOTES thread "the site is hard to crash into on purpose"
+
+### [L-058] The ground seam
+- **what:** props read as hovering, and it is not a gap: the rest gap under a
+  settled prop is **1 mm at the median** (n=102). So this is rendering — a
+  contact shadow, or the toon material flattening the seam where a box meets the
+  ground, or both. Measure the drawn seam, not the physics.
+- **done-when:** a prop at a phone's size reads as sitting on the ground.
+
 ### [L-056] The glass in landscape — cage, viewport and perspective
 - **what:** the panel reflows in both orientations now; the cab around it does
   not. The deck's travel is in `dvh` and the rack takes 74 of them, which is a
@@ -257,6 +278,19 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-059] The pod joins the registry, and the seam moves — **closed**
+The triptych's third part was hand-wired into the shell: a branch and a position
+variable per component, and a live `Autonav` held so the scope could call
+`setTarget`. Now one `Packet` per component (cell, face, pod, units, amps) and
+one contract for all three postures — a part is handed the slot it is drawn from
+and the style it is drawn in, and commands cross back through `Controls`
+(`toggle`, `setParam`, inert for a component nothing is driving). NAV-1's target
+became a declared param, so the plate grew a TARGET slider and the scope stopped
+being a second wire. The route rides the snapshot. `cockpit/` is now what the
+manufacturers made and `ui/` what the rig made; both style bans scan all of
+`src/`, and custom properties carry `--mfg-` or `--cab-`. Rejected: `controls`
+on a face, which has nothing to command.
+
 ### [L-055] GRIP and SLIP become one head — **closed**
 TRACTION: the plan view, nose up, a channel per track. Channel colour is the
 fraction of the friction cone in use, channel length is the contact patch, the
@@ -328,15 +362,3 @@ it exists to prevent. Rejected: reading attitude through `asin`/`atan2` — the
 sines come straight out of the quaternion and stay bit-portable. Ships enabled
 and deliberately timid (25°/18° against a 43.5° climb limit), so the first
 lesson is that your own machine is what stopped you.
-
-### [L-037] The rack as equipment — **closed**
-Server rack rather than DIN rail: faceplates, ears, screws, and a house style
-per manufacturer (KIBA WORKS, TOWA DENKI, HANSA REGELTECHNIK). Module settings
-as bounded numbers with units — never gains. ATT-0 compass/attitude head as the
-chassis instrument, TILT-GUARD's two banded gauges as its own. Rack toggle
-became a control-panel cover at the seam; the camera became an item in the
-instrument column. Tracks are belts wrapped round their wheels rather than
-boxes, and the site is steeper.
-
-
-

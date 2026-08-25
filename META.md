@@ -36,17 +36,22 @@ Mirrored steering was fixed by deriving `forward = up × right` and checking it
 against a known frame (three.js camera), not by trying both. The same method
 caught NAV-1's steering sign *before* it ever ran.
 
-**Look at the numbers, not only at the green ticks.**
-A grade probe reported zero climb at every angle. Ten tests were passing and the
-machine was fine — the *probe* was wrong: the ramp started 30 m away and the
-machine covers 11 m in five seconds.
-
 **Ask the browser what it computed; do not re-read the CSS.**
 A faceplate collapsed to 7 px with tests, types and lint all green. Two rounds
 went into re-reading the stylesheet. One `getComputedStyle` dump answered it:
 `display: block; height: 7px` — a house-style class named `bar` colliding with
 the meter's `.bar` in the same scoped stylesheet. Reading is a hypothesis;
 measuring is an answer.
+
+**Suspect the probe before the system.**
+A grade probe reported zero climb at every angle with ten tests passing and the
+machine fine: the *probe* was wrong, its ramp 30 m away and the machine good for
+11 m in five seconds. Re-earned harder — a probe read the site "after one step"
+and found a marker pole flipped over and moved 40 cm in 1/60 s. Impossible, and
+it was: `createWorld` settles for 120 steps before it hands anything back, so
+the first observable state is two seconds old. Two hypotheses and one
+measured-worse fix went into explaining a launch that never happened. **Ask what
+ran before your first observation.**
 
 **Instrument early.**
 Carried in from the concept-3 probe, which lost rounds diagnosing from
@@ -83,7 +88,8 @@ hits and a formatter diagnostic does not match that pattern.
 Rule 2 was written down, read and violated twice anyway; a scanner found both
 `Math.sin` uses in seconds. The scanner's *scope* is the next trap: the
 `:global` ban scanned `src/cockpit/`, whose author already thinks about it, and
-the first violation after the ban landed in `src/ui/`, unwatched.
+the first violation landed in `src/ui/`, unwatched — and widening it to a
+hand-listed pair of directories was the same mistake with a longer list.
 
 **Tests can encode accidents.**
 An autonav test asserted raw displacement over a short window, and broke when
@@ -121,11 +127,6 @@ them.
 Verbs are three letters, always — which makes a fifth verb typographically
 awkward on purpose. A rule that makes the wrong thing *harder to write* beats a
 rule that asks you to remember not to.
-
-**One fact, one place.**
-Three of concept-3's four defects came from duplicating a fact. Re-earned here:
-machine sides live once as `LEFT_X`/`RIGHT_X`, shared by sim and renderer,
-because a mirrored control is invisible on a symmetric hull.
 
 **Record rejected options with their reasons.**
 Godot, Babylon and Jolt each have a written reason for rejection. Without one, a

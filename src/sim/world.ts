@@ -146,6 +146,14 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * is always a small settling twitch. Charging for that produced a ¥55,690
    * bill before the machine had moved. These steps happen with no rack, no
    * drive and no ledger: the exercise begins with everything at rest.
+   *
+   * **It is not only a twitch, and this window is where it hides.** Measured on
+   * the default seed: everything stands for the first ten steps, and by step 120
+   * seventeen of eighteen marker poles, sixteen of twenty-two barriers and ten
+   * of forty-five cones are lying flat. They are tall boxes on 20° noise and
+   * they simply fall over. Nothing is wrong with the physics; the site is asking
+   * furniture to stand where it cannot. Carded as L-057 — the fix is footing in
+   * the generator, not a number here.
    */
   for (let i = 0; i < SETTLE_STEPS; i++) world.step();
   for (let i = 0; i < propBodies.length; i++) {

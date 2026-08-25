@@ -91,6 +91,7 @@ instrument panel updating reactively at 60 Hz on a phone is exactly the shape of
 problem that kills mobile frame budgets. The boundary also happens to be the
 same seam a worker would sit on, so rules 1 and 3 reinforce each other.
 
-**Check:** grep — no `three` import under `src/ui/`, no Svelte import under
-`src/sim/`. Instrument components take a snapshot object as a prop and nothing
-else.
+**Check:** grep — no `three` import under `src/ui/` or `src/cockpit/`, no Svelte
+import under `src/sim/`. A part of a component takes its slot, its style and (a
+pod) the snapshot, and nothing else — the contract is `src/cockpit/contract.ts`
+and commands leave through `Controls`, never through a live module.

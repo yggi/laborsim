@@ -11,7 +11,8 @@ decoration: **a manufacturer's culture predicts how its kit behaves and how it
 fails.** KIBA builds stubborn, manual, unkillable machines with no opinions.
 HANSA builds safety gear that is right and insufferable. TOWA builds clever
 sensors that a Phantom Labor can lie to. That is not flavour laid over the
-mechanics — it *is* the mechanics, wearing a wordmark (`src/ui/makers.ts`, and
+mechanics — it *is* the mechanics, wearing a wordmark (`src/cockpit/makers.ts`,
+and
 principle 7 in `CLAUDE.md`).
 
 Crystallized facts live in `MEMORY.md`; this is the connective tissue around
@@ -177,7 +178,7 @@ each earns its place when its rung is built.
    maker, decide how that maker *fails*, because that is what the player learns.
 2. **Names carry origin.** KIBA and TOWA read Japanese; HANSA reads German. A new
    maker's name should place it, and its wordmark should be drawable as one SVG
-   path (`src/ui/makers.ts`).
+   path (`src/cockpit/makers.ts`).
 3. **L.A.B.O.R. never sells anything.** It certifies and it bills. Anything with
    a price tag or a spec sheet came from a manufacturer; anything with a verdict
    came from L.A.B.O.R.
