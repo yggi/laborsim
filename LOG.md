@@ -19,6 +19,68 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
+
+Cards: none closed. Opened: [L-056].
+
+**Three dials became one part.** Speed, ATT-0 and TRACTION now share one bezel,
+one set of four screws, and legends engraved into their own plate. The
+designation is internal and appears nowhere on the panel. The argument is not
+tidiness: three separately bolted gauges claim three suppliers, three fitters and
+three dates, and none of that is true of a cluster the chassis maker ships as a
+unit. The counters stayed out of it — a totaliser has never shared a bezel with
+a live dial, and you do not steer by one.
+
+`Gauge`, `Attitude` and `Traction` each lost their own bezel and four screws and
+gained the rim of the hole they are set into. That deleted three copies of the
+same brushed-metal gradient and, more usefully, **freed the space a frame was
+taking**: the dials grew about a quarter at the same footprint.
+
+**The engraved legends are a deliberate exception to the plate rule**, and the
+line is about who made the words: a plate names a control, was engraved by
+whoever fitted it, unscrews, and can outlive what it names; an engraving names
+part of the instrument it is cut into and cannot be wrong, because it and the
+dial are one object. `Meters` already relied on that for its H and KM without
+anyone writing it down. Now `substrate.css` carries it as `.mfg-engraved` with
+the argument, and `tests/cockpit.test.ts` fails if a cell engraves anything — a
+cell is a faceplate, so every word on one names a control (META: a rule enforced
+by a document is a rule that gets violated anyway).
+
+**The panel packs now, and the fix was structural.** Every part is its own item
+in the wrapping flow; the group boxes are gone except the masters, which keep
+theirs because a mushroom button you hunt for twice is one you find too late.
+Groups were why the panel looked sparse: 300 px of instruments either fitted on
+a row or jumped to the next one *entire*, leaving a hole as wide as everything
+in it. The flow is bottom-aligned too, so every plate and every legend across a
+row lands on one line with the controls ragged above it — which was already the
+rule inside each group, and is a better rule outside them.
+
+Measured, at 390 portrait: **251 px of dash before, 229 after**, with bigger
+dials and one fewer row — and the same 229 whether or not any component is
+fitted, where it used to grow a row for the cells. 22 px of glass back.
+
+**Rejected: `margin-left: auto` for the seam.** It made the gap between the
+machine's kit and the fitted kit *all* the slack in the row — fine at 390, a
+third of the panel in landscape, empty, with the cells marooned at the far edge.
+It is a fixed 12 px extra now, and the leftover steel collects at the end of the
+row where it reads as what it is: room for more kit. That is the panel budget
+(L-025) showing through, so it is worth seeing.
+
+**The bench grew a landscape row**, because none of the above was decidable from
+the portrait shots. The specimens render at 390 and again at 844, and
+`npm run shots` writes both. Two findings from doing it: the shots viewport was
+390 wide, so the first landscape shots came out silently clipped to 390 with a
+green run and no error — the browser window has to hold the widest specimen —
+and nothing in the cab is responsive to the window itself, so widening it is
+free. That is META's *ask the browser what it computed* twice in one afternoon:
+the clipped screenshot looked like a CSS bug and was not.
+
+Not done, and carded as [L-056]: **the cab around the panel.** The dash reflows;
+the glass does not. The deck's travel is in `dvh` and the rack takes 74 of them,
+which is a portrait number, so turned sideways the glass is a letterbox and the
+pods sit where a portrait layout left them. Camera FOV, cage geometry and deck
+travel want deciding together, and not as a CSS pass.
+
 ## 2026-08-25 — GRIP and SLIP become one head
 
 Cards: closed [L-055]. History trimmed to its gate: [L-017] dropped, already
@@ -95,8 +157,8 @@ colour carries it; a lamp would need a condition that understands turning, and
 that is a module's opinion, not a chassis symptom.
 
 `MEMORY.md` is now full at 300 lines and `NOTES.md` at 100. The next durable
-fact or open thread forces a spill; the log itself took its third cut to make
-room for this entry.
+fact or open thread forces a spill; the log itself took a cut to make room for
+this entry.
 
 ## 2026-08-25 — is GRIP the same instrument as SLIP?
 
@@ -911,53 +973,3 @@ Grounding note, since the question was asked before building: what the rack was
 entry is furniture. Building NAV first was right, and it immediately paid: the
 props and terrain added last session became the things a blind autopilot drives
 into.
-
-## 2026-08-23 — cel pipeline, a site worth driving through
-
-Cards: closed [L-024] · [L-023] narrowed · history trimmed to its gate
-
-Ported the probe's cel pipeline as mechanism rather than structure: a stepped
-gradient ramp on MeshToonMaterial, a fresnel rim injected via `onBeforeCompile`
-— **kept guarded**, so a future three.js dropping the varying renders without a
-rim instead of a black screen — and inverted-hull ink shells scaled **per axis**
-from each geometry's own bounds, so a thin plate and a chunky block get the same
-apparent line weight. Added a banded gradient sky dome; anime skies are flat
-washes with visible steps, and the same quantize-and-blend trick as the cel ramp
-does it.
-
-The ink immediately broke the cab view to solid black, which was instructive.
-Ink shells are BackSide, and the operator's eye sits *inside* the cab box — so
-where backface culling used to hide the cab for free, the shell's interior
-became an opaque wall. Fixed with a dedicated layer the cab camera disables,
-which reproduces exactly what culling did and keeps ink lines everywhere else.
-Worth remembering as a general hazard: inverted-hull outlining and interior
-cameras do not mix without a plan.
-
-**Site furniture went in as world data, not decoration** — cones, marker poles,
-pipe stacks, barriers and rock outcrops in `src/world/props.ts`, deterministic
-from the seed, with real static colliders in the sim. That placement was
-deliberate: a cone painted on by the renderer could never become
-`site fixture (cone) damaged −¥400`, and the ledger is the point. They cluster
-into work areas rather than scattering evenly, because a site reads as *worked*
-when things gather and as litter when they do not. Rocks are the exception —
-they are landscape, so they stay scattered.
-
-**Recorded a play-session direction as `docs/design/missions.md`, marked
-exploratory and explicitly not v0**: Zachtronics-style budgeting, scored on
-budget, time and complexity, where complexity trades parts and weight against
-operator interaction.
-
-Two things in it are worth more than the missions themselves. It **inverts the
-chase camera** — settled as a cost, it becomes a reward, because a solution good
-enough to run itself is one you can watch, and the same button then means both
-"I gave up control" and "I no longer need it" depending on what you built. And
-it makes **determinism the scoring substrate** rather than only an attribution
-tool: an autopilot mission can demand the same configuration verified across
-different seeded sites.
-
-The striking part is that none of it asks v0 to change. The rack is the
-complexity axis, the damage ledger is a budget line, determinism is the
-verifier, seeded sites are one integer apart. That convergence is the best
-evidence so far that the v0 scope was drawn in the right place. The open core
-is the metric: **what counts as operator interaction** is undefined, and it is
-load-bearing.

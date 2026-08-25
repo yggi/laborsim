@@ -45,7 +45,6 @@
 import {
   type Annunciation,
   chassisConditions,
-  conditionAt,
   isAlarm,
   isWarning,
   worst,
@@ -54,11 +53,8 @@ import { styleOf } from "../cockpit/makers.ts";
 import { cellFor } from "../cockpit/parts.ts";
 import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
-import { MAX_TRACK_SPEED } from "../core/spec.ts";
-import Attitude from "./Attitude.svelte";
-import Gauge from "./Gauge.svelte";
 import Meters from "./Meters.svelte";
-import Traction from "./Traction.svelte";
+import NavUnit from "./NavUnit.svelte";
 
 let {
   snapshot,
@@ -80,14 +76,11 @@ let {
   onToggleModule: (id: string) => void;
 } = $props();
 
-const m = $derived(snapshot?.machine);
 const stages = $derived(snapshot?.stages ?? []);
 
 /** The vehicle's manufacturer owns this panel. Read it off the chassis slot. */
 const chassis = $derived(stages.find((s) => s.id === "PILOT"));
 const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
-
-const speed = $derived(m?.speed ?? 0);
 
 /**
  * The chassis's own conditions. They get no legend row of their own — a strip of
@@ -104,18 +97,13 @@ const overall = $derived(
 );
 
 /**
- * The tells: one small lamp beside the dial that knows why.
- *
- * A single master says *something is wrong* and says it once, which is right —
- * and useless on its own, because the pilot's next question is always which
- * instrument to look at. So the gauges measuring a quantity that can raise a
- * condition carry the source light themselves. They do not flash: rhythm means
- * unacknowledged, the master owns that, and two things blinking out of phase is
- * a panel arguing with itself.
+ * The tells — one small lamp beside the instrument that knows why — live on
+ * the instrument housings themselves now, not on the dash. A single master
+ * says *something is wrong* and says it once, which is right and useless on
+ * its own, because the pilot's next question is always which instrument to
+ * look at. The dash hands the conditions down; the housing decides where on
+ * itself the lamp goes, which is a thing only the housing's maker knows.
  */
-const tells = $derived({ TRACTION: conditionAt(chassisLamps, "TRACTION") });
-const said = (c: Condition): string =>
-  c >= ALARM ? "alarm" : c >= WARN ? "warning" : "nominal";
 
 /**
  * Annunciator acknowledgement.
@@ -165,63 +153,31 @@ const cells = $derived(
          generates the site in the same breath, so the number riveted in front
          of the operator is the exercise they are about to be tested on — and
          two operators comparing serials are comparing worlds. -->
-    <div class="group ident">
-      <div class="mfg-dataplate plate">
+    <div class="mfg-dataplate plate">
         <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
           <path d={house.mark} />
         </svg>
         <div class="fields">
           <b>{house.wordmark}</b>
           <span>TYPE 3A</span>
-          <span class="sn">S/N 3A-{(snapshot?.seed ?? 0).toString(36).toUpperCase()}</span>
-        </div>
+        <span class="sn">S/N 3A-{(snapshot?.seed ?? 0).toString(36).toUpperCase()}</span>
       </div>
     </div>
 
-    <!-- The cluster: the two big heads in the middle, the small dial and the
-         counters at the ends. Aircraft settled that arrangement, and the two in
-         the middle are the two questions you ask constantly — how am I sitting
-         (ATT-0, the horizon) and what are the tracks doing (TRACTION, the plan
-         view). One is the machine seen from the side, the other from above. -->
-    <div class="group instruments">
-      <div class="inst">
-        <Gauge
-          label="road speed"
-          frac={speed / MAX_TRACK_SPEED}
-          display={(speed * 3.6).toFixed(0)}
-          danger={0.92}
-          size={44}
-        />
-        <span class="mfg-legend">KM/H</span>
-      </div>
-      <div class="inst">
-        <Attitude {snapshot} size={54} />
-        <span class="mfg-legend">ATT-0</span>
-      </div>
-      <!-- The plan view, sized to match ATT-0: they are the machine's two
-           viewpoints and neither is the other's satellite. -->
-      <div class="inst">
-        <Traction {snapshot} size={54} />
-        <span class="plateline">
-          <span
-            class="tell mfg-lamp"
-            data-lit={tells.TRACTION}
-            role="img"
-            aria-label="traction {said(tells.TRACTION)}"
-          ></span>
-          <span class="mfg-legend">TRACTION %</span>
-        </span>
-      </div>
-      <!-- Hours over distance, one housing. No plate: the units are screened on
-           the gauge's own face by whoever supplied it. -->
-      <div class="inst">
-        <Meters {snapshot} />
-      </div>
-    </div>
+    <!-- What the machine is doing, in one housing (KIBA-NAV-UNIT). -->
+    <NavUnit {snapshot} lamps={chassisLamps} />
+
+    <!-- What it has done: hours over distance, one housing, deliberately not in
+         the unit above. You steer by that one and you never steer by this one.
+         No plate — the units are screened on the gauge's own face by whoever
+         supplied it. -->
+    <Meters {snapshot} />
 
     <!-- What the machine has to say, and the thing that stops it. Two controls,
-         bolted together because they are the same conversation. -->
-    <div class="group alarms">
+         bolted together because they are the same conversation — the one group
+         on this panel that stays a group, because a mushroom button you have to
+         find twice is a mushroom button you find too late. -->
+    <div class="masters">
       <div class="inst">
         <button
           class="master mfg-lamp"
@@ -249,11 +205,13 @@ const cells = $derived(
       </div>
     </div>
 
-    <!-- The fitted components, floated to the far side of whatever row they land
-         on. That gap is the seam between what the machine came with and what
-         somebody bolted on afterwards, and it is worth a hand's width of empty
-         panel to see at a glance which is which. -->
-    <div class="group cells">
+    <!-- The fitted components, behind a seam: a gap wider than the one between
+         any two of the machine's own parts, so you can see at a glance which is
+         which. It used to be `margin-left: auto`, which made the seam *all* the
+         slack — a third of the panel, empty, in landscape. A seam is a fixed
+         thing on a real machine and the leftover steel is at the end of the
+         row, which is also where the room for more kit is. -->
+    <div class="fitted">
       {#each cells as entry (entry.stage.id)}
         {@const Cell = entry.cell}
         {#if Cell}
@@ -313,41 +271,46 @@ const cells = $derived(
   }
 
   /* One flow, wrapping. No columns, no scrolling: things are bolted where they
-     fit, and a panel that has run out of room grows another row. */
+     fit, and a panel that has run out of room grows another row.
+
+     **Every part is its own item in that flow**, and this is the fix for the
+     thing that made the panel look sparse: the instruments used to be wrapped
+     in a group, so 300 px of kit either fitted on a row or jumped to the next
+     one *entire*, leaving a hole the width of everything in it. Nothing here
+     needs to travel with anything else except the two masters, so nothing else
+     does.
+
+     **Bottom-aligned**, so every plate and every engraved legend across a row
+     lands on one line and the controls go ragged above it — the stop standing
+     taller than the lamp, HANSA's beacon taller again. That is what a row of
+     mixed kit on one panel actually looks like, and it was already the rule
+     *inside* each group before the groups went away. */
   .panel {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 6px 9px;
-    padding: 7px 9px;
+    align-items: flex-end;
+    gap: 7px 8px;
+    padding: 7px 8px;
   }
-  .group {
+  /* The masters keep their own box: they are one conversation and the stop has
+     to be where the lamp is, every time, without looking for it. */
+  .masters {
     flex: none;
     display: flex;
-    align-items: flex-start;
-    gap: 6px;
-  }
-  .instruments {
-    gap: 5px;
-    align-items: flex-end;
-  }
-  /* Plates on one line, controls ragged above it — so the stop stands taller
-     than the lamps and HANSA's beacon taller again, which is exactly what they
-     do on a real panel. */
-  .alarms {
-    gap: 10px;
     align-items: flex-end;
     flex-wrap: wrap;
-  }
-  /* Everything the machine did not come with, pushed to the far edge of its
-     row. `auto` rather than a fixed gap because the panel wraps: the cells take
-     the right-hand end of whichever row they end up on. */
-  .cells {
-    margin-left: auto;
     gap: 10px;
+  }
+  /* Everything the machine did not come with, behind a seam. The extra margin
+     is on top of the panel's own gap, so the join reads as a join at any width
+     and whichever row the cells land on. */
+  .fitted {
+    flex: none;
+    display: flex;
     align-items: flex-end;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    gap: 10px;
+    margin-left: 12px;
   }
   /* A mounted thing and the plate that names it. */
   .inst {
@@ -356,29 +319,10 @@ const cells = $derived(
     align-items: center;
     gap: 3px;
   }
-  /* A plate, and — on the gauges that measure something the machine can raise a
-     condition about — the tell bolted beside it. Keeping the lamp on the plate's
-     line rather than on the dial keeps every plate in the cluster on one
-     baseline, which is what makes the row read as a fitted cluster. */
-  .plateline {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-  .tell {
-    flex: none;
-    width: 7px;
-    height: 7px;
-    border-width: 1px;
-    border-radius: 50%;
-  }
-
   /* -- the nameplate ------------------------------------------------------ */
-  .ident {
-    align-self: center;
-  }
   /* The dataplate: the maker's mark stamped beside engraved fields. */
   .plate {
+    flex: none;
     display: flex;
     align-items: center;
     gap: 7px;

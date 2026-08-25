@@ -63,21 +63,14 @@ const CARDINALS = [
   <svg viewBox="0 0 100 100" role="img" aria-label="heading and attitude">
     <defs>
       <clipPath id="att0-ball"><circle cx="50" cy="50" r="27" /></clipPath>
-      <!-- Brushed metal: a diagonal sweep with the light coming from the same
-           corner it comes from everywhere else on this panel. -->
-      <linearGradient id="mfg-brushed-att" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#d6d9da" />
-        <stop offset="0.42" stop-color="#b4b9bb" />
-        <stop offset="1" stop-color="#8f9497" />
+      <!-- The inside of a hole, lit from above. See `Gauge.svelte`. -->
+      <linearGradient id="mfg-rim-att" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(0, 0, 0, 0.8)" />
+        <stop offset="0.55" stop-color="rgba(0, 0, 0, 0.15)" />
+        <stop offset="1" stop-color="rgba(255, 255, 255, 0.4)" />
       </linearGradient>
     </defs>
 
-    <!-- Same white square bezel and corner screws as the needle gauges: it is
-         one instrument cluster, built by one manufacturer, in one decade. -->
-    <rect class="bezel" x="2" y="2" width="96" height="96" rx="7" />
-    {#each [[10, 10], [90, 10], [10, 90], [90, 90]] as const as [cx, cy] (cx + "," + cy)}
-      <circle class="screw" {cx} {cy} r="2.4" />
-    {/each}
     <circle class="dial" cx="50" cy="50" r="40" />
 
     <!-- The attitude ball. The horizon stays level with the world and the
@@ -119,7 +112,12 @@ const CARDINALS = [
         <line class="tick" x1="50" y1="11" x2="50" y2="16" transform="rotate({tick} 50 50)" />
       {/each}
     </g>
-    <path class="lubber" d="M46 8 L54 8 L50 14 Z" />
+    <!-- The lubber line, and the ring of the hole. Both go on last: the card
+         turns underneath them and neither ever moves. The mark used to sit at
+         radius 42, out on a bezel that no longer exists, so it has come inside
+         the glass where an index mark belongs. -->
+    <path class="lubber" d="M46.5 10.5 L53.5 10.5 L50 16 Z" />
+    <circle class="rim" cx="50" cy="50" r="40" />
   </svg>
   <!-- Wrap *after* rounding: 359.6° rounds to 360, and a compass never reads
        360. It reads 000, the same as every real one. -->
@@ -139,18 +137,14 @@ const CARDINALS = [
     width: 100%;
     height: auto;
   }
-  /* Brushed silver, lit from above-left. Instrument bezels are pressed metal;
-     the cream ones read as plastic, which is a different decade. */
-  .bezel {
-    fill: url(#mfg-brushed-att);
-    stroke: #6e7376;
-    stroke-width: 1;
-  }
-  .screw {
-    fill: #767b7e;
-  }
   .dial {
     fill: #16181a;
+  }
+  /* The lip of the cutout it is set into. See `Gauge.svelte`. */
+  .rim {
+    fill: none;
+    stroke: url(#mfg-rim-att);
+    stroke-width: 2.6;
   }
   .sky {
     fill: #1d2b33;

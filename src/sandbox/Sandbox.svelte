@@ -58,15 +58,33 @@ const noop = () => {};
   <header>
     <h1>COCKPIT SANDBOX</h1>
     <p>
-      Every component in every state, at phone width, with no physics behind it.
-      Fixtures only — nothing here is simulated and nothing here is a test.
+      Every component in every state, at both the widths a phone has, with no
+      physics behind it. Fixtures only — nothing here is simulated and nothing
+      here is a test.
     </p>
   </header>
 
-  <!-- 1. The dash, in each state it can reach. This is the row that has to
-          survive a real phone, so each specimen is clipped to 390px. -->
+  <!-- 1. The dash, in each state it can reach, at both the widths a phone
+          actually has. Portrait is the hard one for cramping and landscape is
+          the hard one for waste, and the panel's rule is that it wraps rather
+          than scrolls — so *how* it wraps is a thing to look at, not to reason
+          about. The glass and the camera behind it are a separate problem
+          (`NOTES.md`); this row is only the panel. -->
+  {#snippet dash(specimen: (typeof SPECIMENS)[number])}
+    <div class="pin">
+      <DashPanel
+        snapshot={specimen.snapshot}
+        rackOpen={false}
+        estopped={specimen.estopped ?? false}
+        onOpenRack={noop}
+        onEstop={noop}
+        onToggleModule={noop}
+      />
+    </div>
+  {/snippet}
+
   <section>
-    <h2>DASH · the seam, in every state</h2>
+    <h2>DASH · the seam, in every state · 390 portrait</h2>
     <div class="grid">
       {#each SPECIMENS as specimen, i (specimen.name)}
         <figure>
@@ -75,20 +93,25 @@ const noop = () => {};
             <span>{specimen.note}</span>
           </figcaption>
           <div class="phone" data-specimen={specimen.name}>
-            <div class="pin">
-              <DashPanel
-                snapshot={specimen.snapshot}
-                rackOpen={false}
-                estopped={specimen.estopped ?? false}
-                onOpenRack={noop}
-                onEstop={noop}
-                onToggleModule={noop}
-              />
-            </div>
+            {@render dash(specimen)}
           </div>
           <button class="pick" class:on={picked === i} onclick={() => (picked = i)}>
             show in rack ▾
           </button>
+        </figure>
+      {/each}
+    </div>
+  </section>
+
+  <section>
+    <h2>DASH · the same states, 844 landscape</h2>
+    <div class="grid">
+      {#each SPECIMENS as specimen (specimen.name)}
+        <figure class="wide">
+          <figcaption><b>{specimen.name}</b></figcaption>
+          <div class="phone landscape" data-wide={specimen.name}>
+            {@render dash(specimen)}
+          </div>
         </figure>
       {/each}
     </div>
@@ -172,6 +195,9 @@ const noop = () => {};
     margin: 0;
     width: 390px;
   }
+  figure.wide {
+    width: 844px;
+  }
   figcaption {
     display: block;
     margin-bottom: 5px;
@@ -197,6 +223,12 @@ const noop = () => {};
     background: #1a1d1f;
     border: 1px solid #2b3133;
     contain: paint;
+  }
+  /* The same panel in the other orientation. Landscape is where a wrapping
+     flow stops wrapping and starts leaving holes, which is the failure this
+     row exists to show. */
+  .phone.landscape {
+    width: 844px;
   }
   .phone.tall {
     height: 620px;

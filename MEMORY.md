@@ -162,24 +162,23 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **The rail is a server rack, not a DIN rail**: faceplates stacked vertically,
   screwed in, **each in its manufacturer's house style**. Kit from different
   makers must look like kit from different makers.
+- **The machine's own instruments are one part**, not a row of separate dials —
+  the KIBA-NAV-UNIT: speed, ATT-0 and TRACTION in one bezel, legends engraved in
+  its own metal. **The dash is one wrapping flow of parts, bottom-aligned**, and
+  the fitted kit sits behind a fixed seam. Never a pinned column, never a split.
 
 ### 6.1 A component is a triptych, and each kind bills you differently
 
-Full contract: `docs/design/components.md`. The load-bearing claims:
+Spilled in full to `docs/design/components.md` (index). What must stay here:
 
-- A component appears in up to three places: a **plate** in the rack (hands), a
-  **cell** on the dash (periphery), a **pod** on the glass (eyes). Only the plate
-  is mandatory; the **manufacturer** decides the rest, never the player.
-- **Three currencies.** A chassis component costs nothing and brings the cockpit;
-  a **capability** component costs **glass**; a **safety** component costs
-  **capability** — it strands you on the incline instead of blocking your view.
-  So a safety module shipping no pod is not a discount.
+- **Three currencies.** A chassis component costs nothing and brings the
+  cockpit; a **capability** component costs **glass**; a **safety** component
+  costs **capability**. A safety module shipping no pod is not a discount.
 - **Severity crosses the boundary as a number** (`0 nominal · 1 active · 2 warn ·
-  3 alarm`). MASTER WARNING and MASTER ALARM are derived from it, never
-  hand-wired. The *word* on the annunciator is a theme decision, not sim state.
-- **The dash is the seam.** The only thing visible in both postures, and it
-  travels: bottom of the view looking forward, top of it looking down at the
-  rack. Its theme belongs to the **vehicle's** manufacturer.
+  3 alarm`); the masters are derived from it, never hand-wired.
+- **The dash is the seam** — visible in both postures, and it travels. Its theme
+  belongs to the **vehicle's** manufacturer, which is why the machine's own
+  instruments are one part (KIBA-NAV-UNIT) and fitted kit sits behind a seam.
 
 ## 7. Mechanics that fall out of the above
 

@@ -337,6 +337,27 @@ describe("the theme contract — invariants every maker must honour", () => {
     }
   });
 
+  /**
+   * The line between a plate and an engraving, which is about *who made the
+   * words*. A plate names a control: engraved by whoever fitted that control,
+   * unscrewable, and capable of being wrong about what it sits next to. An
+   * engraving names part of the instrument it is cut into — it arrived from
+   * that instrument's supplier and it cannot be wrong, because it and the dial
+   * are one object.
+   *
+   * A cell is a component's faceplate: everything on it is a control somebody
+   * fitted. So engraving in a cell is always the wrong side of the line, and it
+   * is exactly the shortcut an author reaches for to save a few pixels.
+   */
+  it("keeps engraving off the cells, where every word names a control", () => {
+    for (const file of cellSources()) {
+      expect(
+        readFileSync(file, "utf8"),
+        `${file} engraves a word into a faceplate; controls get plates`,
+      ).not.toMatch(/mfg-engraved/);
+    }
+  });
+
   it("prefixes every custom property it defines with --mfg-", () => {
     for (const file of filesUnder(COCKPIT)) {
       const source = readFileSync(file, "utf8");

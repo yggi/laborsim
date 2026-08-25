@@ -63,20 +63,20 @@ const TAU = 0.6;
 
 /* -- geometry, in the 100x100 viewBox ------------------------------------- */
 
-const TOP = 18;
-const BOTTOM = 82;
+const TOP = 20;
+const BOTTOM = 80;
 const MID = (TOP + BOTTOM) / 2;
 /** Half the bar's travel. Just inside the channel, so full scale still reads. */
 const REACH = (BOTTOM - TOP) / 2 - 1;
 
 /** Left channel, right channel, and where each one's slip bar sits inside it. */
 const SIDES = [
-  { id: "L", x: 12, bar: 15 },
-  { id: "R", x: 71, bar: 74 },
+  { id: "L", x: 15, bar: 18 },
+  { id: "R", x: 69, bar: 72 },
 ] as const;
 /** Channel width, and the bar's, in viewBox units. */
-const CHANNEL = 17;
-const BAR = 11;
+const CHANNEL = 16;
+const BAR = 10;
 
 /* -- the damped needles --------------------------------------------------- */
 
@@ -181,12 +181,11 @@ const say = (t: (typeof tracks)[number]): string =>
 <div class="traction" style="width: {size}px">
   <svg viewBox="0 0 100 100" role="img" aria-label="traction: {tracks.map(say).join('; ')}">
     <defs>
-      <!-- Brushed metal: a diagonal sweep with the light coming from the same
-           corner it comes from everywhere else on this panel. -->
-      <linearGradient id="mfg-brushed-traction" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#d6d9da" />
-        <stop offset="0.42" stop-color="#b4b9bb" />
-        <stop offset="1" stop-color="#8f9497" />
+      <!-- The inside of a hole, lit from above. See `Gauge.svelte`. -->
+      <linearGradient id="mfg-rim-traction" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(0, 0, 0, 0.8)" />
+        <stop offset="0.55" stop-color="rgba(0, 0, 0, 0.15)" />
+        <stop offset="1" stop-color="rgba(255, 255, 255, 0.4)" />
       </linearGradient>
       <!-- Nothing is being measured here. Hatching is what a dead channel looks
            like on a real panel, and it is deliberately not a colour on the
@@ -203,18 +202,13 @@ const say = (t: (typeof tracks)[number]): string =>
       </pattern>
     </defs>
 
-    <!-- Same white square bezel and corner screws as ATT-0 and the needle
-         gauges: one cluster, one manufacturer, one decade. The face is square
-         rather than round because what is on it is a diagram, not a sweep. -->
-    <rect class="bezel" x="2" y="2" width="96" height="96" rx="7" />
-    {#each [[10, 10], [90, 10], [10, 90], [90, 90]] as const as [cx, cy] (cx + "," + cy)}
-      <circle class="screw" {cx} {cy} r="2.4" />
-    {/each}
-    <rect class="face" x="7" y="7" width="86" height="86" rx="5" />
+    <!-- The face is square where ATT-0's is round, because what is on it is a
+         diagram rather than a sweep. Same cutout, a different window in it. -->
+    <rect class="face" x="10" y="10" width="80" height="80" rx="5" />
 
     <!-- The machine, from above, nose up. It does not move: the world moves
          around it, the same bargain ATT-0 makes with the horizon. -->
-    <path class="hull" d="M41 24 L50 15 L59 24 V79 H41 Z" />
+    <path class="hull" d="M41 26 L50 18 L59 26 V78 H41 Z" />
 
     {#each tracks as track (track.id)}
       <!-- The track, as a channel of six samples. What is *not* touching is
@@ -270,6 +264,8 @@ const say = (t: (typeof tracks)[number]): string =>
         rx="2"
       />
     {/each}
+
+    <rect class="rim" x="10" y="10" width="80" height="80" rx="5" />
   </svg>
 
   <!-- Per cent of the friction cone in use, worst track. Blank — not zero —
@@ -290,18 +286,14 @@ const say = (t: (typeof tracks)[number]): string =>
     width: 100%;
     height: auto;
   }
-  /* Brushed silver, lit from above-left. Instrument bezels are pressed metal;
-     the cream ones read as plastic, which is a different decade. */
-  .bezel {
-    fill: url(#mfg-brushed-traction);
-    stroke: #6e7376;
-    stroke-width: 1;
-  }
-  .screw {
-    fill: #767b7e;
-  }
   .face {
     fill: #16181a;
+  }
+  /* The lip of the cutout it is set into. See `Gauge.svelte`. */
+  .rim {
+    fill: none;
+    stroke: url(#mfg-rim-traction);
+    stroke-width: 2.6;
   }
   /* The machine is drawn as plate, not as an outline: it is the one solid thing
      on this face, and everything else is what is happening to it. */

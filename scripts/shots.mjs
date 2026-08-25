@@ -22,8 +22,17 @@ import { mkdir, rm } from "node:fs/promises";
 import { chromium } from "playwright";
 import { createServer } from "vite";
 
-/** A real mid-range phone, which is the platform this game is aimed at. */
-const VIEWPORT = { width: 390, height: 844 };
+/**
+ * Big enough to hold the widest specimen, and no more meaningful than that.
+ *
+ * The phone widths that matter — 390 portrait, 844 landscape — are set in the
+ * bench's own CSS, so what the browser window is only decides whether a
+ * specimen fits in it. It used to be 390×844, and the landscape row came out
+ * clipped at 390 with no error anywhere: the element screenshot was of a box
+ * wider than the window. Nothing here is responsive to the window itself
+ * (checked: no width media queries, no `vw` in the cab), so this is free.
+ */
+const VIEWPORT = { width: 920, height: 900 };
 const OUT = new URL("../shots/", import.meta.url).pathname;
 
 const filter = process.argv[2] ?? "";
@@ -61,16 +70,24 @@ await page.goto(`${base}/sandbox.html`, { waitUntil: "networkidle" });
 // the shot that answers "do these read as three suppliers in one cab?".
 await page.screenshot({ path: `${OUT}bench.png`, fullPage: true });
 
-// Then each dash specimen on its own, cropped to the phone, which is the shot
-// that answers "does this survive 390px?".
-const specimens = await page.locator("[data-specimen]").all();
+// Then each dash specimen on its own, cropped to the phone. Twice: `dash-` at
+// 390 answers "does this survive a portrait phone?", and `wide-` at 844 answers
+// the question the first one cannot — a wrapping flow does not get cramped when
+// it is given room, it gets holes.
 let written = 1;
-for (const specimen of specimens) {
-  const name = (await specimen.getAttribute("data-specimen")) ?? "unnamed";
-  if (filter && !name.includes(filter)) continue;
-  await specimen.scrollIntoViewIfNeeded();
-  await specimen.screenshot({ path: `${OUT}dash-${name.replace(/\s+/g, "-")}.png` });
-  written++;
+for (const [attribute, prefix] of [
+  ["data-specimen", "dash"],
+  ["data-wide", "wide"],
+]) {
+  for (const specimen of await page.locator(`[${attribute}]`).all()) {
+    const name = (await specimen.getAttribute(attribute)) ?? "unnamed";
+    if (filter && !name.includes(filter)) continue;
+    await specimen.scrollIntoViewIfNeeded();
+    await specimen.screenshot({
+      path: `${OUT}${prefix}-${name.replace(/\s+/g, "-")}.png`,
+    });
+    written++;
+  }
 }
 
 await browser.close();

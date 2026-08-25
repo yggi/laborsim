@@ -114,6 +114,18 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
+### [L-056] The glass in landscape — cage, viewport and perspective
+- **what:** the panel reflows in both orientations now; the cab around it does
+  not. The deck's travel is in `dvh` and the rack takes 74 of them, which is a
+  portrait number — turned sideways the glass is a letterbox, the rack overshoots
+  and the pods sit where a portrait layout left them. Camera FOV, cage geometry
+  and the deck's travel want deciding together rather than patching one at a
+  time. Do not start it as a CSS pass.
+- **done-when:** a phone turned sideways gives a cab worth driving from, with the
+  same instruments, no clipped cage and no geometry that only works at one
+  aspect ratio.
+- **needs:** L-050 (pods move into cage space, which is half this problem)
+
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
   to TILT-GUARD and the first module whose right answer is *situational*: slow

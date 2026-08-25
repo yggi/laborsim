@@ -106,6 +106,28 @@
   }
 
   /**
+   * Lettering cut into the metal of a thing, rather than onto a plate beside
+   * it — a shallow groove, so the light from above catches its lower lip.
+   *
+   * This is the **narrow exception** to the plate rule below, and the line is
+   * about who made the words. A plate names a *control*: it was engraved by
+   * whoever fitted that control, it can be unscrewed, and it can be wrong about
+   * what it is bolted next to. This names a part of the instrument it is cut
+   * into: it arrived from the instrument's supplier with the units already on
+   * it, and it cannot be wrong, because it and the dial are one object.
+   *
+   * So: unit marks on a gauge housing, yes. Anything naming a button, never.
+   */
+  .mfg-engraved {
+    color: #14181a;
+    font-size: 6px;
+    line-height: 1.5;
+    letter-spacing: 0.16em;
+    text-align: center;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /**
    * An engraved legend plate.
    *
    * The defining detail of an industrial panel, and the one that most separates

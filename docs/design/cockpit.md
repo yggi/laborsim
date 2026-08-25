@@ -154,8 +154,9 @@ different part of the body.
 The closed face of the rack is not a button — it is **a live instrument in its
 own right**, a sheet of yellow industrial steel across the bottom of the glass
 and in view while you drive. On it: the machine's riveted dataplate (whose
-serial is the world seed), the chassis maker's instrument cluster — road speed,
-ATT-0, TRACTION, and one housing carrying hours over distance on drums — one
+serial is the world seed), the chassis maker's instrument cluster as **one
+part** (the KIBA-NAV-UNIT: road speed, ATT-0, TRACTION), a second housing
+carrying hours over distance on drums, one
 **ALARM** annunciator, the red mushroom **E-STOP**, and then every fitted
 component's cell. A **latch** across the bottom edge opens the rack: the panel
 rides up, the cabinet comes with it. Same bargain as the chase camera, made with
@@ -169,6 +170,12 @@ Three rules, each of which cost something:
   a pinned right column for the critical controls) and both were a website's
   answers. One wrapping flow: things are bolted where they fit, and a panel that
   has run out of room grows another row.
+- **The flow is of *parts*, and it is bottom-aligned.** Every plate and every
+  engraved legend across a row lands on one line, with the controls ragged above
+  it — the stop standing taller than the lamp, HANSA's beacon taller again.
+  Grouping parts into boxes is what makes a wrapping flow leave holes, so only
+  the masters are a group. See `docs/design/components.md` for both mistakes and
+  the measurements that closed them.
 - **The panel does not talk.** There was a status line along the bottom naming
   the worst thing happening. It was the dash reading its own lamp out loud, and
   a lamp that needs a caption has failed. What it said is now split three ways:
@@ -229,6 +236,43 @@ replaced:
 The needle is damped at 0.6 s (`src/cockpit/damping.ts`), which is a display
 filter and not a sim change: undamped, the traction reading sat above the
 gauge's own danger band **21% of a flat-ground run** at full speed.
+
+## The KIBA-NAV-UNIT — the machine's own instruments are one part
+
+Speed, ATT-0 and TRACTION share **one bezel, one set of screws, and legends
+engraved into their own plate.** The designation is internal — it is what the
+part is called in the parts book and it appears nowhere on the panel.
+
+The argument is that it is **one part**. Three separately bolted gauges say
+three suppliers, three fitters and three dates, and none of that is true: the
+chassis maker builds the cluster and ships it as a unit. Two things follow that
+are worth the change on their own — the plate is a single object the eye lands
+on before it reads anything, and three bezels' worth of border, shadow and plate
+stock comes back as panel. The dials grew about a quarter at the same footprint,
+because a face no longer carries a frame of its own.
+
+Each stack is **gauge, readout, legend**, bottom-aligned, so the three readouts
+sit on one line across the unit and the dials go ragged along the top the way a
+small gauge set among big ones actually is.
+
+**The counters are deliberately not in it.** Hours and distance are not
+something you steer by, and a totaliser has never shared a bezel with a live
+dial on any machine.
+
+### Engraving is the narrow exception to the plate rule
+
+The rule is that a label is a separate physical object, and it holds. The line
+is about **who made the words**:
+
+| | a plate | an engraving |
+|---|---|---|
+| names | a **control** | a part of the instrument it is cut into |
+| made by | whoever fitted that control | the instrument's supplier |
+| can it be wrong? | yes — it unscrews, and it can outlive what it names | no — it and the dial are one object |
+
+So unit marks on a gauge housing, yes; anything naming a button, never. It is
+enforced rather than written down (`META.md`): `tests/cockpit.test.ts` fails if
+a cell — a faceplate, where every word names a control — engraves anything.
 
 ## Cockpit identity — the interior is not exchangeable
 

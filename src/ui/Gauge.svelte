@@ -6,9 +6,15 @@
  * It is dumb on purpose: it takes a fraction 0..1 and points at it. What the
  * fraction *means* is the caller's problem, which keeps this reusable across
  * speed, grip, pressure, whatever the dash decides to show. `label` is the
- * accessible name only — what the dial *measures* is engraved on a plate the
- * dash mounts under it, because on a panel a label is a separate object. A `danger` band
- * paints the top of the sweep red so a gauge in the red reads at a glance.
+ * accessible name only — what the dial *measures* is named by whatever mounts
+ * it. A `danger` band paints the top of the sweep red so a gauge in the red
+ * reads at a glance.
+ *
+ * **It draws a face, not an instrument.** The white square bezel and its four
+ * screws used to be here, which meant a dial could only ever be mounted alone.
+ * A cluster is one plate with holes cut in it, so the bezel belongs to the
+ * thing doing the mounting (`NavUnit.svelte`) and what is left here is the dial
+ * and the ring of the hole it is set into.
  *
  * Architecture rule 3: pure presentation, no snapshot, no sim.
  */
@@ -60,20 +66,17 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
 <div class="gauge" style="width: {size}px">
   <svg viewBox="0 0 100 100" role="img" aria-label="{label} {display}">
     <defs>
-      <!-- Brushed metal: a diagonal sweep with the light coming from the same
-           corner it comes from everywhere else on this panel. -->
-      <linearGradient id="mfg-brushed-gauge" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#d6d9da" />
-        <stop offset="0.42" stop-color="#b4b9bb" />
-        <stop offset="1" stop-color="#8f9497" />
+      <!-- The inside of a hole, lit from above: the upper wall falls into
+           shadow and the lower one catches the light. Same direction as every
+           inset on this panel, because there is only one lamp in this cab. -->
+      <linearGradient id="mfg-rim-gauge" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(0, 0, 0, 0.8)" />
+        <stop offset="0.55" stop-color="rgba(0, 0, 0, 0.15)" />
+        <stop offset="1" stop-color="rgba(255, 255, 255, 0.4)" />
       </linearGradient>
     </defs>
-    <!-- White square bezel with a screw in each corner. -->
-    <rect class="bezel" x="2" y="2" width="96" height="96" rx="7" />
-    {#each [[10, 10], [90, 10], [10, 90], [90, 90]] as const as [cx, cy] (cx + "," + cy)}
-      <circle class="screw" {cx} {cy} r="2.4" />
-    {/each}
     <circle class="dial" cx="50" cy="50" r="40" />
+    <circle class="rim" cx="50" cy="50" r="40" />
 
     <path class="scale" d={arc(0, 1, 33)} />
     {#if danger < 1}
@@ -108,18 +111,15 @@ const ticks = [0, 0.25, 0.5, 0.75, 1];
     width: 100%;
     height: auto;
   }
-  /* Brushed silver, lit from above-left. Instrument bezels are pressed metal;
-     the cream ones read as plastic, which is a different decade. */
-  .bezel {
-    fill: url(#mfg-brushed-gauge);
-    stroke: #6e7376;
-    stroke-width: 1;
-  }
-  .screw {
-    fill: #767b7e;
-  }
   .dial {
     fill: #16181a;
+  }
+  /* Straddles the dial's edge, so half the ring is glass and half is plate —
+     which is what the lip of a cutout looks like. */
+  .rim {
+    fill: none;
+    stroke: url(#mfg-rim-gauge);
+    stroke-width: 2.6;
   }
   .scale {
     fill: none;

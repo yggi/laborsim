@@ -97,17 +97,33 @@ whatever panel the vehicle came with.
 One wrapping flow. No columns, no scrolling — things are bolted where they fit,
 and a panel that has run out of room grows another row.
 
-1. **The dataplate and the instruments** — the chassis maker's own cluster,
-   arranged the way aircraft settled it: attitude biggest, in the middle. A gauge
+1. **The dataplate**, and **the chassis maker's instrument cluster as one part**
+   — the KIBA-NAV-UNIT, arranged the way aircraft settled it. An instrument
    measuring something that can raise a condition carries a **tell**: a small
-   lamp on its plate's line, lit when that condition is the master's source.
-2. **`ALARM` and the stop** — the two things the chassis says about the machine
-   as a whole, bolted together because they are the same conversation.
-3. **Every fitted component's cell**, in rack order, on the same baseline but
-   **floated to the far end of its row**. That gap is the seam: everything left
-   of it came with the machine, everything right of it was bolted on. It is
-   worth a hand's width of empty panel to see which is which at a glance.
-4. **The latch**, pinned along the bottom edge, which is the top of the cabinet.
+   lamp on its own housing, lit when that condition is the master's source.
+2. **The counters**, in a housing of their own. You steer by the cluster and you
+   never steer by a totaliser, so they are not the same part.
+3. **`ALARM` and the stop** — the two things the chassis says about the machine
+   as a whole, bolted together because they are the same conversation. The one
+   group on the panel that stays a group.
+4. **Every fitted component's cell**, in rack order, behind a **seam**: a gap
+   wider than the one between any two of the machine's own parts. Everything
+   before it came with the machine, everything after it was bolted on.
+5. **The latch**, pinned along the bottom edge, which is the top of the cabinet.
+
+Everything above is **one wrapping flow of parts, bottom-aligned** — no columns,
+no scrolling, no pinning but the latch. Two consequences worth stating, because
+both were got wrong first:
+
+- **A part is an item in that flow, never a group of items.** Wrapping the
+  cluster and the counters in one box meant 300 px of kit either fitted on a row
+  or jumped to the next one *entire*, leaving a hole as wide as everything in
+  it. Only the masters are still a group, and only because a mushroom button you
+  have to hunt for twice is one you find too late.
+- **The seam is a fixed gap, not the leftover slack.** Floating the cells to the
+  far end of the row made the seam *all* the width the row did not use — a third
+  of the panel, empty, in landscape. Leftover panel belongs at the end of the
+  row, where it reads as what it is: room for more kit.
 
 There is **no status line**. The panel does not caption its own lamps; the words
 live in the debrief (`docs/design/cockpit.md`).
