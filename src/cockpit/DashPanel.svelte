@@ -43,16 +43,10 @@
  * Architecture rule 3: reads a snapshot, reports intent up. Never the sim.
  */
 
-import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
+import { ALARM, type Condition, WARN } from "../control/bus.ts";
 import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
-import {
-  type Annunciation,
-  chassisConditions,
-  isAlarm,
-  isWarning,
-  worst,
-} from "./annunciator.ts";
+import { type Annunciation, isAlarm, isWarning } from "./annunciator.ts";
 import Meters from "./Meters.svelte";
 import { styleOf } from "./makers.ts";
 import NavUnit from "./NavUnit.svelte";
@@ -62,19 +56,37 @@ let {
   snapshot,
   rackOpen,
   estopped,
+  lamps,
+  master,
+  acked,
   height = $bindable(0),
   onOpenRack,
   onEstop,
+  onAck,
   controls,
 }: {
   snapshot: Snapshot | undefined;
   rackOpen: boolean;
   estopped: boolean;
+  /**
+   * The chassis's own conditions, and the worst thing happening anywhere.
+   *
+   * Both used to be computed here. They moved up to the shell when the horn
+   * arrived, because the horn is the audible half of this lamp and a machine
+   * whose light and noise disagreed about its own condition would be two
+   * instruments wired to two facts. The lamp, the horn and — next — the beacon
+   * all read one.
+   */
+  lamps: readonly Annunciation[];
+  master: Condition;
+  /** The worst condition the pilot has seen and pressed. Owned by the shell. */
+  acked: Condition;
   /** Measured, so the levers and the toasts can sit clear of a panel that
    *  grows a row every time a component is fitted. */
   height?: number;
   onOpenRack: () => void;
   onEstop: () => void;
+  onAck: () => void;
   /** The one channel a part commands through. See `control/controls.ts`. */
   controls: (id: string) => Controls;
 } = $props();
@@ -86,18 +98,13 @@ const chassis = $derived(stages.find((s) => s.id === "PILOT"));
 const house = $derived(styleOf(chassis?.maker ?? "KIBA WORKS"));
 
 /**
- * The chassis's own conditions. They get no legend row of their own — a strip of
+ * The chassis's own conditions get no legend row of their own — a strip of
  * SLIP/GND/¥ lamps was the dash explaining itself in words, which is exactly
  * what a panel does not do. They feed the master, and the ones that *have* a
  * gauge light a tell beside it.
  */
-const chassisLamps = $derived<readonly Annunciation[]>(
-  chassisConditions(snapshot, estopped),
-);
-
-const overall = $derived(
-  worst([...chassisLamps.map((a) => a.condition), ...stages.map((s) => s.condition)]),
-);
+const chassisLamps = $derived<readonly Annunciation[]>(lamps);
+const overall = $derived(master);
 
 /**
  * The tells — one small lamp beside the instrument that knows why — live on
@@ -114,12 +121,11 @@ const overall = $derived(
  * `acked` is the worst condition the pilot has seen and pressed. Anything worse
  * than that is new, and new things flash. Pressing catches up to the present;
  * conditions clearing winds it back down, which re-arms the flash for next time.
- * Nothing here silences anything — a steady lamp is still a lit lamp.
+ *
+ * Nothing here silences the *lamp* — a steady lamp is still a lit lamp. What it
+ * does silence is the horn, which is the whole bargain an annunciator panel
+ * offers: you may stop the noise, you may not stop being told.
  */
-let acked = $state<Condition>(NOMINAL);
-$effect(() => {
-  if (overall < acked) acked = overall;
-});
 const unacked = $derived(overall > acked);
 
 /**
@@ -186,7 +192,7 @@ const cells = $derived(
           class="master mfg-lamp"
           data-lit={alarmLit}
           data-flash={flash}
-          onclick={() => (acked = overall)}
+          onclick={onAck}
           aria-label="alarm, acknowledge"
           aria-pressed={!unacked}
         ></button>

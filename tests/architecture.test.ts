@@ -72,6 +72,13 @@ describe("rule 1 — the sim runs headless", () => {
         `${file} must not import a renderer`,
       ).toHaveLength(0);
       expect(imports, `${file} must not import Svelte`).not.toContain("svelte");
+      // Audio is a renderer like the scene is, and the sim knows about neither.
+      // A module that reached for a voice to announce itself would be a module
+      // that cannot run in a worker, in a test, or in a replay.
+      expect(
+        imports.filter((s) => s.includes("/audio/")),
+        `${file} must not import a renderer`,
+      ).toHaveLength(0);
     }
   });
 
@@ -146,9 +153,11 @@ describe("rule 2 — no transcendental reaches sim state", () => {
 
 describe("rule 3 — the snapshot boundary is one-directional", () => {
   // `cockpit` and `sandbox` joined `ui` when the cockpit became a registry of
-  // components rather than a set of panels. They are further from the sim than
-  // `ui` is, not closer, so the same rule applies to all three.
-  it.each(["ui", "cockpit", "sandbox"])(
+  // components rather than a set of panels. `audio` joined them because a voice
+  // is a view of a recording exactly as an instrument is — which is what makes
+  // a replay sound like the run it recorded. All of them are further from the
+  // sim than `ui` is, not closer, so the same rule applies to all four.
+  it.each(["ui", "cockpit", "sandbox", "audio"])(
     "src/%s imports no renderer and no physics",
     (tree) => {
       let dir: string;

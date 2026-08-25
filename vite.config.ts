@@ -22,12 +22,18 @@ export default defineConfig({
   build: {
     target: "es2022",
     rollupOptions: {
-      // Two entries. `sandbox.html` is the cockpit bench (src/sandbox/): every
+      // Three entries. `sandbox.html` is the cockpit bench (src/sandbox/): every
       // component in every state, driven by hand-built snapshots, with no
       // Rapier and no renderer behind it. It ships with the site on purpose —
       // it is the surface a theme is authored and reviewed against, and one
-      // that only exists on somebody's laptop is one nobody uses.
-      input: { main: "index.html", sandbox: "sandbox.html" },
+      // that only exists on somebody's laptop is one nobody uses. `listen.html`
+      // is the same argument for the machine's voice, which is harder to check
+      // than a panel and therefore needs the bench more.
+      input: {
+        main: "index.html",
+        sandbox: "sandbox.html",
+        listen: "listen.html",
+      },
     },
   },
   test: {

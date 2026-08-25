@@ -18,6 +18,7 @@
  * against — which is why it shows *states*, not a pretty gallery.
  */
 
+import { chassisConditions, worst } from "../cockpit/annunciator.ts";
 import DashPanel from "../cockpit/DashPanel.svelte";
 import { styleOf } from "../cockpit/makers.ts";
 import { cellFor, podFor } from "../cockpit/parts.ts";
@@ -83,13 +84,26 @@ const dead = () => inertControls();
           about. The glass and the camera behind it are a separate problem
           (`NOTES.md`); this row is only the panel. -->
   {#snippet dash(specimen: (typeof SPECIMENS)[number])}
+    <!-- The conditions are derived here rather than passed in, because they
+         moved out of the panel and into the shell when the horn arrived. The
+         bench has to stand where the shell stands or it stops showing the
+         panel a player sees. `acked` is NOMINAL throughout: an unacknowledged
+         condition flashes, and the flash is a state worth looking at. -->
+    {@const lamps = chassisConditions(specimen.snapshot, specimen.estopped ?? false)}
     <div class="pin">
       <DashPanel
         snapshot={specimen.snapshot}
         rackOpen={false}
         estopped={specimen.estopped ?? false}
+        {lamps}
+        master={worst([
+          ...lamps.map((a) => a.condition),
+          ...specimen.snapshot.stages.map((s) => s.condition),
+        ])}
+        acked={0}
         onOpenRack={noop}
         onEstop={noop}
+        onAck={noop}
         controls={dead}
       />
     </div>

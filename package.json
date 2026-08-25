@@ -13,7 +13,8 @@
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "listen": "node scripts/listen.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

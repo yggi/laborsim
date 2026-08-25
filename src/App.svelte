@@ -10,6 +10,8 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
+import { type Audio, createLiveAudio } from "./audio/engine.ts";
+import { type Annunciation, chassisConditions, worst } from "./cockpit/annunciator.ts";
 import DashPanel from "./cockpit/DashPanel.svelte";
 import Glass from "./cockpit/Glass.svelte";
 import Lever from "./cockpit/Lever.svelte";
@@ -81,6 +83,87 @@ let citizenSeen = false;
 /** Measured off the dash, so levers and toasts sit clear of a panel whose
  *  height changes as components are fitted and cells appear. */
 let dashHeight = $state(96);
+
+/**
+ * How worried the machine is, and how much of that the pilot has pressed.
+ *
+ * It lives here rather than on the dash because it now has **three** consumers:
+ * the master lamp, the horn, and the beacon behind it (L-046). A machine whose
+ * light and noise disagreed about its own condition would be two instruments
+ * wired to two facts — so they are wired to one, and the panel is handed the
+ * answer rather than working it out again.
+ */
+let acked = $state<Condition>(NOMINAL);
+const lamps = $derived<readonly Annunciation[]>(chassisConditions(latest, estop));
+const master = $derived(
+  worst([
+    ...lamps.map((a) => a.condition),
+    ...(latest?.stages ?? []).map((s) => s.condition),
+  ]),
+);
+// A condition clearing winds the acknowledgement back down, which re-arms both
+// the flash and the horn for next time.
+$effect(() => {
+  if (master < acked) acked = master;
+});
+
+/**
+ * The horn's input, mirrored into a plain variable.
+ *
+ * The render loop runs in a `requestAnimationFrame` callback, which is outside
+ * any reactive scope — reading a rune from in there would be an untracked read
+ * that happens to work. Mirroring it in an effect keeps the loop reading a
+ * plain number and keeps the sim effect from re-racking the exercise every time
+ * a lamp changes colour.
+ */
+let hornLevel = NOMINAL as Condition;
+$effect(() => {
+  hornLevel = master > acked ? master : NOMINAL;
+});
+
+/**
+ * The rig's volume, not the machine's.
+ *
+ * A Labor's horn has no cut-out — that is what a horn is for — so this is not a
+ * dash control and does not live on the panel. It is the training rig's own
+ * knob, and it sits with the camera, which is the other control that belongs to
+ * the room rather than to the machine (`docs/design/training-frame.md`).
+ */
+let sound = $state(true);
+let audio: Audio | undefined;
+
+function toggleSound() {
+  sound = !sound;
+  audio?.setVolume(sound ? 1 : 0);
+}
+
+/**
+ * The machine's voice, built once and kept across a RESET.
+ *
+ * Deliberately *not* inside the sim effect: an `AudioContext` is an expensive,
+ * limited resource and re-racking the exercise is not a reason to throw one
+ * away. It costs nothing to keep, because the engine reads the event channel
+ * like everything else — a rewind is a new run to it, and nothing from the old
+ * one is played.
+ *
+ * A browser will not let a page make noise before the player has touched it, so
+ * the context starts suspended and the first gesture anywhere wakes it. That is
+ * not a workaround to be embarrassed about: a rig that started talking before
+ * you had touched anything would be the rig being rude.
+ */
+$effect(() => {
+  const live = createLiveAudio();
+  audio = live.audio;
+  const wake = () => live.resume();
+  addEventListener("pointerdown", wake);
+  addEventListener("keydown", wake);
+  return () => {
+    removeEventListener("pointerdown", wake);
+    removeEventListener("keydown", wake);
+    audio = undefined;
+    live.dispose();
+  };
+});
 
 let setViewMode: (m: CameraMode) => void = () => {};
 
@@ -193,6 +276,7 @@ function resetSim() {
   rackOpen = false;
   mode = "cab";
   citizenSeen = false;
+  acked = NOMINAL;
   runId++;
 }
 
@@ -293,6 +377,10 @@ $effect(() => {
         latest = current;
       }
       viewport.render(current);
+      // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
+      // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
+      // after you watched it land is heard as a second event.
+      audio?.render(current, hornLevel);
     };
     frame = requestAnimationFrame(tick);
 
@@ -365,14 +453,19 @@ $effect(() => {
     </div>
   {/if}
 
-  <!-- The camera is a fixed control, top-right: choosing the view is a thing you
-       do with the equipment, and in chase it is the only equipment you keep. -->
+  <!-- The rig's own controls, fixed top-right: the view you are given, and how
+       loud the room is. Neither belongs to the machine — a Labor's horn has no
+       cut-out and its cab has no camera — so neither is on the dash. In chase
+       this is the only equipment you keep. -->
   <div class="camera item">
     {#each ["cab", "chase"] as const as option (option)}
       <button class:on={mode === option} onclick={() => setView(option)}>
         {option === "cab" ? "CAB" : "CHASE"}
       </button>
     {/each}
+    <button class:on={sound} onclick={toggleSound} aria-pressed={sound}>
+      {sound ? "SND" : "MUTE"}
+    </button>
   </div>
 
   <!--
@@ -405,9 +498,13 @@ $effect(() => {
         snapshot={latest}
         {rackOpen}
         estopped={estop}
+        {lamps}
+        {master}
+        {acked}
         bind:height={dashHeight}
         onOpenRack={() => (rackOpen = !rackOpen)}
         onEstop={hitEstop}
+        onAck={() => (acked = master)}
         {controls}
       />
       {#if rackOpen}
