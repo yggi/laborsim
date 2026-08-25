@@ -26,8 +26,8 @@ import {
 } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import type { SimEvent } from "../core/events.ts";
-import type { Snapshot, TrackState } from "../core/snapshot.ts";
-import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import type { Shake, Snapshot, TrackState } from "../core/snapshot.ts";
+import { G, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { PropKind } from "../world/props.ts";
 
 const REST: TrackState = {
@@ -113,6 +113,8 @@ function frameOf(
   right: TrackState,
   events: readonly SimEvent[] = [],
   maker = "KIBA WORKS",
+  /** Standing on the ground unless a scene says otherwise: 1 g up, and still. */
+  shake: Shake = { surge: 0, heave: G, sway: 0, jerk: 0 },
 ): Snapshot {
   const tick = Math.round(t / STEP_SECONDS);
   return {
@@ -127,6 +129,7 @@ function frameOf(
       speed: Math.max(0, (left.surface + right.surface) / 2),
       pitch: 0,
       roll: 0,
+      shake,
     },
     stages: [chassisStage(maker)],
     props: [],
@@ -144,13 +147,97 @@ const both = (
   state: Partial<TrackState>,
   events?: readonly SimEvent[],
   maker?: string,
-) => frameOf(t, track(state), track(state), events, maker);
+  shake?: Shake,
+) => frameOf(t, track(state), track(state), events, maker, shake);
 
 /** The load ramp `labouring` runs, so two houses can be heard against it. */
 const labour = (t: number): Partial<TrackState> => ({
   commanded: MAX_TRACK_SPEED,
   traction: ramp(t, 1, 5, 0.1, 0.95),
 });
+
+/**
+ * Ground, as the hull feels it — shaped like **the measured thing**.
+ *
+ * Two false starts, both instructive. Sines first, which is a wobble: the scene
+ * measured identically over smooth ground and rough. Then sharp spikes in
+ * continuous time, which is the right *shape* and still measured flat — the
+ * spikes decayed in 12 ms and the bench samples at 60 Hz, so most of them fell
+ * between two frames and the ones that landed were aliased to whatever height
+ * the sampler happened to catch.
+ *
+ * The sim has no such problem: it *is* a 60 Hz signal, and a probe over the
+ * default site says what it looks like. Parked reads exactly zero. At full
+ * ahead the median step is 0.13 m/s², the ninetieth percentile is 8.6, the
+ * ninety-ninth is 69 and the worst is 80. So this draws one value per frame
+ * from a curve fitted to those three points — `86·u^21.8`, which passes through
+ * 8.6 at u=0.9 and 69 at u=0.99 — and the result is a bench that is *mostly
+ * nothing, punctuated*, exactly as the machine is.
+ */
+const FRAME_HZ = 60;
+
+/** A deterministic draw per frame. The bench must render the same twice. */
+function dither(frame: number): number {
+  const x = Math.sin(frame * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** What an accelerometer bolted to the hull would read at this instant. */
+type Reading = Omit<Shake, "jerk">;
+
+/**
+ * A `Shake` from a reading, with the jerk **differenced from the frame before
+ * it** — the same operation the sim performs, at the same rate.
+ *
+ * A scene cannot just make a jerk up: it is the difference between two
+ * accelerometer readings, and inventing one that did not follow from the two
+ * either side of it would be a bench that lies about the thing it exists to
+ * check. Doing it this way also means a scene only has to describe *the ride*,
+ * and the quantity the cab answers to falls out.
+ */
+function shakeAt(t: number, reading: (at: number) => Reading): Shake {
+  const now = reading(t);
+  const before = reading(Math.max(0, t - 1 / FRAME_HZ));
+  return {
+    ...now,
+    jerk:
+      Math.hypot(
+        now.surge - before.surge,
+        now.heave - before.heave,
+        now.sway - before.sway,
+      ) * FRAME_HZ,
+  };
+}
+
+/**
+ * Ground, as the hull feels it — shaped like **the measured thing**.
+ *
+ * Two false starts, both instructive. Sines first, which is a wobble: the scene
+ * measured identically over smooth ground and rough. Then sharp spikes in
+ * continuous time, which is the right *shape* and still measured flat — they
+ * decayed in 12 ms and the bench samples at 60 Hz, so most of them fell between
+ * two frames and the ones that landed were aliased to whatever height the
+ * sampler happened to catch.
+ *
+ * The sim has no such problem: it *is* a 60 Hz signal, and a probe over the
+ * default site says what it looks like. So this draws one reading per frame
+ * from a curve fitted to the measured percentiles — `86·u^21.8`, which passes
+ * through the ninetieth at 8.6 m/s² and the ninety-ninth at 69 — and the
+ * differencing above turns that into the jerk the cab answers to.
+ */
+const rough =
+  (amount: (at: number) => number) =>
+  (t: number): Reading => {
+    const frame = Math.round(t * FRAME_HZ);
+    const jolt = amount(t) * (0.13 + 86 * dither(frame) ** 21.8);
+    return {
+      // A tracked machine walks sideways over a rut rather than riding across
+      // it, so the vertical knock arrives with some of itself in the other two.
+      surge: jolt * 0.3 * (dither(frame + 977) - 0.5),
+      heave: G + jolt,
+      sway: jolt * 0.24 * (dither(frame + 313) - 0.5),
+    };
+  };
 
 export const SCENES: readonly Scene[] = [
   {
@@ -233,6 +320,33 @@ export const SCENES: readonly Scene[] = [
     }),
   },
   {
+    name: "creep",
+    note: "walking pace with the weight on: slow separate clanks, and the dry bearing squeals. The one voice that says *heavy* rather than *fast*.",
+    seconds: 6,
+    frame: (t) => ({
+      snapshot: both(t, { commanded: 0.35, traction: ramp(t, 0.5, 3, 0.2, 0.92) }),
+      alarm: NOMINAL,
+    }),
+  },
+  {
+    name: "rough-ground",
+    note: "the same drive over a graded pad, then over ruts. Nothing about the drivetrain changes — the rattle is the *ground*, and it is the only voice that renders it.",
+    seconds: 8,
+    frame: (t) => ({
+      snapshot: both(
+        t,
+        { commanded: MAX_TRACK_SPEED * 0.8, traction: 0.45 },
+        [],
+        undefined,
+        shakeAt(
+          t,
+          rough((at) => ramp(at, 2, 3.5, 0, 1)),
+        ),
+      ),
+      alarm: NOMINAL,
+    }),
+  },
+  {
     name: "the-site",
     note: "a pole tipping over on its own (1.6 J), a cone, a barrier, then a pipe stack at speed (550 J). One scale, no thresholds.",
     seconds: 7,
@@ -251,14 +365,32 @@ export const SCENES: readonly Scene[] = [
   },
   {
     name: "landing",
-    note: "the machine itself, dropped 2.4 m. 140 kJ into the hull — the biggest thing rung 1 can make happen.",
+    note: "the machine itself, dropped 2.4 m. 140 kJ into the hull — the biggest thing rung 1 can make happen. Weightless on the way down, and the whole cab arrives with it.",
     seconds: 5,
-    frame: (t) => ({
-      snapshot: both(t, { commanded: 0.6, traction: 0.2 }, [
-        { kind: "hull", seq: 1, tick: 90, joules: 140_000, jolt: 6.7 },
-      ]),
-      alarm: NOMINAL,
-    }),
+    frame: (t) => {
+      // In the air an accelerometer reads **nothing**, which is why the cab goes
+      // quiet before it lands rather than rattling all the way down. Then one
+      // frame at 8 g, and everything loose in it arrives at once.
+      const falling = t > 1.0 && t < 1.5;
+      // Weightless from the moment it leaves the ground, then one frame at 9 g.
+      // Both edges are steps, so the jerk differencing gives a bang leaving the
+      // ground and a much bigger one arriving — and nothing in between.
+      const reading = (at: number): Reading => ({
+        surge: 0,
+        heave: at > 1.0 && at < 1.5 ? 0 : at >= 1.5 && at < 1.52 ? G + 78 : G,
+        sway: 0,
+      });
+      return {
+        snapshot: both(
+          t,
+          { commanded: 0.6, traction: falling ? null : 0.2, contacts: falling ? 0 : 6 },
+          [{ kind: "hull", seq: 1, tick: 90, joules: 140_000, jolt: 6.7 }],
+          undefined,
+          shakeAt(t, reading),
+        ),
+        alarm: NOMINAL,
+      };
+    },
   },
   {
     name: "caution",

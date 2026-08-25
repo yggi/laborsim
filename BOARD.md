@@ -47,8 +47,9 @@ built; what remains is more to break, replay, and the path to the conflict.
   with a house-voice nag. `voice.tips` already exists and nothing consumes it.
 - **done-when:** looking around moves the pods, a drop is refused by arm reach
   rather than by the screen edge, and the look recentres without a per-instrument
-  rune firing at 60 Hz.
-- **needs:** NOTES thread "Pods on arms"
+  rune firing at 60 Hz. The design is written up in `docs/design/components.md`
+  ("Pods are on arms"); `cockpit/Glass.svelte` is the one file that has to learn
+  look angle, and placements are already one record keyed by component id.
 
 ### [L-051] The cage and the levers are KIBA's too
 - **what:** the chassis component brings the cab furniture, and it is currently
@@ -104,6 +105,17 @@ built; what remains is more to break, replay, and the path to the conflict.
 ---
 
 ## backlog
+
+### [L-062] The running gear has no suspension
+- **what:** the chain clanks and the cab rattles, and between them is a knock
+  nothing renders: the bogies taking a rut. It was refused rather than invented,
+  because suspension travel is not simulated and a voice with no quantity behind
+  it is a sound effect wearing a simulation's clothes. The nearest honest
+  quantity already exists — a track's `contacts` rising and falling as its six
+  samples find and lose ground — and the reason it was not used is that no bench
+  scene can vary it over time yet, so it would ship unheard.
+- **done-when:** riding over a rut knocks on the side that took it, from a
+  quantity the sim publishes, with a scene that shows it.
 
 ### [L-057] The site stands up
 - **what:** most of the furniture falls over on its own. Measured on the default
@@ -286,6 +298,19 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## history
 
+### [L-061] A machine is voiced by whoever built it — **closed**
+Sound gets an owner. A manufacturer's house is colours, words **and sound**, in
+one object at `src/makers/` above both renderers; the machine's voices are its
+**chassis maker's**, read off the recording, and the site's belong to materials.
+A house sets timbre and rate, never level. Depth on the drone (a detuned twin
+and a firing pulse, both measured into place against the headroom an impact
+needs), and three voices that were not there: the **chain**, one knock per track
+plate at the rate the renderer turns the belt; the **squeak**, which belongs to
+a heavy crawl and is gone by working speed; and the **rattle**, keyed to the
+hull's jerk, which is the only voice that renders the ground. `MachineState`
+gained an accelerometer. Rejected: a suspension voice (L-062), because nothing
+simulates suspension travel.
+
 ### [L-040] The machine symphony — synthesised sound — **closed**
 Five voices, none sampled: the drive note carrying load (filter, droop and
 loudness off `traction`), the grind carrying slip and only where there is
@@ -364,13 +389,3 @@ Instruments move by a titlebar, free to place but refused if they leave the
 glass or overlap another; they snap back to the last legal spot. All three rules
 (free move, no-overlap, in-bounds) verified in the browser. The scope for L-025
 (a real glass budget) is now visible.
-
-### [L-031] Damage model — the world can be broken — **closed**
-Breakable furniture is dynamic and scatters; damage is **joules absorbed**, not
-hit points, so it is a quantity the player can be shown. Lines carry what was
-driving and what was bypassed. Two bugs paid for: props spawned overlapping and
-destroyed each other (¥55,690 before the machine moved), and energy fed to
-anything already sliding got integrated until it wrote itself off. Rejected:
-Rapier's contact-force events — a solver force magnitude is not inspectable and
-energy is. Learned: toughness must be a fraction of ½·m·v², or a cone rated at
-22 J is indestructible by a 6.2 t machine.

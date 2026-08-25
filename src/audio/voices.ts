@@ -33,8 +33,9 @@
 
 import { ALARM, type Condition, WARN } from "../control/bus.ts";
 import type { HullEvent, ImpactEvent } from "../core/events.ts";
-import type { TrackState } from "../core/snapshot.ts";
-import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import { makeRng } from "../core/rng.ts";
+import type { Shake, TrackState } from "../core/snapshot.ts";
+import { GROUSER_PITCH, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { SoundHouse, Wave } from "../makers/sound.ts";
 import type { PropKind } from "../world/props.ts";
 
@@ -288,15 +289,28 @@ const IMPACT_REF = 700;
 export const loudness = (joules: number, reference: number): number =>
   clamp01(Math.sqrt(Math.max(0, joules) / reference));
 
+/**
+ * How unlike each other two hits on the same thing are.
+ *
+ * Nothing is ever struck twice in the same place. A cone caught on its rim and
+ * a cone caught flat are the same plastic and not the same noise, and without
+ * this a line of cones is one cone played eight times — which is the exact
+ * complaint people have about *sampled* audio, arrived at from the other
+ * direction. Drawn from `seq`, which is on the recording, so a replay of a run
+ * hits everything the same way twice.
+ */
+const IMPACT_SPREAD = 0.2;
+
 export function impactVoice(event: ImpactEvent): Knock {
   const material = MATERIAL[event.what];
   const level = loudness(event.joules, IMPACT_REF);
+  const wobble = makeRng(event.seq).range(-1, 1) * IMPACT_SPREAD;
   return {
     // A harder hit excites lower modes: the same cone struck harder rings
     // deeper, which is why a bang and a tap are not the same sound louder.
-    hz: material.hz * (1 - 0.28 * level),
+    hz: material.hz * (1 - 0.28 * level) * (1 + wobble),
     gain: level,
-    decay: material.decay * (0.5 + 0.9 * level),
+    decay: material.decay * (0.5 + 0.9 * level) * (1 + wobble * 0.5),
     grit: material.grit,
     strikeHz: strikeOf(level),
   };
@@ -324,6 +338,192 @@ export function hullVoice(event: HullEvent): Knock {
     decay: 0.28 + 0.5 * level,
     grit: 0.6,
     strikeHz: strikeOf(level),
+  };
+}
+
+/* -- the chain ------------------------------------------------------------- */
+
+/**
+ * The running gear: one knock per track plate over the sprocket, and the dry
+ * bearing it turns on.
+ *
+ * **The rate is geometry, not taste.** A plate passes a fixed point every
+ * `GROUSER_PITCH` metres of belt, so the chain clanks at
+ * `|commanded| / GROUSER_PITCH` — between one and seven times a second at
+ * working speeds — and that is the *same number the renderer turns the belt at*.
+ * You hear what you see, and when the belt races under a machine that is not
+ * moving, the clank races with it: slip becomes audible without slip being
+ * mentioned anywhere in this voice.
+ *
+ * `commanded` and not `surface`, deliberately. The belt's speed relative to the
+ * hull is what the drivetrain is delivering; a track spinning in mid-air clanks
+ * *faster*, not slower, because nothing is holding it back.
+ */
+export interface ChainVoice {
+  /** Plates per second past a fixed point. Zero on a stopped belt. */
+  readonly rate: number;
+  /** What one plate sounds like. Jittered per plate; see `chainLink`. */
+  readonly link: Knock;
+}
+
+/** How loud the chain is against the note. Under it, always. */
+const CHAIN_GAIN = 0.5;
+/**
+ * What a plate touching ground adds.
+ *
+ * A belt makes two noises: the plate coming over the sprocket, which happens
+ * whatever the machine is doing, and the plate slapping the ground, which does
+ * not. So a track in the air keeps a third of its voice — it is still turning,
+ * and you can hear that it is turning against nothing.
+ */
+const CHAIN_SPROCKET = 0.34;
+
+export function chainVoice(track: TrackState, house: SoundHouse): ChainVoice {
+  const gear = house.gear;
+  const belt = Math.abs(track.commanded);
+  const effort = clamp01(belt / MAX_TRACK_SPEED);
+  const ground = clamp01(track.contacts / 6);
+  // A faster belt hits harder, but not by much: what mostly changes with speed
+  // is how *often* it hits, and doubling both would run away with the mix.
+  const level =
+    CHAIN_GAIN *
+    (0.45 + 0.55 * effort) *
+    (CHAIN_SPROCKET + (1 - CHAIN_SPROCKET) * ground);
+
+  return {
+    rate: belt / GROUSER_PITCH,
+    link: {
+      hz: gear.clankHz,
+      gain: level,
+      decay: gear.clankDecay,
+      grit: gear.clankGrit,
+      strikeHz: strikeOf(0.35 + 0.4 * effort),
+    },
+  };
+}
+
+/**
+ * One plate, made unlike the last one.
+ *
+ * `spread` is the maker's, `wobble` is a number from the seeded generator, and
+ * the product is what stops seven clanks a second reading as a metronome. It is
+ * the same trick the site uses for prop yaw, and it costs one multiply.
+ */
+export function chainLink(link: Knock, spread: number, wobble: number): Knock {
+  const swing = 1 + spread * wobble;
+  return {
+    ...link,
+    hz: link.hz * swing,
+    // Half the spread on level: an uneven chain is uneven in pitch first.
+    gain: link.gain * (1 + spread * wobble * 0.5),
+    decay: link.decay * swing,
+  };
+}
+
+/* -- the squeak ------------------------------------------------------------ */
+
+/**
+ * A dry bearing under load.
+ *
+ * It needs three things at once — weight on the track, the belt turning, and
+ * ground under it — which is why it is not a drone: it arrives on a loaded
+ * crawl and goes away the moment you take the weight off. That makes it the
+ * only voice on the machine that says *slowly and heavily* rather than *fast*.
+ */
+export interface SqueakVoice {
+  readonly gain: number;
+  readonly hz: number;
+  readonly q: number;
+  /** How far the note wanders, as a fraction of `hz`. */
+  readonly sweep: number;
+}
+
+/**
+ * Nine times the drive note's, and **not nine times as loud**.
+ *
+ * A filter's gain is not what you hear — its *bandwidth* is. This squeak is a
+ * `Q` of 14 around 2.4 kHz, which passes about 170 Hz of a 22 kHz noise floor,
+ * so nine tenths of the number below is spent buying back what the filter threw
+ * away. The same mistake has now been paid for three times in this file: the
+ * strike was a bandpass until a 140 kJ landing measured quieter than a cone,
+ * and both this and the rattle were written at "sensible" levels first and were
+ * inaudible. **Set a filtered voice by measuring it, never by reading it.**
+ */
+const SQUEAK_GAIN = 0.5;
+
+export function squeakVoice(track: TrackState, house: SoundHouse): SqueakVoice {
+  const gear = house.gear;
+  const effort = clamp01(Math.abs(track.commanded) / MAX_TRACK_SPEED);
+  const load = clamp01(track.traction ?? 0);
+  // Nothing to squeak against with no ground, however hard the belt is turning.
+  const ground = track.contacts === 0 ? 0 : 1;
+  /**
+   * **Loudest at a heavy crawl, and gone by working speed.**
+   *
+   * A bearing squeals by stick-slip, which is a low-relative-speed phenomenon —
+   * it is the noise of a machine inching a load, not of one driving. Without
+   * the `crawl` term the squeak was simply on whenever the machine was loaded,
+   * which measured as a labouring cue brighter than the note's own and made
+   * every scene hiss. With it, the squeak belongs to one condition, and that
+   * condition is the one nothing else on the machine says out loud.
+   */
+  const crawl = clamp01(1 - effort);
+  return {
+    // `sqrt` on the belt speed so it is already there at walking pace rather
+    // than fading in from nothing.
+    gain: SQUEAK_GAIN * load * Math.sqrt(effort) * crawl * ground,
+    hz: gear.squeakHz,
+    q: gear.squeakQ,
+    sweep: gear.squeakSweep,
+  };
+}
+
+/* -- the rattle ------------------------------------------------------------ */
+
+/**
+ * Everything in the cab that is not bolted down tightly enough.
+ *
+ * It reads the accelerometer (`core/snapshot.ts`) rather than anything the
+ * drivetrain is doing, and that is what makes it the voice of the **ground**: a
+ * graded pad is silent at any speed, and a rutted haul road is not. It is also
+ * the one voice that answers a question the instruments cannot — the dash tells
+ * you what the machine is doing, and this tells you what is being done to it.
+ *
+ * The 1 g the hull carries at rest is subtracted first, so standing still is
+ * silent and free fall — where an accelerometer reads nothing at all — is
+ * silent too. A machine in the air is *quiet*, and lands loudly.
+ */
+export interface RattleVoice {
+  readonly gain: number;
+  readonly hz: number;
+  readonly q: number;
+}
+
+/**
+ * The range the cab rattles over, m/s³, measured rather than chosen.
+ *
+ * A probe drove the real machine over the default site and recorded the jerk at
+ * every step. Parked reads **exactly zero**, which is the check that the whole
+ * derivation is right. Driving is not a smooth signal at all: at full ahead the
+ * median step is 4, the seventy-fifth percentile is 49, the ninetieth is 416
+ * and the tail runs to 5000. The ride is *mostly nothing, punctuated*, which is
+ * what a rattle is — so the floor sits above the hum of an ordinary crawl and
+ * the ceiling sits an order of magnitude below the worst slam. Everything past
+ * the ceiling is a landing, and the hull event already has that.
+ */
+const RATTLE_FLOOR = 25;
+const RATTLE_FULL = 1200;
+/** Ten times the drive note's, for the bandwidth reason at `SQUEAK_GAIN`. */
+const RATTLE_GAIN = 1.0;
+
+export function rattleVoice(shake: Shake, house: SoundHouse): RattleVoice {
+  const over = clamp01((shake.jerk - RATTLE_FLOOR) / (RATTLE_FULL - RATTLE_FLOOR));
+  return {
+    // Square root, as everywhere else that maps a physical quantity to a level:
+    // it is amplitude against energy, and it keeps small knocks audible.
+    gain: RATTLE_GAIN * Math.sqrt(over),
+    hz: house.rattle.hz,
+    q: house.rattle.q,
   };
 }
 

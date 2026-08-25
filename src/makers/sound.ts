@@ -114,7 +114,54 @@ export interface HornSound {
   readonly alarmHz: number;
 }
 
+/**
+ * The running gear: a steel belt going round two wheels, and the bearings it
+ * goes round them on.
+ *
+ * The **rate** is not here and cannot be — a plate passes at
+ * `commanded / GROUSER_PITCH`, which is geometry the chassis already publishes
+ * and the same number the renderer turns the belt at (`core/spec.ts`). What a
+ * house owns is **one link's knock**: how it rings, how long, how rough, and how
+ * unlike the last one it is. That is the difference between bare steel plates
+ * and rubber-padded ones, and it is a thing you would hear from across a site.
+ */
+export interface GearSound {
+  /** Where one link rings when it comes over the sprocket. */
+  readonly clankHz: number;
+  /** Seconds to silence. Short: this happens seven times a second. */
+  readonly clankDecay: number;
+  /** 0–1, noise against tone. Bare steel is nearly all strike. */
+  readonly clankGrit: number;
+  /**
+   * How unlike each other two links are, 0–1.
+   *
+   * Worn kit is uneven and it is *the* cue that a machine is old: identical
+   * clicks read as a metronome, and a metronome is a sample loop with extra
+   * steps. The variation is drawn from the seeded generator, so a replay clanks
+   * the same way twice.
+   */
+  readonly clankSpread: number;
+  /** A dry bearing: where the squeak sits, how narrow, and how far it wanders. */
+  readonly squeakHz: number;
+  readonly squeakQ: number;
+  readonly squeakSweep: number;
+}
+
+/**
+ * Everything in the cab that is not bolted down tightly enough.
+ *
+ * It answers to the accelerometer (`core/snapshot.ts`) rather than to anything
+ * the drivetrain is doing, which is why it is the voice that makes *ground*
+ * audible: a smooth floor is silent at any speed and a rutted one is not.
+ */
+export interface RattleSound {
+  readonly hz: number;
+  readonly q: number;
+}
+
 export interface SoundHouse {
   readonly drive: DriveSound;
+  readonly gear: GearSound;
+  readonly rattle: RattleSound;
   readonly horn: HornSound;
 }

@@ -25,6 +25,7 @@ import {
   WARN,
 } from "../control/bus.ts";
 import type { Snapshot, Waypoint } from "../core/snapshot.ts";
+import { G } from "../core/spec.ts";
 
 /**
  * A track state that cannot be built inconsistent: no contact means no traction
@@ -160,6 +161,9 @@ export function snapshotOf(
       speed: over.speed ?? 0,
       pitch: over.pitch ?? 0,
       roll: over.roll ?? 0,
+      // Standing on the ground: an accelerometer reads 1 g up and nothing else.
+      // The panel shows none of this yet; the cab's rattle hears it.
+      shake: { surge: 0, heave: G, sway: 0, jerk: 0 },
     },
     stages,
     props: [],

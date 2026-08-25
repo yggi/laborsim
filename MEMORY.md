@@ -18,13 +18,14 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
 | `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
 | `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
-| `docs/design/damage.md` | the ledger, the machine breaking, the reset, synthesised sound |
+| `docs/design/damage.md` | the ledger, the machine breaking, the reset |
 | `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
 | `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
 | `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
 | `docs/design/missions.md` | **exploratory** — Zachtronics budgeting, and why it inverts the chase camera |
 | `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
 | `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
+| `docs/design/sound.md` | the voices, who owns each one, and what a sound house may not decide |
 | `docs/design/roadmap.md` | **forward-looking** — critical-path review and the argument behind the board's order |
 | `docs/design/stack.md` | the stack, and the rejected options with their reasons |
 | `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
@@ -112,21 +113,15 @@ priced line item. Model, numbers and build order: `docs/design/damage.md`.
 
 ### 4.1 Rung 1 is built
 
-Detail: `docs/design/tracked-platform.md`. The load-bearing claims:
-
-- Rapier has no anisotropic friction and its vehicle controller models *wheels*,
-  so **the track friction model is ours** — and that is the design, not a
-  workaround. The friction model is the teaching layer.
-- Colliders carry friction 0; six ray samples per track apply impulses capped at
-  `mu · N · dt`. **One tuned constant** (`MU = 0.95`); everything else is a
-  dimension or a mass.
-- The climb limit is `atan(MU)` ≈ **43.5°** — what a friction cone does, not a
-  number chosen to feel right. Past it the machine rears, loses contact and
-  **flips over backwards.** No tipping logic exists anywhere.
-- **Slip — commanded track speed minus actual ground speed — is rung 1's
-  teaching quantity**, on the telemetry line from the first commit, alongside
-  traction (fraction of the friction cone in use) which is **`null`, never 0,
-  for a track with no ground**: nothing measured is not a low reading.
+**The track friction model is ours** — Rapier has no anisotropic friction and
+its vehicle controller models wheels — and that is the design rather than a
+workaround: the friction model is the teaching layer. **One tuned constant**
+(`MU = 0.95`); everything else is a dimension or a mass, and the 43.5° climb
+limit is `atan(MU)` rather than a number chosen to feel right. **Slip is rung
+1's teaching quantity**, alongside traction, which is **`null` and never 0 for a
+track with no ground** — nothing measured is not a low reading, and every
+consumer has to decide what to show for it. Detail, and what falls out of the
+model: `docs/design/tracked-platform.md`.
 
 ## 5. The machinery ladder
 
@@ -155,11 +150,9 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **The chase camera is "hands off the wheel", not pause.** No cockpit and no
   control, but **the sim keeps stepping and nothing auto-stops** — leave the
   throttle open and the ledger will tell you what it cost.
-- **Viewport budgeting is a core mechanism, not a UI style**, which couples it
-  deeply to touch. This is *why* mobile-first is fixed — see § 9.
-- **The rail is a server rack, not a DIN rail**: faceplates stacked vertically,
-  screwed in, **each in its manufacturer's house style**. Kit from different
-  makers must look like kit from different makers.
+- **The rail is a server rack, not a DIN rail**: faceplates stacked vertically
+  and screwed in, each in its maker's house style. Viewport budgeting is a core
+  mechanism rather than a UI style, which is *why* mobile-first is fixed (§ 9).
 - **The machine's own instruments are one part**, not a row of separate dials —
   the KIBA-NAV-UNIT: speed, ATT-0 and TRACTION in one bezel, legends engraved in
   its own metal. **The dash is one wrapping flow of parts, bottom-aligned**, and
@@ -177,6 +170,10 @@ Spilled in full to `docs/design/components.md` (index). What must stay here:
 - **The dash is the seam** — visible in both postures, and it travels. Its theme
   belongs to the **vehicle's** manufacturer, which is why the machine's own
   instruments are one part (KIBA-NAV-UNIT) and fitted kit sits behind a seam.
+- **A manufacturer is one house** (`src/makers/`): colours, words **and sound**.
+  The machine's voice is its **chassis maker's**, a component's is its own, and
+  the site's belongs to materials. A house sets timbre, never level — the
+  rack-unit rule in another medium (`docs/design/sound.md`).
 
 ## 7. Mechanics that fall out of the above
 
@@ -199,11 +196,10 @@ The engine of record is **Rapier (wasm)**, chosen for motorized joints, joint
 limits, and **determinism you can replay a failure with** — attribution is the
 design, so replay is not a nice-to-have.
 
-Target tier is the **virtual crane**: full dynamics plus an external stabilising
-wrench on the hull with a finite authority budget. That wrench **is** STAB-2 —
-switching it off does not fake a fall, it removes the thing that was holding you
-up. Mechanic and physics from the same object. See
-`docs/design/physics-migration.md` for the tier costs and what inverts.
+Target tier is the **virtual crane**: full dynamics plus a stabilising wrench on
+the hull with a finite authority budget. That wrench **is** STAB-2 — switching it
+off does not fake a fall, it removes the thing that was holding you up. Tier
+costs and what inverts: `docs/design/physics-migration.md`.
 
 ## 9. Stack — settled
 
@@ -247,6 +243,7 @@ src/
   cockpit/   everything the machine's manufacturers made: the cab, the dash,
              the rack's rail, and each component's three parts —
              cells/ faces/ pods/, registered as one packet in `parts.ts`
+  makers/    who built the kit: one house per manufacturer, read by both renderers
   render/    three.js scene, cel pipeline
   audio/     the machine's voice: `voices.ts` is arithmetic, `engine.ts` the graph
   world/     terrain, job sites, hazards (radiation, EMF)
@@ -267,6 +264,8 @@ because it had drifted. If a manufacturer built it — the cage, the dash, an
 instrument, a rack plate — it is `cockpit/`. If the training system built it —
 the debrief, the live voice, the shell, the volume control — it is `ui/` or the
 shell. The rig may read the machine; the machine knows nothing of the rig.
+**`makers/` is who they are rather than what they made**: colours, words and
+sound in one object per manufacturer, above both renderers that read it.
 
 ## 12. Conventions
 

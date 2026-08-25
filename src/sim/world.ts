@@ -12,9 +12,14 @@ import { type Module, runRack, type Stage } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import { createRecorder } from "../core/events.ts";
 import { hashBytes } from "../core/hash.ts";
-import { attitudeOf, type PropPose, type Snapshot } from "../core/snapshot.ts";
-import { CLEARANCE, TRACK } from "../core/spec.ts";
-import { vec } from "../core/vec.ts";
+import {
+  attitudeOf,
+  type PropPose,
+  type Shake,
+  type Snapshot,
+} from "../core/snapshot.ts";
+import { CLEARANCE, G, TRACK } from "../core/spec.ts";
+import { conjugate, rotate, vec } from "../core/vec.ts";
 import {
   generateProps,
   isBreakable,
@@ -94,7 +99,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const seed = options.seed ?? 20260823;
   const modules = options.modules ?? [];
 
-  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: -G, z: 0 });
   world.timestep = STEP_SECONDS;
 
   const terrain = options.terrain ?? generateTerrain(seed);
@@ -181,6 +186,10 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const waypoints = generateWaypoints(terrain);
 
   let tick = 0;
+  /** What the hull is being shaken by, measured each step. At rest, 1 g up. */
+  let shake: Shake = { surge: 0, heave: G, sway: 0, jerk: 0 };
+  /** The last accelerometer reading, so the next one can be differenced. */
+  let lastFelt = vec(0, G, 0);
   /** Ground covered this run, metres. */
   let distance = 0;
   let stages: readonly Stage[] = [];
@@ -253,8 +262,36 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       stages = bus.stages;
       machine.drive(bus.command.left, bus.command.right, STEP_SECONDS);
       const hullBefore = machine.speed();
+      const velocityBefore = machine.body.linvel();
       world.step();
       tick++;
+
+      // What an accelerometer bolted to the hull reads: the velocity change over
+      // one step, **less gravity**, in the machine's own frame. Subtracting
+      // gravity is what makes it proper acceleration rather than `dv/dt` — at
+      // rest it reads a steady 1 g up because the ground is pushing, and in free
+      // fall it reads nothing at all because nothing is. Only the cab's rattle
+      // consumes it today; it is a real measurement either way, and one field
+      // away from being a G-meter on the glass.
+      const velocityAfter = machine.body.linvel();
+      const measured = vec(
+        (velocityAfter.x - velocityBefore.x) / STEP_SECONDS,
+        (velocityAfter.y - velocityBefore.y) / STEP_SECONDS + G,
+        (velocityAfter.z - velocityBefore.z) / STEP_SECONDS,
+      );
+      const felt = rotate(conjugate(machine.body.rotation()), measured);
+      // Jerk: how fast that reading is changing. It is what a loose thing in the
+      // cab actually answers to — see `Shake` — and it is differenced here, at
+      // the fixed step, so that it means the same on a phone dropping frames.
+      // `sqrt` and not `hypot`: sqrt is required to be correctly rounded and
+      // `Math.hypot` is not, and this value crosses to a renderer that a replay
+      // has to reproduce exactly (rule 2, and `waypoints.ts` says the same).
+      const dx = felt.x - lastFelt.x;
+      const dy = felt.y - lastFelt.y;
+      const dz = felt.z - lastFelt.z;
+      const jerk = Math.sqrt(dx * dx + dy * dy + dz * dz) / STEP_SECONDS;
+      lastFelt = felt;
+      shake = { surge: felt.z, heave: felt.y, sway: felt.x, jerk };
       // What the world did to the machine, measured the same way as what the
       // machine does to the world: energy lost in one step. Nothing prices it
       // yet — L-038 does — but the machine's own collisions are now on the
@@ -294,6 +331,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
           left: machine.left,
           right: machine.right,
           speed: machine.speed(),
+          shake,
           ...attitudeOf(pose.rotation),
         },
         stages,

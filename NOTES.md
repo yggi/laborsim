@@ -80,19 +80,21 @@ the player to *listen* before anything costs them.
 What is still a thread is **degradation**: the drive genuinely changes — per-track
 `MU` falls, a bias enters the normal-load share, a sprocket will not take full
 torque. That makes a damaged machine a *different machine*, which is the whole
-subject, and it is the expensive part. It got cheaper twice over: the friction
-model can already express most of it, and the drive note renders `traction`
-directly, so a track that has lost grip would **sound** wrong with no audio work
-at all. Not v0; do not let the reset design (L-038) foreclose it.
+subject, and it is the expensive part. It keeps getting cheaper: the friction
+model can already express most of it, and the machine's voices are per track and
+read `traction`, `commanded` and `contacts` directly — so a sprocket that has
+lost a tooth or a track that has lost grip would sound wrong with **no audio work
+at all**. Not v0; do not let the reset design (L-038) foreclose it.
 
-## Pods on arms — deferred, and deliberately separated
+## Does a component ship a voice?
 
-Instruments should be **clamped to the cage** and move on screen as you look
-around, not sit as viewport-fixed overlays (`docs/design/components.md`). Split
-off from the triptych work on purpose, because it drags in three things that are
-each their own decision: look angle has to reach the DOM without going through
-Svelte reactivity; L-008's placement rules move from screen space into cage
-space, where the bound becomes the reach of the arm rather than the screen edge;
-and the view-recentring QoL is entangled with it. Cheaper now than it was:
-`cockpit/Glass.svelte` is the one file that has to learn look angle, and
-placements are already one record keyed by component id.
+A manufacturer's house now has a sound in it, and the arrangement says a fitted
+component is voiced by *its own* maker rather than by the chassis
+(`docs/design/sound.md`). Nothing has asked yet, and the unresolved half is not
+*whose* noise it is but **when** one happens: a component is a triptych today —
+plate, cell, pod — and a voice is either a fourth part of it, which the triptych
+argument would have to survive, or it is not a part at all but a thing a
+component *does*, closer to a condition changing than to a surface. TILT-GUARD
+winding you down is the case to decide it against: a relay you hear cost
+nothing, and a relay you hear is also a component telling you what it did before
+the panel does.

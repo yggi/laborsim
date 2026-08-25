@@ -30,6 +30,7 @@ import RAPIER from "@dimforge/rapier3d-deterministic-compat";
 import type { TrackState } from "../core/snapshot.ts";
 import {
   CLEARANCE,
+  G,
   HULL,
   LEFT_X,
   MASS,
@@ -60,8 +61,6 @@ const SAMPLES_PER_TRACK: number = 6;
 /** How far above the track bottom a sample ray starts, and how far it reaches. */
 const PROBE_UP = 0.25;
 const PROBE_DOWN = 0.35;
-
-const GRAVITY = 9.81;
 
 /* ----------------------------------------------------------------------- */
 
@@ -159,7 +158,7 @@ export function spawnTrackedMachine(world: World, at: Vec3): TrackedMachine {
     const q = body.rotation();
     const origin = body.translation();
     const massShare = MASS / totalContacts;
-    const maxImpulse = MU * massShare * GRAVITY * dt;
+    const maxImpulse = MU * massShare * G * dt;
 
     for (const offset of offsetsForSide) {
       const local = rotate(q, offset);

@@ -61,6 +61,45 @@ export interface Waypoint {
   readonly z: number;
 }
 
+/**
+ * What an accelerometer bolted to the hull reads, in the body frame, m/s².
+ *
+ * **Proper acceleration, not `dv/dt`.** The difference is the whole usefulness
+ * of it: an accelerometer at rest reads a steady 1 g upward, because the ground
+ * is pushing it, and one in free fall reads *zero*, because nothing is. So the
+ * quantity is already "how hard is this thing being shaken" rather than "how
+ * fast is it going" — a machine flying off a bank is weightless and quiet, and
+ * a machine landing at the bottom is not, which is what the cab has to sound
+ * like.
+ *
+ * Ship axes, in the machine's own frame: `surge` along its nose (+Z),
+ * `heave` up (+Y), `sway` to its left (+X, see `spec.ts`). Nothing shows this
+ * yet — the first consumer is the rattle in the cab — but it is one snapshot
+ * field away from being a G-meter on the glass, which is the test of whether a
+ * simulated quantity was published honestly.
+ */
+export interface Shake {
+  readonly surge: number;
+  readonly heave: number;
+  readonly sway: number;
+  /**
+   * How fast that reading is **changing**, m/s³, over one step.
+   *
+   * The reading itself cannot answer the question a rattling cab asks. A toolbox
+   * on the floor is quiet at rest, because the floor holds it; it is also quiet
+   * in free fall, because it is falling with the floor. Both are steady states,
+   * and they read 1 g and 0 g — so no function of the reading alone can call
+   * them both silent. What shakes something loose is the floor *changing* under
+   * it faster than friction can carry it along, which is this.
+   *
+   * Physically it is jerk, and it is why a machine flying off a bank goes
+   * quiet: it left the ground at one instant (loud), floats (silent), and
+   * arrives (very loud). It is computed at the fixed step rather than
+   * differenced by a renderer, so a phone dropping frames hears the same ride.
+   */
+  readonly jerk: number;
+}
+
 export interface MachineState {
   readonly pose: BodyPose;
   readonly left: TrackState;
@@ -70,6 +109,7 @@ export interface MachineState {
   /** Radians. Derived for display only — see the note below. */
   readonly pitch: number;
   readonly roll: number;
+  readonly shake: Shake;
 }
 
 /**

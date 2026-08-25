@@ -39,6 +39,15 @@ export interface Quat {
   w: number;
 }
 
+/**
+ * The inverse of a unit rotation: same axis, opposite angle.
+ *
+ * `rotate(conjugate(hull), v)` takes a world vector into the body frame, which
+ * is what anything bolted to the machine measures — an accelerometer does not
+ * know which way north is.
+ */
+export const conjugate = (q: Quat): Quat => ({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
+
 /** Rotate a vector by a unit quaternion. */
 export function rotate(q: Quat, v: Vec3): Vec3 {
   const u = vec(q.x, q.y, q.z);

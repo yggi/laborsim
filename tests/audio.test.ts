@@ -14,6 +14,8 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  chainLink,
+  chainVoice,
   driveVoice,
   grindVoice,
   hornVoice,
@@ -21,11 +23,13 @@ import {
   impactVoice,
   isSilent,
   loudness,
+  rattleVoice,
+  squeakVoice,
 } from "../src/audio/voices.ts";
 import { ACTIVE, ALARM, NOMINAL, WARN } from "../src/control/bus.ts";
 import type { HullEvent, ImpactEvent } from "../src/core/events.ts";
 import type { TrackState } from "../src/core/snapshot.ts";
-import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
+import { G, GROUSER_PITCH, MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
 
 /**
@@ -270,6 +274,131 @@ describe("an impact's voice follows how hard it was", () => {
     expect(landing.gain).toBe(1);
     expect(scuff.gain).toBeLessThan(0.1);
     expect(landing.hz).toBeLessThan(impactVoice(impact({ what: "pipes" })).hz);
+  });
+});
+
+describe("the chain is the belt, and you hear what you see", () => {
+  it("clanks once per plate over the sprocket", () => {
+    // The rate the renderer turns the belt at, and the rate the ear hears. One
+    // number: change the plate count and the picture and the sound move
+    // together, because neither owns it.
+    const chain = chainVoice(track({ commanded: MAX_TRACK_SPEED }), KIBA);
+    expect(chain.rate).toBeCloseTo(MAX_TRACK_SPEED / GROUSER_PITCH, 6);
+  });
+
+  it("says nothing on a stopped belt", () => {
+    expect(chainVoice(track(), KIBA).rate).toBe(0);
+  });
+
+  it("clanks faster on a track that has lost the ground, not slower", () => {
+    // `commanded` and not `surface`: the belt's speed relative to the hull is
+    // what the drivetrain delivers, and a track spinning in mid-air has nothing
+    // holding it back. Reading the ground speed here would make a machine
+    // beached on a ridge go quiet at exactly the moment it is working hardest.
+    const spinning = chainVoice(
+      track({ commanded: MAX_TRACK_SPEED, surface: 0, contacts: 0, traction: null }),
+      KIBA,
+    );
+    const gripping = chainVoice(
+      track({ commanded: MAX_TRACK_SPEED * 0.5, surface: MAX_TRACK_SPEED * 0.5 }),
+      KIBA,
+    );
+    expect(spinning.rate).toBeGreaterThan(gripping.rate);
+  });
+
+  it("keeps a third of its voice with no ground under it", () => {
+    // Two noises: a plate coming over the sprocket, which happens whatever the
+    // machine is doing, and a plate slapping the ground, which does not.
+    const air = chainVoice(track({ commanded: 1.4, contacts: 0 }), KIBA);
+    const dirt = chainVoice(track({ commanded: 1.4, contacts: 6 }), KIBA);
+    expect(air.link.gain).toBeGreaterThan(0);
+    expect(air.link.gain).toBeLessThan(dirt.link.gain);
+  });
+
+  it("makes each plate unlike the last, by the maker's amount", () => {
+    const link = chainVoice(track({ commanded: 1.4 }), KIBA).link;
+    const high = chainLink(link, 0.3, 1);
+    const low = chainLink(link, 0.3, -1);
+    expect(high.hz).toBeGreaterThan(low.hz);
+    // A maker that grinds its links flat gets a metronome, and is entitled to.
+    expect(chainLink(link, 0, 1).hz).toBe(link.hz);
+    // Deterministic: the same wobble is the same plate, every replay.
+    expect(chainLink(link, 0.3, 0.5)).toEqual(chainLink(link, 0.3, 0.5));
+  });
+});
+
+describe("the squeak is a heavy crawl", () => {
+  const crawl = track({ commanded: 0.3, traction: 0.9 });
+
+  it("squeals inching a load", () => {
+    expect(squeakVoice(crawl, KIBA).gain).toBeGreaterThan(0);
+  });
+
+  it("is gone by working speed", () => {
+    // Stick-slip is a low-relative-speed phenomenon. Without this the squeak
+    // was simply on whenever the machine was loaded, and measured as a
+    // labouring cue brighter than the note's own.
+    const fast = track({ commanded: MAX_TRACK_SPEED, traction: 0.9 });
+    expect(squeakVoice(fast, KIBA).gain).toBeLessThan(squeakVoice(crawl, KIBA).gain);
+  });
+
+  it("needs weight on it and ground under it", () => {
+    expect(squeakVoice(track({ commanded: 0.3, traction: 0 }), KIBA).gain).toBe(0);
+    expect(
+      squeakVoice(track({ commanded: 0.3, traction: null, contacts: 0 }), KIBA).gain,
+    ).toBe(0);
+  });
+});
+
+describe("the rattle is the ground, not the drivetrain", () => {
+  const shake = (jerk: number) => ({ surge: 0, heave: G, sway: 0, jerk });
+
+  it("is silent standing still", () => {
+    expect(rattleVoice(shake(0), KIBA).gain).toBe(0);
+  });
+
+  /**
+   * The case the whole quantity exists for. A toolbox on the floor is quiet at
+   * rest because the floor holds it, and quiet in free fall because it is
+   * falling with the floor — and no function of the accelerometer *reading*
+   * alone can call both silent, because they read 1 g and 0 g. The first
+   * version keyed off the reading and hissed all the way through a jump.
+   */
+  it("is silent in free fall, where the reading is nothing at all", () => {
+    expect(rattleVoice({ surge: 0, heave: 0, sway: 0, jerk: 0 }, KIBA).gain).toBe(0);
+  });
+
+  it("rises with the jerk, and saturates", () => {
+    const soft = rattleVoice(shake(200), KIBA).gain;
+    const hard = rattleVoice(shake(900), KIBA).gain;
+    expect(hard).toBeGreaterThan(soft);
+    expect(rattleVoice(shake(50_000), KIBA).gain).toBeCloseTo(
+      rattleVoice(shake(1200), KIBA).gain,
+      6,
+    );
+  });
+
+  it("ignores an ordinary crawl", () => {
+    // Measured on the machine: the median step at full ahead is a jerk of 4,
+    // and the floor sits above the hum so that only the ruts speak.
+    expect(rattleVoice(shake(4), KIBA).gain).toBe(0);
+  });
+});
+
+describe("nothing is struck twice in the same place", () => {
+  it("gives two hits on one material two voices", () => {
+    const first = impactVoice(impact({ seq: 1 }));
+    const second = impactVoice(impact({ seq: 2 }));
+    expect(first.hz).not.toBeCloseTo(second.hz, 3);
+    // Same material, same energy: the difference is where it was caught, and it
+    // must not be a difference in how *hard* it was hit.
+    expect(first.gain).toBe(second.gain);
+  });
+
+  it("hits the same way twice on a replay", () => {
+    // Drawn from `seq`, which is on the recording. A wobble from `Math.random`
+    // would make two playbacks of one run into two different runs.
+    expect(impactVoice(impact({ seq: 7 }))).toEqual(impactVoice(impact({ seq: 7 })));
   });
 });
 

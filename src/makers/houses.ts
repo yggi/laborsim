@@ -142,6 +142,19 @@ const MAKERS: Record<string, MakerStyle> = {
         cutAir: 1500,
         resonance: 3,
       },
+      // Bare steel plates on a chain that has done twenty years, and every link
+      // sounds slightly unlike the one before it.
+      gear: {
+        clankHz: 380,
+        clankDecay: 0.075,
+        clankGrit: 0.78,
+        clankSpread: 0.3,
+        squeakHz: 2400,
+        squeakQ: 14,
+        squeakSweep: 0.22,
+      },
+      // Sheet steel panels and a toolbox nobody latched.
+      rattle: { hz: 900, q: 1.2 },
       // A pressed-steel buzzer wired straight to the annunciator relay.
       horn: { wave: "square", warnHz: 620, alarmHz: 990 },
     },
@@ -188,6 +201,19 @@ const MAKERS: Record<string, MakerStyle> = {
         cutAir: 2600,
         resonance: 6,
       },
+      // Rubber-padded plates, machined to a tolerance, on sealed bearings. It
+      // is quieter and it is *even*, which reads as new rather than as good.
+      gear: {
+        clankHz: 260,
+        clankDecay: 0.05,
+        clankGrit: 0.55,
+        clankSpread: 0.08,
+        squeakHz: 3200,
+        squeakQ: 20,
+        squeakSweep: 0.08,
+      },
+      // Moulded trim on clips. It does not clank, it buzzes.
+      rattle: { hz: 1600, q: 2.1 },
       // A moulded piezo sounder. Polite, and impossible to take seriously.
       horn: { wave: "sine", warnHz: 700, alarmHz: 1180 },
     },
@@ -239,6 +265,17 @@ const MAKERS: Record<string, MakerStyle> = {
         cutAir: 1900,
         resonance: 4,
       },
+      // Hardened steel, ground flat, and inspected. Every link is the same link.
+      gear: {
+        clankHz: 620,
+        clankDecay: 0.06,
+        clankGrit: 0.66,
+        clankSpread: 0.04,
+        squeakHz: 1900,
+        squeakQ: 12,
+        squeakSweep: 0.12,
+      },
+      rattle: { hz: 1200, q: 1.6 },
       // Two tones a fifth apart, to a standard, as klaxons have been since 1954.
       horn: { wave: "square", warnHz: 660, alarmHz: 880 },
     },

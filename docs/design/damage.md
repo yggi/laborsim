@@ -121,34 +121,14 @@ subject. It is also the most expensive. Not v0.
 
 ## Sound is the fourth channel, and it is synthesised — **built** (L-040)
 
-Not sampled. **Engine-generated**, from the same quantities the sim already
-publishes. The argument is the inspectability pillar, not audio fashion: a
-sampled clip is a black box triggered by an event, and a synthesised voice is
-another rendering of a simulated quantity. Slip already has a number, a bar and
-a belt racing under a stationary machine; sound is the channel that reaches you
-when your eyes are on the ground.
+Not sampled: engine-generated, from the same quantities the sim already
+publishes, because a sampled clip is a black box triggered by an event and a
+synthesised voice is another rendering of a simulated quantity. Slip already has
+a number, a bar and a belt racing under a stationary machine; sound is the
+channel that reaches you when your eyes are on the ground.
 
-What it became, in `src/audio/` — `voices.ts` is the arithmetic and `engine.ts`
-is the only file that knows an oscillator exists:
-
-| Voice | The quantity it renders |
-|---|---|
-| drive note | commanded track speed for pitch; `traction` for filter, droop and loudness. Per track, panned to its side, so a skid turn beats against itself. |
-| grind | `slip`, and only where `contacts > 0` — the largest slip reading on the machine belongs to a track in mid-air, rubbing against nothing. |
-| impact | joules, as **amplitude ∝ √energy**, which is physics rather than taste. The ring is the material; the strike is the energy. |
-| hull | the machine's own collisions, on a scale of its own — 140 kJ lands from 2.4 m and a real hit on a pipe stack is 15 J. |
-| horn | the master condition, at the master lamp's own blink rates. Acknowledging stops the noise and leaves the light on. |
-
-Three consequences worth keeping:
-
-- **`traction: null` survives into the sound.** A track with no ground does not
-  go quiet, it runs away — the type's whole point, rendered.
-- **Audio is a renderer, not a reader** (`MEMORY.md` § 12, rule 3): 60 Hz, and
-  its grit comes from the seeded generator, so a replay sounds identical.
-- **A bench first.** `listen.html` plays every scene and `npm run listen`
-  renders them through the real graph and measures them, because a sound cannot
-  be asserted about at all. It found three defects in its first run — including
-  one in its own measure.
+It grew past a section in this file. The voices, who owns each one, and what a
+manufacturer's sound house may and may not decide: `docs/design/sound.md`.
 
 **The machine should become a lemon.** As it takes abuse it should slip, pull to
 one side, buckle; smoke and leak oil; set off alarms and warning lights. Two

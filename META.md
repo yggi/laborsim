@@ -16,15 +16,15 @@ has probably stopped being true.
 **Ask when it appeared, before asking what it is.**
 A dark slab across the site got four diagnoses; three were wrong. It had
 appeared *exactly* when `terrainMaterial` landed and survived every lighting
-change — the cheapest possible signal, and it was ignored for three rounds. The
-cause was the contour shader: on perfectly flat ground both the distance to a
-contour and its derivative vanish, and the graded pad sits at exactly 0 m, so
-the whole pad rendered as one enormous contour line.
+change — the cheapest possible signal, ignored for three rounds. The cause was
+the contour shader: on flat ground both the distance to a contour and its
+derivative vanish, and the graded pad sits at exactly 0 m, so it rendered as one
+enormous contour line.
 
 **Build the isolating experiment before proposing the next hypothesis.**
-In that same hunt, `receiveShadow = false` took one build and permanently
-settled whether it was a shadow. It was run third. With two plausible causes,
-the move is the test that eliminates half — not a third hypothesis.
+In that hunt, `receiveShadow = false` took one build and settled whether it was
+a shadow. It was run third. With two plausible causes, the move is the test that
+eliminates half — not a third hypothesis.
 
 **Probe the API; do not trust the prose.**
 Rapier's docs say `createSnapshot()`; the JS method is `takeSnapshot()`. Its
@@ -69,15 +69,17 @@ on spawn. A bite check proves the code path ran, not that the scenario happened.
 Assert the scenario too — here, that the impact speed was non-zero.
 
 **A check that cannot fail is not a check.**
-Three scars, one shape. Two `str.replace` edits did nothing at all, because the
-formatter had reflowed the file since the strings were written — one blanked the
-dash and everything stayed green, since nothing was *wrong*, it just was not
-there. A deploy failed on formatting because the local check grepped output for
-`lint/`, which a formatter diagnostic does not match. And an audio bench measured
-brightness as zero-crossing rate, which does not move when a filter opens on a
-periodic waveform: it would have signed off on a voice that did nothing.
-Assert the edit matched; verify by exit code; move the instrument before you
-trust what it says.
+Four scars, one shape: the thing you judge by is the broken thing. Two
+`str.replace` edits matched nothing, because the formatter had reflowed the file
+— one blanked the dash and everything stayed green, since nothing was *wrong*. A deploy failed on formatting because the local check
+grepped output for `lint/`, which a formatter diagnostic does not match. A bench
+measured brightness as zero-crossing rate, which does not move when a filter
+opens on a periodic waveform. And a bench *scene* built from sines, then from
+spikes too sharp for its own 60 Hz sampling, reported rough ground identical to
+smooth both times — until the real machine was probed and the fixture fitted to
+what it measured. Assert the edit matched; verify by exit code; move the
+instrument before you trust it; **fit a fixture to a measurement rather than to
+your idea of one.** No difference is indisputable and means nothing.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both
@@ -94,17 +96,15 @@ closes.
 
 **Perception catches what CI cannot — so make it cheap first.**
 Build green, tests green, and the cab view was a solid black wall: an ink shell
-seen from inside. Then a cyan wall — an opaque windscreen 0.47 m from the eye.
-Neither is expressible as an assertion. Re-earned on the dash, written blind for
-an hour, typechecked, 104 tests green, and the whole instrument cluster
-off-screen at 390 px. Perception is only reliable when it costs nothing, so when
-the work is visual — or audible — build the bench *first*. The audio bench paid
-for itself three times in its first run, on defects no test could hold: a limiter
-crushing every impact, a strike filter tied backwards to the ring, and a cue that
-measured beautifully and could not be heard. It goes back to the concept-3 probe,
-which lost rounds diagnosing from screenshots until one telemetry line settled it
-instantly — and it pays twice, because the readout a developer needs to diagnose
-a failure is the readout the player needs.
+seen from inside. Then a cyan wall — a windscreen 0.47 m from the eye. Re-earned
+on the dash, written blind for an hour, typechecked, 104 tests green, and the
+whole cluster off-screen at 390 px. None of it is expressible as an assertion,
+and perception is only reliable when it costs nothing — so when the work is
+visual, or audible, build the bench *first*. The audio bench paid for itself
+three times in its first run: a limiter crushing every impact, a strike filter
+tied backwards to the ring, and a cue that measured beautifully and could not be
+heard. It pays twice, because the readout a developer needs to diagnose a
+failure is the readout the player needs.
 
 ## Design
 

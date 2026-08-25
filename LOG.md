@@ -102,6 +102,98 @@ folder silences it. Both verified in the browser rather than in the stylesheet.
 
 ---
 
+## 2026-08-25 — the machine gets a maker's voice, and three more of its own
+
+Cards: closed [L-061]. Opened: [L-062]. Threads: opened "does a component ship a
+voice?", closed "pods on arms" (it had crystallized into `components.md` and
+L-050 and was being kept in three places).
+
+**Sound got an owner.** A manufacturer was already three things — how its kit
+looks, what words it uses, what it says to you — and it is four now. The
+machine's drivetrain, running gear, loose fittings and horn are voiced by the
+house of whoever built the **chassis**, read off the chassis slot on the
+recording exactly as the dash reads its panel colours, so a replay sounds like
+the machine it recorded. Nothing in `src/audio/` names a manufacturer.
+
+The other two owners were written down because they are the ones that get got
+wrong later: a **component** is voiced by its own maker rather than by the
+chassis, and the **site** is voiced by materials and belongs to nobody. A pipe
+stack is steel whoever stacked it.
+
+**The house moved out of the cockpit** to `src/makers/`. `cockpit/` holds what
+the manufacturers made; a house is who they are, and it now has two readers. One
+house per maker rather than one table per surface — three places to edit a
+manufacturer into existence is three places for it to drift, and it is also what
+L-049 hands a blind author: one object is one manufacturer.
+
+**A house may set timbre and rate; it may not set level**, and it may not decide
+what a quantity means. That is the rack-unit rule in another medium — a maker
+cannot make its plate taller to get more attention, so it cannot make its machine
+louder either.
+
+All three houses are complete, including HANSA, which does not build chassis. The
+bench renders a TOWA chassis that does not exist, and the result was better than
+the argument for it: TOWA's drive is electric, so against the same load ramp KIBA
+hardens 17% → 23% brightness while TOWA sits flat at 12% → 11%. **A TOWA machine
+hides its own labour from you.** Refinement as a trade rather than an upgrade,
+and it fell out of characterising an electric drive honestly rather than being
+designed in.
+
+**Depth, and four voices.** The drone got a detuned twin and a firing pulse; the
+machine got a **chain** (one knock per track plate at `commanded / GROUSER_PITCH`
+— the rate the renderer already turns the belt at, so you hear what you see and
+a racing belt under a stationary machine makes slip audible), a **squeak** (a
+dry bearing under load at a crawl), and a **rattle** (the cab, answering to the
+hull rather than to the drivetrain — the only voice that renders the *ground*).
+Impacts stopped being identical: the wobble is drawn from `seq`, so a line of
+cones is eight different cones and a replay still hits them the same way twice.
+
+**Everything above was measured into place, and nearly everything was wrong
+first.** The bench earned its keep four times over:
+
+- The twin at full level doubled every driving peak at unchanged RMS. Halving it
+  matched the peaks and *halved* every RMS — two detuned oscillators are briefly
+  in phase and spend the rest of the beat cancelling, so they add in power and
+  not in amplitude. Same shape of bug in the pulse: a square-cut note is quieter
+  than a held one by `hypot(1−d, d)`, and `idle` fell 0.037 → 0.016 RMS at an
+  unchanged peak until that was divided back out.
+- The squeak and the rattle were both written at "sensible" levels and were both
+  inaudible, for the third time in this file's history: **a filtered voice's
+  level is not what you hear, its bandwidth is.** The strike was a bandpass once
+  and made a 140 kJ landing quieter than a cone. They are set nine and ten times
+  the drive note's level and are *not* nine times as loud.
+- The rattle keyed off the accelerometer reading, and no function of a reading
+  can tell "standing still" from "in free fall" — they read 1 g and 0 g, and
+  both are silent. What shakes a toolbox is the floor changing under it, so the
+  sim publishes **jerk** as well, differenced at the fixed step. A machine
+  flying off a bank is now quiet, and arrives loudly.
+- The `rough-ground` scene measured identically to smooth ground twice: first
+  built out of sines, which is a wobble and not a ride; then out of sharp spikes
+  in continuous time, which the 60 Hz bench sampled straight past. The sim is
+  itself a 60 Hz signal, and a probe over the real site says what it looks like —
+  median jerk 4 m/s³ at full ahead, ninetieth percentile 416, tail to 5000 —
+  so the scene now draws one reading per frame from a curve fitted to that.
+
+`MachineState` gained an accelerometer (`shake`: surge, heave, sway, and the
+jerk between two readings). Nothing shows it, and it is a real measurement a
+G-meter could read tomorrow, which is the test of whether a quantity was
+published honestly. `GROUSERS`/`GROUSER_PITCH` and gravity moved into
+`core/spec.ts`, where the picture, the physics and the sound read one number.
+
+Rejected: a **suspension** voice, which is what "clanking suspension" would
+literally want. Suspension travel is not simulated, and a voice with nothing
+behind it is a sound effect wearing a simulation's clothes. The nearest honest
+quantity is a track's `contacts` rising and falling, and the reason that was not
+used instead is that no scene can vary it over time yet — so it would have
+shipped unheard. Carded as L-062.
+
+The architecture test caught `Math.hypot` in the jerk calculation: it is not
+required to be correctly rounded and the value crosses to a renderer a replay
+has to reproduce. Rewritten with `sqrt`, which is.
+
+183 tests (169 before), thirteen bench scenes, nothing clipping, and six seconds
+of real driving in the browser with the live context and no errors.
+
 ## 2026-08-25 — the pod joins the registry, and the seam moves
 
 Cards: closed [L-059]. Opened: [L-057], [L-058]. Threads closed: "props seem to
