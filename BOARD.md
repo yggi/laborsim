@@ -114,6 +114,18 @@ built; what remains is more to break, replay, and the path to the conflict.
 
 ## backlog
 
+### [L-055] GRIP earns its place, or loses it
+- **what:** GRIP measures something SLIP cannot — how much of the friction cone
+  is in use — but the dial reads 0% both when parked and when clawing air,
+  saturates for the whole of a normal turn, sits above its own danger band 22%
+  of the time on flat ground, and takes the *good* track's number when one side
+  loses the ground. Fix the instrument: move the GND tell to SLIP, make "no
+  ground" not read as "no demand", smooth ~0.6 s, revisit `max` over the tracks.
+  Or drop the dial and keep the quantity for L-040.
+- **done-when:** the dial reads low only when there is genuinely reserve left, a
+  track that has lost the ground is unmistakable on the panel, and no gauge
+  shows a number for a quantity nothing is measuring.
+
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
   to TILT-GUARD and the first module whose right answer is *situational*: slow

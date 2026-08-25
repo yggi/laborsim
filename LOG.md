@@ -19,6 +19,64 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-25 — is GRIP the same instrument as SLIP?
+
+Cards: none touched. Opened: [L-055]. No code changed — this was a measurement.
+
+The question was whether the dash needs both dials or could be reduced to SLIP.
+Answer: **they are different quantities, and the difference is real — but the
+GRIP instrument as built delivers it in one regime and misleads in three.**
+Measured headless over 7200 steps across eleven scenarios (flat cruise and
+crawl, spin in place, hard turn, ramps at 10/25/40/42/55°, idle on flat and on
+grade), reading the panel's own reductions rather than the raw `TrackState`.
+
+**The quantities.** `slip` is a velocity difference at the contact — state.
+`traction` is impulse wanted over impulse the ground can hold, per step —
+demand over capacity. Pearson r between the two dials is **0.267**. Neither
+determines the other, and the buckets show why: below the SLIP lamp's 0.4
+threshold, GRIP ranges across its entire scale.
+
+**What GRIP knows that SLIP does not: margin.** On a 40° ramp the machine
+climbs cleanly — slip under the lamp threshold 89% of the time, mean 0.31 —
+while GRIP sits at 0.93 (5–95 pct: 0.87–1.00). At the edge of the cone and not
+yet sliding. That is the only leading indicator on the panel; everything else
+is lagging. Delete it and the dash can only tell you about failures that have
+already happened.
+
+**What SLIP knows that GRIP does not: the ground is gone.** Fully airborne on
+the 55° ramp, over 426 steps: GRIP reads **0.00**, SLIP pegs at 2.20 m/s, past
+its 1.6 span. `summarize()` returns `traction: 0` for `contacts === 0`, which is
+also what `idleTrack()` returns — so 0% means *parked* or *clawing air*, two
+opposite conditions on one reading. That matters because the GND tell is bolted
+to GRIP, whose comment claims the dial is "pinned, with no ground under it". It
+is not. It reads zero, which looks nominal, beside a lit red lamp.
+
+**Three more defects, all measured.** `Math.max` over the two tracks takes the
+*good* side's number: on the 55° ramp with exactly one track down, the dial read
+1.00 for every such step — indistinguishable from a turn. In a hard turn GRIP is
+pinned at exactly 1.00 for 100% of steps (per-step jitter 0.000): skid-steer
+saturates the friction circle by construction, so the dial is dead at full scale
+through a normal manoeuvre. And on flat ground at full speed it spends **21.9%**
+of steps above its own 0.85 danger band, jittering 0.058 per step — six dial
+points a frame, crying wolf at a machine doing nothing wrong.
+
+**Tried: smoothing.** An EMA over the raw dial, τ from 0.15 s to 1.2 s. At 0.6 s
+the flat-ground false-alarm rate falls from 21.9% to **1.8%** and the ordering
+stays clean and readable (flat 0.56 · 25° 0.67 · 40° 0.88). So the noise half is
+a display filter and belongs in the instrument, not in the sim — but smoothing
+does nothing for the zero-means-two-things overload or the turn saturation,
+which are the model and the reduction, not the render.
+
+Rejected: reducing to SLIP only. It would delete the panel's one warning that
+arrives *before* the failure, and L-040 wants "a machine labouring at 90% grip
+sounds like it", which needs the quantity whether or not a dial shows it.
+
+Named but not taken: replace GRIP % with **MARGIN %** (`1 − utilization`). Same
+number read the other way up, it falls toward zero as you get into trouble, and
+"no ground" becomes zero margin rather than zero use — the overload disappears
+by construction. A bigger change to the face than to the sim. Carded as part of
+[L-055].
+
 ## 2026-08-24 — the panel stops talking
 
 Cards: [L-052] extended. Opened: [L-054].
