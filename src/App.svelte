@@ -10,8 +10,11 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
+import DashPanel from "./cockpit/DashPanel.svelte";
 import Glass from "./cockpit/Glass.svelte";
+import Lever from "./cockpit/Lever.svelte";
 import { styleOf } from "./cockpit/makers.ts";
+import Rack from "./cockpit/Rack.svelte";
 import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
 import { makeClock } from "./core/clock.ts";
@@ -21,9 +24,6 @@ import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
-import DashPanel from "./ui/DashPanel.svelte";
-import Lever from "./ui/Lever.svelte";
-import Rack from "./ui/Rack.svelte";
 import RunReport from "./ui/RunReport.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
 import Toasts from "./ui/Toasts.svelte";
@@ -317,7 +317,7 @@ $effect(() => {
 
 <!-- `display: contents`, so it lays nothing out — it exists to publish the
      measured dash height to everything that has to sit clear of it. -->
-<div class="shell" style="--dash-h: {dashHeight}px">
+<div class="shell" style="--cab-dash-h: {dashHeight}px">
   <!-- Looking down at the rack slides the whole viewport up: a strip of glass
        stays visible at the top, and the machine keeps running while you read. -->
   <div class="viewport" class:down={rackOpen}>
@@ -546,7 +546,7 @@ $effect(() => {
       inset 0 0 120px rgba(0, 0, 0, 0.55);
   }
 
-  /* Lays nothing out; it only publishes `--dash-h` to everything that has to
+  /* Lays nothing out; it only publishes `--cab-dash-h` to everything that has to
      sit clear of a panel whose height changes as components are fitted. */
   .shell {
     display: contents;
@@ -571,7 +571,7 @@ $effect(() => {
     z-index: 2;
     display: flex;
     flex-direction: column;
-    transform: translateY(calc(100dvh - var(--dash-h)));
+    transform: translateY(calc(100dvh - var(--cab-dash-h)));
     transition: transform 0.28s ease;
   }
   .deck.up {
@@ -588,7 +588,7 @@ $effect(() => {
      which owns the very bottom of the glass. */
   .levers {
     position: fixed;
-    bottom: calc(var(--dash-h) + 14px);
+    bottom: calc(var(--cab-dash-h) + 14px);
     z-index: 3;
   }
   .levers.left {

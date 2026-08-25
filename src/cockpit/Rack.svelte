@@ -23,13 +23,13 @@
  * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
  */
 
-import Decal from "../cockpit/Decal.svelte";
-import { styleOf } from "../cockpit/makers.ts";
-import { ampsFor, faceFor, fuseColour, unitsFor } from "../cockpit/parts.ts";
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import Decal from "./Decal.svelte";
+import { styleOf } from "./makers.ts";
+import { ampsFor, faceFor, fuseColour, unitsFor } from "./parts.ts";
 
 const {
   modules,
@@ -79,6 +79,15 @@ const keyOf = (module: Module, param: Param) => `${module.id}:${param.id}`;
 const settingOf = (module: Module, param: Param) =>
   shown[keyOf(module, param)] ?? param.get();
 
+/**
+ * A degree sign is set closed up against the number; a word is not. That is
+ * typography and it belongs to the plate — the module owns the unit, the plate
+ * owns how it is set, and a module writing `" PIN"` to buy itself a space would
+ * be a module doing layout.
+ */
+const withUnit = (value: number, unit: string) =>
+  `${value}${/^[a-z]/i.test(unit) ? " " : ""}${unit}`;
+
 function setParam(module: Module, param: Param, value: number) {
   param.set(value);
   shown[keyOf(module, param)] = param.get();
@@ -125,7 +134,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
           <button
             class="fuse"
             class:pulled={!module.enabled}
-            style="--fuse: {fuseColour(amps)}"
+            style="--cab-fuse: {fuseColour(amps)}"
             onclick={() => toggle(module)}
             aria-label="enable {module.label}"
             aria-pressed={module.enabled}
@@ -175,7 +184,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
                     disabled={!module.enabled}
                     oninput={(e) => setParam(module, param, e.currentTarget.valueAsNumber)}
                   />
-                  <span class="pval">{settingOf(module, param)}{param.unit}</span>
+                  <span class="pval">{withUnit(settingOf(module, param), param.unit)}</span>
                 </label>
               {/each}
             </div>
@@ -325,7 +334,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
      height is fixed and the content is clipped: a faceplate that does not fit
      its unit has too much on it, which is the standard doing its job. */
   .slot {
-    --u: 46px;
+    --cab-u: 46px;
     display: flex;
     align-items: stretch;
     gap: 0;
@@ -335,10 +344,10 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     overflow: hidden;
   }
   .slot[data-u="1"] {
-    height: var(--u);
+    height: var(--cab-u);
   }
   .slot[data-u="2"] {
-    height: calc(var(--u) * 2);
+    height: calc(var(--cab-u) * 2);
   }
   /* At one unit there is no room for the rating line, and it is the least
      load-bearing thing on the plate. */
@@ -514,8 +523,14 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
     font-size: 7px;
     white-space: nowrap;
   }
+  /* Sized for a degree reading, but it is a *minimum*: a unit that is a word
+     ("1 PIN") must not wrap onto a second line inside a plate whose height is
+     fixed by its rack units. It takes the width from the slider, which has it
+     to give. */
   .pval {
-    width: 22px;
+    min-width: 22px;
+    flex: none;
+    white-space: nowrap;
     text-align: right;
     color: var(--mfg-face);
     font-size: 7px;
@@ -591,7 +606,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
        through the body, and translucent enough to see it is plastic. */
     background:
       linear-gradient(100deg, rgba(255, 255, 255, 0.5), transparent 42%),
-      linear-gradient(180deg, var(--fuse), color-mix(in srgb, var(--fuse) 62%, #101314));
+      linear-gradient(180deg, var(--cab-fuse), color-mix(in srgb, var(--cab-fuse) 62%, #101314));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.45),
       inset 0 -2px 3px rgba(0, 0, 0, 0.3);

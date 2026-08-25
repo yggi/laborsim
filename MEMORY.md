@@ -14,6 +14,7 @@ Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `MET
 | `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
 | `docs/design/cockpit.md` | panel budget, occlusion, mandatory-manifest placement, the chase camera |
 | `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
+| `docs/design/conventions.md` | the coding conventions, each with the bug that earned it |
 | `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
 | `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
 | `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
@@ -218,14 +219,9 @@ occlusion by your own hand, no hover, no pixel precision. A desktop-first
 cockpit would be a different mechanic wearing the same name. This is upstream of
 stack, layout and control design alike.
 
-Use `@dimforge/rapier3d-deterministic`: it is bit-level cross-platform
-deterministic and `world.takeSnapshot()` hashes identically across machines,
-which makes replay a test rather than an aspiration. It costs SIMD and parallel
-features. Rapier also rules out single-file HTML output — it wants a bundler.
-
-Rejected, with reasons, in `docs/design/stack.md`: **Godot** (its web export
-cannot run C# at all), **Babylon.js** (switching cost lands on the proven cel
-pipeline), **Jolt** (its vehicle controller is the black box we refuse).
+Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
+aspiration. What that costs, and the rejected options with their reasons —
+**Godot**, **Babylon.js**, **Jolt** — are in `docs/design/stack.md`.
 
 No further dependencies without a reason. The art direction is procedural boxes
 and cylinders, so **no asset pipeline is needed for a long time** — do not build
@@ -250,12 +246,15 @@ src/
   sim/       simulation driver
     layers/  the individual simulation layers
   modules/   rack components: loops that hold one invariant in one frame
-  control/   the rack: ordering, arbitration, actuator-bus ownership
+  control/   the rack: ordering, arbitration, actuator-bus ownership;
+             and `Controls`, the one channel a command crosses back through
   build/     build mode: assembly, load-chart computation
-  cockpit/   pilot viewport: instruments, panel budget, occlusion
+  cockpit/   everything the machine's manufacturers made: the cab, the dash,
+             the rack's rail, and each component's three parts —
+             cells/ faces/ pods/, registered as one packet in `parts.ts`
   render/    three.js scene, cel pipeline
   world/     terrain, job sites, hazards (radiation, EMF)
-  ui/        application shell, mode switching
+  ui/        everything the rig made: the shell, the debrief, the live voice
   platform/  input (touch-first), persistence, config
 assets/      models, textures, data
 docs/design/ MEMORY.md spill files
@@ -266,6 +265,13 @@ tests/
 
 The tree is a claim about seams, not a promise about files. Move a seam if it
 turns out to be wrong, and record the move here.
+
+**The cockpit/ui line is the machine against the rig**, and it was moved once
+(2026-08-25) because it had drifted: every instrument in the cab was living in
+`ui/` while its primitives were in `cockpit/`. If a manufacturer built it — the
+cage, the dash, an instrument, a rack plate — it is `cockpit/`. If the training
+system built it — the debrief, the live voice, the shell, the debug telemetry —
+it is `ui/`. The rig may read the machine; the machine knows nothing of the rig.
 
 ## 12. Conventions
 
@@ -286,14 +292,7 @@ and the checks: `docs/design/architecture-rules.md`.
 
 ### Coding
 
-- **One fact, one place.** Three of the four probe defects came from keeping one
-  fact in two places (heading in `body.yaw` *and* `root.rotation.y`; hull height
-  from soles *and* from ground). Delete the duplicate rather than syncing it.
-- **Body axes: forward is +Z, up is +Y, so right is −X and left is +X.**
-  Named as `LEFT_X`/`RIGHT_X` in `core/spec.ts` rather than written inline —
-  getting them the wrong way round silently mirrors the steering, which is
-  invisible on a symmetric hull. It shipped that way once.
-- **Write the full rotation triple** — `rotation.set(k,0,0)`, not
-  `rotation.x = k` — so a hinge's one-axis constraint is explicit in the code
-  rather than assumed. `Object3D.add()` returns the *parent*.
-- Nothing else is established yet. Do not invent conventions here in advance.
+**One fact, one place** — three of the four probe defects came from keeping one
+fact in two. The rest, each with the bug that earned it — body axes, the
+rotation triple, the two custom-property namespaces:
+`docs/design/conventions.md`. Do not invent conventions there in advance.

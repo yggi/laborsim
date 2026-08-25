@@ -34,12 +34,13 @@
  *
  * Architecture rule 3: reads a snapshot, hands it on.
  */
-import type { Annunciation } from "../cockpit/annunciator.ts";
-import { conditionAt } from "../cockpit/annunciator.ts";
+
 import { ALARM, type Condition, WARN } from "../control/bus.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import Attitude from "./Attitude.svelte";
+import type { Annunciation } from "./annunciator.ts";
+import { conditionAt } from "./annunciator.ts";
 import Gauge from "./Gauge.svelte";
 import Traction from "./Traction.svelte";
 

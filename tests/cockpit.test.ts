@@ -47,15 +47,18 @@ import { createAutonav } from "../src/modules/autonav.ts";
 
 const COCKPIT = new URL("../src/cockpit", import.meta.url).pathname;
 /**
- * The `:global` ban covers the cab, not just the contract.
+ * The style bans scan **everything that renders**, not the careful half.
  *
- * It used to scan `src/cockpit/` alone, which is exactly the directory whose
+ * They used to scan `src/cockpit/` alone, which is exactly the directory whose
  * author is already thinking about the rule — and the first `:global` written
- * after the ban went in was written in `src/ui/Rack.svelte`, to size a decal,
- * where nothing was watching. A conformance test that only checks the careful
- * half of the codebase is a test that will pass while the invariant dies.
+ * after the ban went in was written in the rack, to size a decal, where nothing
+ * was watching. Widened once to `src/cockpit/` plus `src/ui/`, which was the
+ * same mistake with a longer list: the two directories are a seam between the
+ * *machine* and the *rig*, and a stylesheet does not care which side it is on.
+ * A conformance test that checks a subset chosen by accident is a test that will
+ * pass while the invariant dies. So: all of `src/`.
  */
-const CAB = [COCKPIT, new URL("../src/ui", import.meta.url).pathname];
+const SRC = [new URL("../src", import.meta.url).pathname];
 
 function filesUnder(dir: string): string[] {
   let found: string[] = [];
@@ -449,7 +452,7 @@ describe("commands cross back through one channel", () => {
         { x: 10, z: 0 },
         { x: 0, z: -10 },
       ],
-      () => ({ x: 0, z: 0, rotation: [0, 0, 0, 1] }),
+      () => ({ x: 0, z: 0, rotation: { x: 0, y: 0, z: 0, w: 1 } }),
     );
     const controls = createControls([nav], {});
     controls("NAV").setParam("target", 3);
@@ -493,7 +496,7 @@ describe("the theme contract — invariants every maker must honour", () => {
    * a meter's `.bar` and collapsed a faceplate to 7px with everything green.
    */
   it("uses no :global anywhere in the cab", () => {
-    for (const dir of CAB) {
+    for (const dir of SRC) {
       for (const file of filesUnder(dir).filter((f) => f.endsWith(".svelte"))) {
         expect(readFileSync(file, "utf8"), `${file} must not use :global`).not.toMatch(
           /:global\s*\(/,
@@ -523,14 +526,61 @@ describe("the theme contract — invariants every maker must honour", () => {
     }
   });
 
-  it("prefixes every custom property it defines with --mfg-", () => {
-    for (const file of filesUnder(COCKPIT)) {
-      const source = readFileSync(file, "utf8");
-      // Definitions, not uses: `--x: value`, wherever it is written.
-      for (const [, name] of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
-        expect(name, `${file} defines ${name}, which is not namespaced`).toMatch(
-          /^--mfg-/,
-        );
+  /**
+   * Svelte scopes classes. It does **not** scope custom properties: one set on
+   * a slot inherits straight down into whatever a manufacturer bolted into it,
+   * so a bare `--u` on a rack slot and a bare `--u` in somebody's faceplate are
+   * one variable with two owners. That is the `bar` collision again, one layer
+   * down and harder to see, so every custom property carries a namespace:
+   *
+   *   `--mfg-` — a maker's token, inherited into its parts on purpose.
+   *   `--cab-` — the machine's own structure, and never a maker's to set.
+   *
+   * Two prefixes, no more, for the same reason there are four verbs.
+   */
+  /**
+   * The other half, and the half that bites. A `var()` with a fallback is a
+   * property that *works* when nothing defines it — so renaming `--dash-h` to
+   * `--cab-dash-h` left the toasts silently sitting 128px off the bottom, with
+   * types, lint and every test green, exactly the way a scripted edit that
+   * matched nothing once removed the dash's background (`META.md`).
+   *
+   * A `--mfg-` token is allowed to go undefined: a maker's component offers
+   * them to whatever it is bolted into, and the fallback *is* the offer.
+   * Everything else must be defined somewhere in `src/` by the time it is read.
+   */
+  it("defines every property something reads, unless it is a maker's offer", () => {
+    const defined = new Set<string>();
+    const used = new Map<string, string>();
+    for (const dir of SRC) {
+      for (const file of filesUnder(dir)) {
+        const source = readFileSync(file, "utf8");
+        for (const match of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
+          if (match[1]) defined.add(match[1]);
+        }
+        for (const match of source.matchAll(/var\(\s*(--[a-z][\w-]*)/g)) {
+          // A maker's token may go undefined: the fallback is the offer.
+          if (match[1] && !match[1].startsWith("--mfg-")) used.set(match[1], file);
+        }
+      }
+    }
+    for (const [name, file] of used) {
+      expect(defined, `${file} reads ${name}, which nothing in src/ defines`).toContain(
+        name,
+      );
+    }
+  });
+
+  it("namespaces every custom property it defines", () => {
+    for (const dir of SRC) {
+      for (const file of filesUnder(dir)) {
+        const source = readFileSync(file, "utf8");
+        // Definitions, not uses: `--x: value`, wherever it is written.
+        for (const [, name] of source.matchAll(/(--[a-z][\w-]*)\s*:/g)) {
+          expect(name, `${file} defines ${name}, which is not namespaced`).toMatch(
+            /^--(mfg|cab)-/,
+          );
+        }
       }
     }
   });

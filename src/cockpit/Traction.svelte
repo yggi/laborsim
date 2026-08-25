@@ -48,10 +48,11 @@
  *
  * Architecture rule 3: reads a snapshot.
  */
-import { SLIPPING } from "../cockpit/annunciator.ts";
-import { damp } from "../cockpit/damping.ts";
-import Seg from "../cockpit/Seg.svelte";
+
 import type { Snapshot } from "../core/snapshot.ts";
+import { SLIPPING } from "./annunciator.ts";
+import { damp } from "./damping.ts";
+import Seg from "./Seg.svelte";
 
 const { snapshot, size = 62 }: { snapshot: Snapshot | undefined; size?: number } =
   $props();

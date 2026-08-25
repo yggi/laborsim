@@ -42,20 +42,21 @@
  *
  * Architecture rule 3: reads a snapshot, reports intent up. Never the sim.
  */
+
+import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
+import type { Controls } from "../control/controls.ts";
+import type { Snapshot } from "../core/snapshot.ts";
 import {
   type Annunciation,
   chassisConditions,
   isAlarm,
   isWarning,
   worst,
-} from "../cockpit/annunciator.ts";
-import { styleOf } from "../cockpit/makers.ts";
-import { cellFor } from "../cockpit/parts.ts";
-import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
-import type { Controls } from "../control/controls.ts";
-import type { Snapshot } from "../core/snapshot.ts";
+} from "./annunciator.ts";
 import Meters from "./Meters.svelte";
+import { styleOf } from "./makers.ts";
 import NavUnit from "./NavUnit.svelte";
+import { cellFor } from "./parts.ts";
 
 let {
   snapshot,

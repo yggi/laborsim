@@ -146,7 +146,7 @@ function why(line: DamageEvent): string {
   .toasts {
     position: fixed;
     left: 12px;
-    bottom: calc(var(--dash-h, 128px) + 14px);
+    bottom: calc(var(--cab-dash-h, 128px) + 14px);
     z-index: 3;
     display: flex;
     flex-direction: column;

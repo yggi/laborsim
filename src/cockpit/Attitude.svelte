@@ -25,8 +25,9 @@
  * the ban in rule 2 is on transcendentals that close a loop back into the sim,
  * and nothing here ever reaches it.
  */
-import Seg from "../cockpit/Seg.svelte";
+
 import type { Snapshot } from "../core/snapshot.ts";
+import Seg from "./Seg.svelte";
 
 const { snapshot, size = 62 }: { snapshot: Snapshot | undefined; size?: number } =
   $props();

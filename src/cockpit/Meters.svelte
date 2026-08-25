@@ -23,8 +23,9 @@
  * Architecture rule 3: reads a snapshot. Distance is integrated in the sim, so a
  * recording carries its own mileage.
  */
-import Odometer from "../cockpit/Odometer.svelte";
+
 import type { Snapshot } from "../core/snapshot.ts";
+import Odometer from "./Odometer.svelte";
 
 const { snapshot }: { snapshot: Snapshot | undefined } = $props();
 

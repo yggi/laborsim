@@ -17,11 +17,12 @@
  * It is also the surface a blind subagent authoring a maker's theme works
  * against — which is why it shows *states*, not a pretty gallery.
  */
+
+import DashPanel from "../cockpit/DashPanel.svelte";
 import { styleOf } from "../cockpit/makers.ts";
 import { cellFor, podFor } from "../cockpit/parts.ts";
+import Rack from "../cockpit/Rack.svelte";
 import { inertControls } from "../control/controls.ts";
-import DashPanel from "../ui/DashPanel.svelte";
-import Rack from "../ui/Rack.svelte";
 import { SPECIMENS } from "./fixtures.ts";
 
 /** Which specimen the rack and the loose cells are showing. */

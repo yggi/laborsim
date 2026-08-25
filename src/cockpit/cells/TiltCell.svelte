@@ -22,7 +22,7 @@
  *
  * Architecture rule 3: reads a stage off a snapshot. No intent leaves it.
  */
-import type { CellProps } from "../cell.ts";
+import type { CellProps } from "../contract.ts";
 
 const { stage, style }: CellProps = $props();
 
