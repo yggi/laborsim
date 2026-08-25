@@ -90,6 +90,16 @@ A fourth fell out of (2): opening a sawtooth's filter can only ever move a few
 percent of its energy, so brightness alone was a cue visible in a spectrum and
 inaudible across a room. Load makes the machine **louder** as well now.
 
+**Two more found by reading the diff back adversarially**, both about lifetimes.
+The live voice was unmounted whenever the rack opened, so its reader rejoined the
+run at zero and re-voiced every line still on the channel the moment you closed
+the cabinet — a bug that predates the channel (the old high-water mark restarted
+at zero too) and was simply invisible while the whole damage list was in reach.
+It is hidden now, not destroyed: a subscription belongs to a consumer's lifetime.
+And the E-stop lights the master at ALARM *and* opens the debrief in one press,
+so the horn was blaring under somebody explaining what you had just done. The
+folder silences it. Both verified in the browser rather than in the stylesheet.
+
 ---
 
 ## 2026-08-25 — the pod joins the registry, and the seam moves

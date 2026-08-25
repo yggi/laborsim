@@ -118,7 +118,10 @@ $effect(() => {
  */
 let hornLevel = NOMINAL as Condition;
 $effect(() => {
-  hornLevel = master > acked ? master : NOMINAL;
+  // Silent while the folder is open. Hitting the stop lights the master at
+  // ALARM and opens the debrief in the same press, and a horn blaring under
+  // somebody explaining what you just did is the rig talking over itself.
+  hornLevel = !report && master > acked ? master : NOMINAL;
 });
 
 /**
@@ -434,10 +437,12 @@ $effect(() => {
   <!-- The live voice: the rig narrating as it happens, in the same register as
        the end-of-run report. Stacks, then fades; a citizen latches. Manufacturer
        notices ride the same channel in their own colours — a warranty notice is
-       not a verdict, and you must be able to tell whose opinion you are reading. -->
-  {#if !rackOpen}
-    <Toasts snapshot={latest} {notices} />
-  {/if}
+       not a verdict, and you must be able to tell whose opinion you are reading.
+
+       Hidden while you are in the rack, never unmounted: a subscription belongs
+       to a consumer's lifetime, and rebuilding this mid-run made it re-voice
+       every line still on the channel the moment you closed the cabinet. -->
+  <Toasts snapshot={latest} {notices} hidden={rackOpen} />
 
   <!-- The levers go with the glass. Looking down at the rack puts your hands in
        the cabinet, not on the controls — the same bargain as the chase view,

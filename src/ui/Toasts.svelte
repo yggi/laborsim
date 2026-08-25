@@ -40,7 +40,24 @@ interface Notice {
 const {
   snapshot,
   notices = [],
-}: { snapshot: Snapshot | undefined; notices?: readonly Notice[] } = $props();
+  hidden = false,
+}: {
+  snapshot: Snapshot | undefined;
+  notices?: readonly Notice[];
+  /**
+   * Out of sight, still running.
+   *
+   * Looking down at the rack has to hide these — they sit above the deck — but
+   * it must not *unmount* them, which is what it used to do. A subscription
+   * belongs to a consumer's lifetime, so a consumer that is destroyed and
+   * rebuilt mid-run rejoins with no idea what it has already voiced, and every
+   * line still on the channel arrives a second time the moment you close the
+   * cabinet. Hiding costs a `display: none`; the timers keep running, so a
+   * notice you could not see because you were in the rack expires on schedule
+   * rather than queueing up to shout at you afterwards.
+   */
+  hidden?: boolean;
+} = $props();
 
 /** How long a routine notice lingers before it fades, ms. */
 const LINGER = 5200;
@@ -99,7 +116,7 @@ function why(line: DamageEvent): string {
 }
 </script>
 
-<div class="toasts">
+<div class="toasts" class:hidden>
   <!-- The manufacturer's channel, above the ledger's and in its own livery. -->
   {#each notices as notice (notice.id)}
     {@const style = styleOf(notice.maker)}
@@ -153,6 +170,11 @@ function why(line: DamageEvent): string {
     gap: 6px;
     width: min(300px, calc(100vw - 24px));
     pointer-events: none;
+  }
+  /* In the rack, out of sight. Still mounted, still counting down — see the
+     `hidden` prop above for why unmounting was the wrong way to do this. */
+  .toasts.hidden {
+    display: none;
   }
   .toast {
     background: rgba(16, 19, 21, 0.94);
