@@ -13,26 +13,23 @@
  * whether it is right to. Sitting nose-high in the red with no drive is the
  * gauge telling the truth.
  *
- * Architecture rule 3: reads a snapshot, and only the readout its module
- * published into it.
+ * Architecture rule 3: reads its own slot off a recording, and only the readout
+ * its module published into it. It is handed that slot rather than going to look
+ * for it — a pod that finds itself by id on the snapshot cannot be shown for a
+ * component it was not fitted to.
  */
-import { styleOf } from "../cockpit/makers.ts";
-import Seg from "../cockpit/Seg.svelte";
-import type { Snapshot } from "../core/snapshot.ts";
+import type { PodProps } from "../contract.ts";
+import Seg from "../Seg.svelte";
 
-/** HANSA built this, so it looks like HANSA built it. */
-const house = styleOf("HANSA REGELTECHNIK");
-
-const { snapshot }: { snapshot: Snapshot | undefined } = $props();
+const { stage, style }: PodProps = $props();
 
 /** Fraction of the limit at which the module starts easing. Mirrors EASE. */
 const EASE = 0.6;
 /** Full scale, in limits. The needle can leave the red, but not far. */
 const SPAN = 1.45;
 
-const stage = $derived(snapshot?.stages.find((s) => s.id === "TILT"));
-const readout = $derived(stage?.readout);
-const live = $derived(stage?.enabled === true);
+const readout = $derived(stage.readout);
+const live = $derived(stage.enabled);
 
 /** Sines in, degrees out. Instruments may use transcendentals; the sim may not. */
 const deg = (sine: number) =>
@@ -66,7 +63,7 @@ const pct = (u: number) => ((u + SPAN) / (2 * SPAN)) * 100;
 <div
   class="gauges"
   class:live
-  style="--mfg-plate: {house.plate}; --mfg-face: {house.face}; --mfg-accent: {house.accent}; --mfg-seg: {house.accent}"
+  style="--mfg-plate: {style.plate}; --mfg-face: {style.face}; --mfg-accent: {style.accent}; --mfg-seg: {style.accent}"
 >
   <span class="fix tl mfg-screw mfg-screw-hex"></span>
   <span class="fix tr mfg-screw mfg-screw-hex"></span>

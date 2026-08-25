@@ -11,7 +11,7 @@
  */
 
 import { makeRng } from "../core/rng.ts";
-import type { Waypoint } from "../modules/autonav.ts";
+import type { Waypoint } from "../core/snapshot.ts";
 import { sampleTerrain, type Terrain } from "./terrain.ts";
 
 export interface Pin extends Waypoint {

@@ -52,6 +52,7 @@ import {
 import { styleOf } from "../cockpit/makers.ts";
 import { cellFor } from "../cockpit/parts.ts";
 import { ALARM, type Condition, NOMINAL, WARN } from "../control/bus.ts";
+import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import Meters from "./Meters.svelte";
 import NavUnit from "./NavUnit.svelte";
@@ -63,7 +64,7 @@ let {
   height = $bindable(0),
   onOpenRack,
   onEstop,
-  onToggleModule,
+  controls,
 }: {
   snapshot: Snapshot | undefined;
   rackOpen: boolean;
@@ -73,7 +74,8 @@ let {
   height?: number;
   onOpenRack: () => void;
   onEstop: () => void;
-  onToggleModule: (id: string) => void;
+  /** The one channel a part commands through. See `control/controls.ts`. */
+  controls: (id: string) => Controls;
 } = $props();
 
 const stages = $derived(snapshot?.stages ?? []);
@@ -218,7 +220,7 @@ const cells = $derived(
           <Cell
             stage={entry.stage}
             style={styleOf(entry.stage.maker)}
-            onToggle={() => onToggleModule(entry.stage.id)}
+            controls={controls(entry.stage.id)}
           />
         {/if}
       {/each}

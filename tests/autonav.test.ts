@@ -62,6 +62,39 @@ describe("NAV-1 steers toward the pin", () => {
     expect(nav.target).toBe(1);
   });
 
+  /**
+   * Sending it to a pin is the one control on the machine that used to be
+   * reachable only by holding the live module — the route scope was handed an
+   * `Autonav` so it could call `setTarget`, which is exactly what an instrument
+   * drawing a recording cannot do. A pin is a bounded number with a name and a
+   * unit, so it is a `Param` like any other setting.
+   */
+  it("takes its target as a declared param, counted from one", () => {
+    const nav = createAutonav(
+      [
+        { x: 0, z: 60 },
+        { x: 60, z: 0 },
+        { x: 0, z: -60 },
+      ],
+      () => facingForward,
+    );
+    const target = nav.params?.find((p) => p.id === "target");
+    expect(target).toBeTruthy();
+    expect(target?.get()).toBe(1);
+    target?.set(3);
+    expect(nav.target).toBe(2);
+    expect(target?.get()).toBe(3);
+  });
+
+  it("refuses a pin that is not on the route", () => {
+    const nav = createAutonav([{ x: 0, z: 60 }], () => facingForward);
+    const target = nav.params?.find((p) => p.id === "target");
+    target?.set(4);
+    expect(nav.target).toBe(0);
+    target?.set(0);
+    expect(nav.target).toBe(0);
+  });
+
   it("says nothing at all with no route", () => {
     const nav = createAutonav([], () => facingForward, { enabled: true });
     expect(nav.intent()).toBeNull();

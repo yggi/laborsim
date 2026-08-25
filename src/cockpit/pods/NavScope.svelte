@@ -11,32 +11,35 @@
  * lying about the module behind it, and the honesty of that blindness is
  * the whole lesson of the module.
  *
- * Architecture rule 3: reads a snapshot and a static route, reports taps
- * upward. It never touches the sim.
+ * Architecture rule 3: reads a snapshot, and sends a tap back through the one
+ * channel a part has. It never touches the sim, and it never holds the module
+ * it is drawing — it used to be handed a live `Autonav` so it could call
+ * `setTarget`, which is exactly the thing that cannot be replayed.
+ *
+ * The route comes off the snapshot for the same reason: a recording that cannot
+ * draw the route it was following is not a recording.
  */
-import { styleOf } from "../cockpit/makers.ts";
-import type { Snapshot } from "../core/snapshot.ts";
+import type { PodProps } from "../contract.ts";
 
-/** TOWA built this, so it looks like TOWA built it. */
-const house = styleOf("TOWA DENKI");
+const { stage, style, snapshot, controls }: PodProps = $props();
 
-const {
-  snapshot,
-  waypoints,
-  onselect,
-}: {
-  snapshot: Snapshot | undefined;
-  waypoints: readonly { x: number; z: number }[];
-  onselect: (index: number) => void;
-} = $props();
+const waypoints = $derived(snapshot?.route ?? []);
 
 /** Metres from edge to edge of the scope. */
 const SPAN = 190;
 const R = 62;
 
-const nav = $derived(snapshot?.stages.find((s) => s.id === "NAV"));
-const target = $derived(nav?.readout?.target ?? 0);
-const live = $derived(nav?.enabled === true && nav?.idle === false);
+const target = $derived(stage.readout?.target ?? 0);
+const live = $derived(stage.enabled && !stage.idle);
+
+/**
+ * Sending it to a pin is a **setting on the component**, reached the same way
+ * the plate's sliders are. The scope is a faster way to do a thing the plate
+ * can already do, not a second wire into the module — so the pin numbers here
+ * and on the faceplate are one number, and both are 1-based because nobody
+ * standing at a machine counts pins from zero.
+ */
+const select = (index: number) => controls.setParam("target", index + 1);
 
 /** World position → scope position, rotated so the machine's nose is up. */
 function plot(x: number, z: number) {
@@ -63,7 +66,7 @@ function plot(x: number, z: number) {
 <div
   class="scope"
   class:live
-  style="--mfg-plate: {house.plate}; --mfg-bezel: {house.bezel}; --mfg-face: {house.face}; --mfg-accent: {house.accent}"
+  style="--mfg-plate: {style.plate}; --mfg-bezel: {style.bezel}; --mfg-face: {style.face}; --mfg-accent: {style.accent}"
 >
   <svg viewBox="0 0 {R * 2} {R * 2}" role="img" aria-label="navigation route">
     <circle class="ring" cx={R} cy={R} r={R - 1} />
@@ -88,8 +91,8 @@ function plot(x: number, z: number) {
         role="button"
         tabindex="0"
         aria-label="waypoint {i + 1}"
-        onclick={() => onselect(i)}
-        onkeydown={(e) => e.key === "Enter" && onselect(i)}
+        onclick={() => select(i)}
+        onkeydown={(e) => e.key === "Enter" && select(i)}
       >
         <circle cx={p.px} cy={p.py} r="7" fill="transparent" />
         <rect x={p.px - 3} y={p.py - 3} width="6" height="6" />

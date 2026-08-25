@@ -243,6 +243,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         },
         stages,
         props: movedProps(),
+        route: waypoints,
         damage: ledger.events,
         bill: ledger.total,
       };

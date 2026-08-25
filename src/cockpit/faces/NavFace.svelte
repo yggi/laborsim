@@ -15,7 +15,7 @@
  *
  * Architecture rule 3: reads a stage off a snapshot.
  */
-import type { FaceProps } from "../face.ts";
+import type { FaceProps } from "../contract.ts";
 import Matrix from "../Matrix.svelte";
 
 const { stage }: FaceProps = $props();

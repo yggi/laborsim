@@ -10,23 +10,22 @@
  * reach the controls. No pause, no auto-stop, no special case in the sim.
  */
 
+import Glass from "./cockpit/Glass.svelte";
 import { styleOf } from "./cockpit/makers.ts";
 import { ACTIVE, type Condition, type Module, NOMINAL } from "./control/bus.ts";
+import { createControls } from "./control/controls.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
-import { type Autonav, createAutonav } from "./modules/autonav.ts";
+import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
 import { type CameraMode, createViewport } from "./render/scene.ts";
 import { createWorld, initPhysics } from "./sim/world.ts";
 import DashPanel from "./ui/DashPanel.svelte";
-import Draggable from "./ui/Draggable.svelte";
 import Lever from "./ui/Lever.svelte";
-import NavRadar from "./ui/NavRadar.svelte";
 import Rack from "./ui/Rack.svelte";
 import RunReport from "./ui/RunReport.svelte";
 import Telemetry from "./ui/Telemetry.svelte";
-import TiltGauges from "./ui/TiltGauges.svelte";
 import Toasts from "./ui/Toasts.svelte";
 
 let canvas: HTMLCanvasElement;
@@ -66,8 +65,6 @@ const pilot: Module = {
  */
 const rack: Module[] = $state([pilot]);
 let rackOpen = $state(false);
-let nav = $state<Autonav | undefined>(undefined);
-let route = $state<readonly { x: number; z: number }[]>([]);
 let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
 let showDebug = $state(true);
@@ -116,24 +113,24 @@ function notify(maker: string, head: string, body: string) {
 }
 
 /**
- * Toggle a component from its dashboard cell.
+ * The handles every part of every component commands through — the cells on the
+ * dash, the pods on the glass, and whatever is fitted next. The shell owns them
+ * because the shell owns the live rack; nothing downstream of here ever sees a
+ * module (`src/control/controls.ts`).
  *
  * Popping the hood: switching off **safety** kit is a deliberate act, so the
- * maker says so and the run report will remember. The guard against firing this
- * on an emergency stop is the `estop` check — an E-stop disables every module in
+ * maker says so and the run report will remember. The `estop` check is why it is
+ * a hook rather than a rule in the channel — an E-stop disables every module in
  * the rack, and nobody's warranty is void because you hit the big red button.
  */
-function toggleModule(id: string) {
-  const mod = rack.find((m) => m.id === id);
-  if (!mod) return;
-  const bypassing = mod.enabled && mod.safety === true && !estop;
-  mod.enabled = !mod.enabled;
-  if (bypassing) {
+const controls = createControls(rack, {
+  onBypass(mod) {
+    if (estop) return;
     const [head, body] = styleOf(mod.maker).voice.warranty;
     notify(mod.maker, head, body);
-  }
-  rackVersion++;
-}
+  },
+  onChange: () => rackVersion++,
+});
 
 function setView(next: CameraMode) {
   mode = next;
@@ -199,19 +196,6 @@ function resetSim() {
   runId++;
 }
 
-/** Is a module with this id in the rack? Its instrument is fitted if so. */
-const fitted = (id: string) => latest?.stages.some((s) => s.id === id) === true;
-
-/** Pod placements on the glass — draggable, and remembered per session. They
- *  start down the right, clear of the camera control at the very top.
- *
- *  ATT-0 is no longer among them: heading and attitude moved to the dash, so a
- *  bare chassis now starts with **clear glass** and the first component you fit
- *  is the first view you lose. */
-const rightX = typeof window === "undefined" ? 280 : innerWidth - 124;
-let navPos = $state({ x: rightX, y: 50 });
-let tiltPos = $state({ x: rightX, y: 224 });
-
 // Auto-open the debrief the moment a citizen is involved: it is categorical
 // failure, and the rig does not let that scroll past.
 $effect(() => {
@@ -239,18 +223,19 @@ $effect(() => {
 
     const world = createWorld({ modules: rack });
     // NAV needs the pose of the machine it is driving, so it is built once the
-    // world exists and pushed onto the rail below the pilot.
-    route = world.waypoints;
-    const autonav = createAutonav(
-      world.waypoints,
-      () => {
-        const t = world.machine.body.translation();
-        return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
-      },
-      { verb: "CAP", enabled: false },
+    // world exists and pushed onto the rail below the pilot. Nothing keeps a
+    // reference to it: its instrument reads the snapshot and commands through
+    // the same handles as everything else.
+    rack.push(
+      createAutonav(
+        world.waypoints,
+        () => {
+          const t = world.machine.body.translation();
+          return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
+        },
+        { verb: "CAP", enabled: false },
+      ),
     );
-    nav = autonav;
-    rack.push(autonav);
 
     // TILT-GUARD sits at the bottom of the rail, below everything: it is the
     // last thing between the rack and the tracks, which is where a safety
@@ -392,36 +377,17 @@ $effect(() => {
 
   <!--
     Fitted pods, draggable on the glass by their titlebars (L-008). Each one is a
-    piece of view you gave up; the budget that prices that is L-025, and this is
-    the pile it will price. They must stay wholly on the glass and clear of each
-    other — the Draggable refuses a drop that breaks either rule.
+    piece of view you gave up; the budget that prices that is L-025, and the
+    glass is the pile it will price.
 
-    A pod is optional and its maker decides whether one exists at all. NAV-1 is a
+    Which components have one is the registry's business, not the shell's — a
+    pod is optional and its maker decides whether it exists at all. NAV-1 is a
     capability component and pays in glass; TILT-GUARD is a safety component and
-    pays in capability instead, so its gauges are here by choice rather than as
-    the price of fitting it.
+    pays in capability instead, so its gauges are there by choice rather than as
+    the price of fitting it. This file knows neither of those things.
   -->
   {#if mode === "cab" && !rackOpen}
-    {#if nav}
-      <Draggable
-        title="NAV-1"
-        bottomKeepOut={dashHeight + 12}
-        bind:x={navPos.x}
-        bind:y={navPos.y}
-      >
-        <NavRadar snapshot={latest} waypoints={route} onselect={(i) => nav?.setTarget(i)} />
-      </Draggable>
-    {/if}
-    {#if fitted("TILT")}
-      <Draggable
-        title="TILT-GUARD"
-        bottomKeepOut={dashHeight + 12}
-        bind:x={tiltPos.x}
-        bind:y={tiltPos.y}
-      >
-        <TiltGauges snapshot={latest} />
-      </Draggable>
-    {/if}
+    <Glass snapshot={latest} {controls} bottomKeepOut={dashHeight + 12} />
   {/if}
 
   <!--
@@ -442,7 +408,7 @@ $effect(() => {
         bind:height={dashHeight}
         onOpenRack={() => (rackOpen = !rackOpen)}
         onEstop={hitEstop}
-        onToggleModule={toggleModule}
+        {controls}
       />
       {#if rackOpen}
         {#key rackVersion}

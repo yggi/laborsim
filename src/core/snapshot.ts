@@ -47,6 +47,19 @@ export interface TrackState {
   readonly traction: number | null;
 }
 
+/**
+ * A pin on the route, in world metres.
+ *
+ * It lives in the kernel because three layers need the same two numbers and none
+ * of them should own it: the world generates the pins, NAV-1 follows them, and
+ * the cockpit draws them. It used to be declared on NAV-1, which made the world
+ * import from a rack module to describe its own terrain furniture.
+ */
+export interface Waypoint {
+  readonly x: number;
+  readonly z: number;
+}
+
 export interface MachineState {
   readonly pose: BodyPose;
   readonly left: TrackState;
@@ -96,6 +109,16 @@ export interface Snapshot {
   readonly stages: readonly Stage[];
   /** Props that moved this step. Empty on an undisturbed site. */
   readonly props: readonly PropPose[];
+  /**
+   * The route the site was laid out with, unchanging for the run.
+   *
+   * It is here rather than handed to the instrument that draws it, because a
+   * recording that cannot draw the route it was following is not a recording —
+   * and because a pod holding world data it was passed at build time is a pod
+   * that cannot be replayed. The array is the world's, by reference: it costs
+   * nothing to carry and it is never rebuilt.
+   */
+  readonly route: readonly Waypoint[];
   /** The ledger so far, oldest line first. */
   readonly damage: readonly DamageEvent[];
   /** Total billed, yen. */

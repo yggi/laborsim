@@ -531,7 +531,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
   /* -- the two rails ----------------------------------------------------- */
   /* Both belong to the *slot*, identically for every component, because that is
      what a rack is: a standard you plug things into. A module owns its style
-     and its own face and nothing else (docs: src/cockpit/face.ts). */
+     and its own face and nothing else (docs: src/cockpit/contract.ts). */
   .rail {
     flex: none;
     display: flex;

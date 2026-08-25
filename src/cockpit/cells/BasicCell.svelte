@@ -15,9 +15,9 @@
  *
  * Architecture rule 3: reads a stage off a snapshot, reports intent up.
  */
-import type { CellProps } from "../cell.ts";
+import type { CellProps } from "../contract.ts";
 
-const { stage, style, onToggle }: CellProps = $props();
+const { stage, style, controls }: CellProps = $props();
 
 /**
  * Enabled and fine is a **lit** lamp, not a dark one — same rule as the rack.
@@ -35,7 +35,7 @@ const lit = $derived(stage.enabled ? Math.max(1, stage.condition) : 0);
   <button
     class="lamp mfg-lamp"
     data-lit={lit}
-    onclick={onToggle}
+    onclick={controls.toggle}
     aria-label="enable {stage.label}"
     aria-pressed={stage.enabled}
   ></button>

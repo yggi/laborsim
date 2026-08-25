@@ -1,5 +1,5 @@
 /**
- * The registry — which component owns which part of the cockpit.
+ * The registry — what arrives in the box when you buy a component.
  *
  * This is the seam that keeps architecture rule 1 intact. A module declares what
  * it *publishes* (its readout, its condition, whether it is safety kit) and
@@ -12,37 +12,33 @@
  * dash. Now a component arrives with its own cell or does not, and the dash
  * neither knows nor cares which components exist.
  *
- * Registering a cell is optional and registering `null` is a statement: the
- * chassis brings the whole dashboard, so it needs no lamp to tell you the levers
- * are fitted. Anything unregistered gets the base case, which is the right
- * default — a component you have never seen before still shows up as one lens
- * and a strip of label tape.
+ * **One packet per component, not one table per part.** Cells, faces, rack units
+ * and fuse ratings each used to have their own `Record` keyed by the same id, so
+ * fitting a component meant four edits in four places and a pod meant editing
+ * `App.svelte` as well — which is how the pod ended up outside the registry
+ * altogether. A packet is the whole delivery: this is what you unpack, this is
+ * what a manufacturer's author is asked to produce, and this is the single
+ * place a new component is registered.
+ *
+ * A packet is optional and a component with no packet is not an error: it gets
+ * the base case, which is the right default — a component you have never seen
+ * before still shows up as one lens and a strip of label tape. Registering a
+ * cell as `null` is a different statement: the chassis brings the whole
+ * dashboard, so it needs no lamp to tell you the levers are fitted.
  */
 
 import type { Component } from "svelte";
-import type { CellProps } from "./cell.ts";
 import BasicCell from "./cells/BasicCell.svelte";
 import NavCell from "./cells/NavCell.svelte";
 import TiltCell from "./cells/TiltCell.svelte";
-import type { FaceProps } from "./face.ts";
+import type { CellProps, FaceProps, PodProps } from "./contract.ts";
 import NavFace from "./faces/NavFace.svelte";
+import NavScope from "./pods/NavScope.svelte";
+import TiltGauges from "./pods/TiltGauges.svelte";
 
 export type Cell = Component<CellProps>;
 export type Face = Component<FaceProps>;
-
-/** `null` means *deliberately no cell*, which is different from unregistered. */
-const CELLS: Record<string, Cell | null> = {
-  // The chassis component. It has a plate (your two levers) and it brings the
-  // dashboard, the cage and the glass — so it is the one thing on the machine
-  // that does not need an indicator saying it is there.
-  PILOT: null,
-  NAV: NavCell as Cell,
-  TILT: TiltCell as Cell,
-};
-
-export function cellFor(id: string): Cell | null {
-  return id in CELLS ? (CELLS[id] ?? null) : (BasicCell as Cell);
-}
+export type Pod = Component<PodProps>;
 
 /**
  * Rack units — how tall a component's faceplate is.
@@ -62,49 +58,75 @@ export function cellFor(id: string): Cell | null {
  */
 export type Units = 1 | 2;
 
-const UNITS: Record<string, Units> = {
-  // Two levers and no settings. It does not need the room.
-  PILOT: 1,
-  NAV: 2,
-  TILT: 2,
+/** Everything the cockpit gets when a component is fitted. */
+export interface Packet {
+  /**
+   * The dashboard indicator. `null` means *deliberately none*, which is a
+   * different statement from a component the registry has never heard of.
+   */
+  readonly cell: Cell | null;
+  /**
+   * The module's own strip of its rack plate. Most components have none: a plate
+   * with an identity and a couple of limit sliders is a complete plate. A face
+   * is for kit with something of its own to show, and so far that is TOWA,
+   * because TOWA cannot help itself.
+   */
+  readonly face?: Face;
+  /**
+   * The instrument on the glass. Optional, and its maker decides whether one
+   * exists at all — a capability component pays for itself in view, a safety
+   * component pays in capability and need not cost glass at all.
+   */
+  readonly pod?: Pod;
+  readonly units: Units;
+  /**
+   * What the slot is fused at, in amps.
+   *
+   * Blade fuses are **colour-coded by rating** — the same code on every vehicle
+   * built since about 1976 — so the rating is legible across the cabinet without
+   * reading anything, and a component's current draw becomes a visible fact
+   * about it. The drive controls take the big green thirty; guidance electronics
+   * sip five; a guard sits in the middle on ten.
+   *
+   * It is characterisation with a real referent, which is the cheapest kind: the
+   * numbers are not invented, they are what you would actually fit.
+   */
+  readonly amps: number;
+}
+
+const PACKETS: Record<string, Packet> = {
+  // The chassis component. It has a plate (your two levers) and it brings the
+  // dashboard, the cage and the glass — so it is the one thing on the machine
+  // that does not need an indicator saying it is there, and the one thing that
+  // costs no view, because the view is its.
+  PILOT: { cell: null, units: 1, amps: 30 },
+  NAV: {
+    cell: NavCell as Cell,
+    face: NavFace as Face,
+    pod: NavScope as Pod,
+    units: 2,
+    amps: 5,
+  },
+  TILT: { cell: TiltCell as Cell, pod: TiltGauges as Pod, units: 2, amps: 10 },
 };
 
-export const unitsFor = (id: string): Units => UNITS[id] ?? 2;
+const packetFor = (id: string): Packet | undefined => PACKETS[id];
 
-/**
- * A module's **face** — the interface that belongs to the component rather than
- * to the slot it is plugged into. See `face.ts` for why power and mode are not
- * in here.
- *
- * Most components have none: a plate with an identity and a couple of limit
- * sliders is a complete plate. A face is for kit with something of its own to
- * show, and so far that is TOWA, because TOWA cannot help itself.
- */
-const FACES: Record<string, Face> = {
-  NAV: NavFace as Face,
-};
+export function cellFor(id: string): Cell | null {
+  const packet = packetFor(id);
+  if (!packet) return BasicCell as Cell;
+  return packet.cell;
+}
 
-export const faceFor = (id: string): Face | undefined => FACES[id];
+export const podFor = (id: string): Pod | undefined => packetFor(id)?.pod;
 
-/**
- * What a slot is fused at, in amps.
- *
- * Blade fuses are **colour-coded by rating** — the same code on every vehicle
- * built since about 1976 — so the rating is legible across the cabinet without
- * reading anything, and a component's current draw becomes a visible fact about
- * it. The drive controls take the big green thirty; guidance electronics sip
- * five; a guard sits in the middle on ten.
- *
- * It is characterisation with a real referent, which is the cheapest kind: the
- * numbers are not invented, they are what you would actually fit.
- */
-export const AMPS: Record<string, number> = {
-  PILOT: 30,
-  NAV: 5,
-  TILT: 10,
-};
+export const faceFor = (id: string): Face | undefined => packetFor(id)?.face;
 
-export const ampsFor = (id: string): number => AMPS[id] ?? 15;
+/** Unknown kit gets the bigger plate: better a spare unit than a clipped one. */
+export const unitsFor = (id: string): Units => packetFor(id)?.units ?? 2;
+
+/** Unknown kit is fused mid-range, on the blue fifteen. */
+export const ampsFor = (id: string): number => packetFor(id)?.amps ?? 15;
 
 /**
  * The standard blade-fuse colour code. Not a palette decision — this is the
@@ -128,5 +150,5 @@ const FUSE_COLOURS: Record<number, string> = {
 
 export const fuseColour = (amps: number): string => FUSE_COLOURS[amps] ?? "#8a8f92";
 
-/** Ids with a deliberate registry entry, for the conformance tests. */
-export const REGISTERED: readonly string[] = Object.keys(CELLS);
+/** Ids with a packet of their own, for the conformance tests. */
+export const REGISTERED: readonly string[] = Object.keys(PACKETS);

@@ -78,6 +78,9 @@ let written = 1;
 for (const [attribute, prefix] of [
   ["data-specimen", "dash"],
   ["data-wide", "wide"],
+  // The pods, over sky. An instrument is inseparable from what it is in front
+  // of, and the one thing a dark bench cannot show is a pod washing out.
+  ["data-pods", "pods"],
 ]) {
   for (const specimen of await page.locator(`[${attribute}]`).all()) {
     const name = (await specimen.getAttribute(attribute)) ?? "unnamed";
