@@ -249,7 +249,8 @@ src/
   ui/        everything the rig made: the shell, the schedule, the objective
              strip, the debrief, the live voice
   sandbox/   the benches: every component in every state, every voice
-  platform/  input (touch-first), persistence, config
+  platform/  where the app meets the browser: `run.ts` owns one run — the
+             world, the fitted kit, the viewport, the input and the loop
 assets/      models, textures, data
 docs/design/ MEMORY.md spill files
 docs/log/    LOG.md yearly archives

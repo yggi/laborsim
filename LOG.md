@@ -25,6 +25,64 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the loop leaves the component
+
+Cards: [L-070] closed, which finishes the foundation pass ([L-068], [L-069],
+[L-070]).
+
+`App.svelte` was 1082 lines and the sim lifecycle was 155 of them, in one
+`$effect` in the middle: physics init, world, rack assembly, viewport, resize,
+pointer capture, the frame loop, teardown. The file's own opening comment has
+said since it was written that "Svelte owns the DOM; a plain module owns the
+renderer and the loop". `platform/run.ts` is the module that comment was
+describing, and the header now points at it instead of promising it.
+
+**`platform/`, because almost everything the run does is where the application
+meets the browser** — `requestAnimationFrame`, pointer capture, a resize
+listener, one custom-property write a frame. The world and the renderer are
+things it owns, not things it is. The directory had been empty since the repo
+map first named it.
+
+**The escape hatch went with it, and the fix is that the run exists
+synchronously.** The old code hoisted `let setViewMode = () => {}` into the
+component and reassigned it from inside the `.then()`, so pressing CHASE before
+the wasm landed reached a function that did nothing and reported nothing.
+`createRun` returns a `Run` immediately and *remembers* a view given during the
+boot, applying it on arrival; `dispose()` is safe at any point including
+mid-boot. What the shell holds is a `Run | undefined` — an absence that is typed
+and handled with `?.` rather than a function that lies about being ready.
+
+**The run has no opinion about what is fitted.** NAV-1 needs a world to read a
+pose off and TILT-GUARD needs one for an attitude, which is *why* they are built
+in there — but which components those are is the cab's business. So the caller
+passes `fit(world)` and hands modules back. A run with `createAutonav` inside it
+would be a run that knows what a machine is.
+
+L-069 is what made this a small change rather than a fight: everything the loop
+needs from the cab already arrived as one argument, so the extraction moved code
+without having to *decide* anything about the boundary. Two objects cross the
+seam now and nothing else does — `hands` going down, a snapshot coming back.
+
+The scanner from L-069 failed, correctly, the moment the blocks it reads moved
+out of the component: `no such block: const tick = (now: number) => {`. Its rule
+is stronger now rather than gone — a plain `.ts` module cannot hold a rune at
+all — so it checks the boundary instead: the pilot module (still declared in the
+component, still called from inside `world.step()`) reads no rune, the component
+contains no `requestAnimationFrame`, and the run declares no rune and imports no
+Svelte. Each verified by breaking it.
+
+Driven, not just typechecked. The cab bench reads `PILOT [SET] +2.20/-2.20` down
+the whole chain with the clock running — identical to before the extraction — and
+a separate probe pressed CHASE on the same tick as BEGIN, which is the race the
+old hatch lost, and got the chase camera. 242 tests, lint, typecheck, build, 19
+cab shots, 20 panel shots.
+
+Not done, and deliberately: the shell is 984 lines and still holds the
+annunciator, the E-stop, the horn, the notices, the audio lifecycle and the nag.
+Those are all *cab* concerns and they belong to a component; the card was about
+the sim lifecycle, and stretching it into a general decomposition would have been
+a different, worse change.
+
 ## 2026-08-26 — one channel for what the loop reads
 
 Cards: [L-069] closed. Rule 3 gained an edge in

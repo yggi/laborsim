@@ -235,24 +235,24 @@ describe("one fact, one place — a hand-built snapshot comes from the kit", () 
 /**
  * Rule 3's other edge: **what runs outside the reactive graph reads `hands`.**
  *
- * Three things in `App.svelte` run where a rune must not be read — the pilot
- * module's callbacks, which `runRack` invokes inside `world.step()`; the render
- * loop's `tick`, which is a `requestAnimationFrame` callback; and the pointer
- * handlers bound to the canvas. Reading a rune from any of them is an untracked
- * read: it returns the right value today and nothing anywhere guarantees it.
+ * The render loop, the rack it steps and the canvas pointer handlers all run
+ * where a rune must not be read. Reading one from there is an untracked read: it
+ * returns the right value today and nothing anywhere guarantees it. All three
+ * did it, by three different mechanisms, and the worst — the two levers, read
+ * sixty times a second through a module callback — went unnoticed for as long as
+ * it did precisely because it was not in the loop body where somebody would
+ * think to look. `control/hands.ts` is the one channel now.
  *
- * All three did it, by three different mechanisms, and the worst one — the two
- * levers, read sixty times a second through a module callback — went unnoticed
- * for as long as it did precisely because it was not in the loop body where
- * somebody would think to look. `control/hands.ts` is the one channel now.
+ * The loop and the pointer handlers have since moved to `platform/run.ts`, where
+ * the question cannot arise: a plain `.ts` module has no runes to read. So what
+ * is left to check is the boundary itself — that the loop really is *out* of the
+ * component, and that the one callback still declared in there stays clean.
  *
- * A write is fine and is how the UI gets its value at all: `latest = current`
- * is the snapshot boundary working. It is *reads* that have to go through the
- * seam, so an assignment target is allowed and everything else is not.
+ * A write is fine and is how the UI gets its value at all. It is *reads* that
+ * have to go through the seam, so an assignment target is allowed.
  */
 describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
-  const APP = readFileSync(join(SRC, "App.svelte"), "utf8");
-  const CODE = stripComments(APP);
+  const CODE = stripComments(readFileSync(join(SRC, "App.svelte"), "utf8"));
 
   /** Every name this component declares with a rune. */
   const runes = [
@@ -273,15 +273,12 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
     throw new Error(`unbalanced: ${opener}`);
   }
 
-  it.each([
-    ["the pilot module", "const pilot: Module = {"],
-    ["the render loop", "const tick = (now: number) => {"],
-    ["the canvas drag handler", "const drag = (e: PointerEvent) => {"],
-  ])("%s reads no rune", (_what, opener) => {
-    const body = bodyAfter(CODE, opener);
+  it("the pilot module reads no rune", () => {
+    // `runRack` calls its `intent` and `condition` from inside `world.step()`,
+    // inside the frame loop. It is declared in the component, so unlike the loop
+    // it *could* reach a rune, and it did — both levers, on the hottest path.
+    const body = bodyAfter(CODE, "const pilot: Module = {");
     const read = runes.filter((name) => {
-      // An assignment target is a write, which is allowed. `name ==` and
-      // `name ===` are reads wearing an equals sign.
       // The lookbehind is load-bearing: `hands.leverL` contains `leverL`, and
       // reading it off the seam is the whole point. A property access is not a
       // rune read, and without this the check fails on its own fix.
@@ -290,5 +287,21 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
       return (body.match(anywhere)?.length ?? 0) > (body.match(written)?.length ?? 0);
     });
     expect(read, "read it off `hands` instead (src/control/hands.ts)").toEqual([]);
+  });
+
+  it("the component owns no frame loop", () => {
+    // The shell's own header has claimed from the start that "a plain module
+    // owns the renderer and the loop". It was aspirational for a long time; this
+    // is what keeps it true, and what stops the loop drifting back in one
+    // `requestAnimationFrame` at a time.
+    expect(CODE, "the loop belongs to platform/run.ts").not.toContain(
+      "requestAnimationFrame",
+    );
+  });
+
+  it("the run is a plain module, so runes cannot get into it", () => {
+    const run = stripComments(readFileSync(join(SRC, "platform/run.ts"), "utf8"));
+    expect(run).not.toMatch(/\$(?:state|derived|effect)\b/);
+    expect(valueImports(run).filter((s) => s.startsWith("svelte"))).toEqual([]);
   });
 });

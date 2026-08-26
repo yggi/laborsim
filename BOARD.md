@@ -32,21 +32,10 @@ Order and reasoning: `docs/design/code/roadmap.md`. These close the core loop at
 exercises are built; what remains is more to break, replay, and the path to the
 conflict.
 
-The two foundation cards come first and are not features. Three feature branches
-in one week bent the same seams, and both were *found* rather than planned —
-which is the argument for spending a session on them before the next feature
-bends them again.
-
-### [L-070] `App.svelte` is ten concerns in one file
-- **what:** ~1080 lines holding the sim lifecycle, the render loop, the rack
-  build, audio wiring, the annunciator, the E-stop, the horn, the notices, the
-  exercise/briefing state, the camera and the nag. The seams are already
-  visible as comment blocks; they want to be modules. `setViewMode` is the
-  tell — a `let` assigned from inside an async callback, so calling it before
-  the world exists does nothing, silently. L-069 cleared the way: everything the
-  extracted loop needs from the cab already arrives as one argument (`hands`).
-- **done-when:** the sim lifecycle leaves the component, and nothing crosses
-  the boundary as a reassigned `let`.
+The foundation pass is done — [L-068], [L-069] and [L-070] closed the three seams
+that three feature branches in one week had each bent. What is left here is
+features again, and `L-032` is the one everything downstream of *attribution*
+waits on.
 
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
@@ -320,6 +309,20 @@ bends them again.
 ---
 
 ## history
+
+### [L-070] The loop leaves the component — **closed**
+`App.svelte` was 1082 lines with the sim lifecycle in the middle of it. It is
+`platform/run.ts` now: the world, the fitted kit, the viewport, the input and the
+frame loop, behind an object the shell holds. The escape hatch went with it —
+`let setViewMode = () => {}`, reassigned from inside a `.then()`, so a camera
+press before the wasm landed reached a function that did nothing and said
+nothing. `createRun` returns synchronously and *remembers* a view given during
+the boot. The run does not know what kit is fitted: NAV-1 and TILT-GUARD need a
+world to read a pose off, so the caller passes `fit(world)` and keeps the
+opinion. Verified by driving it — the rack reads `PILOT [SET] +2.20/-2.20` down
+the chain exactly as before, and CHASE pressed on the same tick as BEGIN now
+lands. `tests/architecture.test.ts` fails if a `requestAnimationFrame` reappears
+in the component or a rune reaches the run.
 
 ### [L-069] `hands` — one channel across the reactive boundary — **closed**
 Five values crossed into the loop by three mechanisms: two mirrored through
