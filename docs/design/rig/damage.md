@@ -1,7 +1,7 @@
 # Damage — the ledger, and everything that has to be true for it to land
 
 Spilled from `MEMORY.md` § 3.1. The voice the ledger speaks in is in
-`docs/design/tone.md`; this is what it is speaking *about*.
+`docs/design/rig/tone.md`; this is what it is speaking *about*.
 
 The model is **built** (L-031): furniture is dynamic, impacts are measured in
 joules, and lines are priced and attributed. So is the end-of-run report (L-029),
@@ -128,7 +128,7 @@ a number, a bar and a belt racing under a stationary machine; sound is the
 channel that reaches you when your eyes are on the ground.
 
 It grew past a section in this file. The voices, who owns each one, and what a
-manufacturer's sound house may and may not decide: `docs/design/sound.md`.
+manufacturer's sound house may and may not decide: `docs/design/cab/sound.md`.
 
 **The machine should become a lemon.** As it takes abuse it should slip, pull to
 one side, buckle; smoke and leak oil; set off alarms and warning lights. Two

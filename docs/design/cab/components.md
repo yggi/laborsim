@@ -6,7 +6,7 @@ honour, and what each is free to invent.
 
 Status: **built** — the triptych (L-048), then the arms and the recentring view
 (L-050). The crystallized half is `MEMORY.md` § 6.1; how to *make* a theme is
-`docs/design/theming.md`.
+`docs/design/cab/theming.md`.
 
 ---
 
@@ -126,7 +126,7 @@ both were got wrong first:
   row, where it reads as what it is: room for more kit.
 
 There is **no status line**. The panel does not caption its own lamps; the words
-live in the debrief (`docs/design/cockpit.md`).
+live in the debrief (`docs/design/cab/cockpit.md`).
 
 The cells have **no budget and nothing to configure.** Fighting for space on
 three fronts (glass, rack, dash) is one front too many. Cells just work.
@@ -149,7 +149,7 @@ cockpit fact and nothing under `src/modules/` should know how tall it is drawn.
 ## Cell formats
 
 A small closed set, so a component of a kind you have never seen still reads.
-The table and the panel-language rules behind it: `docs/design/theming.md`. The
+The table and the panel-language rules behind it: `docs/design/cab/theming.md`. The
 base case is **one illuminated pushbutton and one engraved plate**; everything
 else retrofits that.
 
@@ -183,7 +183,7 @@ Extending the theme past colour. Each manufacturer supplies:
 - **a lexicon** — how it labels the same states. `ON/OFF`, `EIN/AUS`, `入/切`.
 - **a voice** — short house strings. Two consumers already exist: the warranty
   toast when a safety component is bypassed, and the "keep your eyes on the road"
-  safety tips. L.A.B.O.R. keeps its own voice (`docs/design/tone.md`); this is
+  safety tips. L.A.B.O.R. keeps its own voice (`docs/design/rig/tone.md`); this is
   the first time a *manufacturer* speaks.
 
 A maker's toast wears that maker's plate style. That is a third theme surface for
@@ -212,7 +212,7 @@ system-level stop.
 Instruments are **not viewport-fixed overlays.** They are clamped to the cage, so
 they sweep across the glass as the pilot looks around and settle back as the view
 recentres. The cab is one rigid object and it all moves together — see
-`docs/design/cockpit.md`, which owns that decision.
+`docs/design/cab/cockpit.md`, which owns that decision.
 
 - **Placement is in cage space, not screen space.** Cage space *is* screen space
   at the neutral look, so a pod's position means the same thing whichever way
@@ -235,7 +235,7 @@ recentres. The cab is one rigid object and it all moves together — see
   sideways — so a pod is pulled back onto its arm rather than left hanging, and
   a default placement only has to be roughly right.
 - This is **not** `CSS3DRenderer` and does not reopen
-  `docs/design/instrument-rendering.md`. It is a 2D translate driven by look
+  `docs/design/cab/instrument-rendering.md`. It is a 2D translate driven by look
   angle — no second renderer, no depth buffer, no perspective.
 - **It does not go through Svelte reactivity.** The renderer publishes the sweep
   in CSS pixels; the app writes `--look-x` / `--look-y` on `:root` once a frame
@@ -287,7 +287,7 @@ These are the contract. A theme that breaks one is wrong, not distinctive.
    inspectability pillar as surely as a hidden sim layer.
 6. **No new dependencies. No `:global`. No unprefixed custom properties.**
    Character comes from tokens, the maker's own scoped components, and inline
-   SVG — in that order of preference (`docs/design/instrument-rendering.md`).
+   SVG — in that order of preference (`docs/design/cab/instrument-rendering.md`).
 7. **The substrate is shared.** Screws, grain, the proud-plate lighting recipe,
    meters and lamps are house-neutral primitives. Themes vary *character*, never
    the physics of a panel. One maker inventing flat design reads as a different

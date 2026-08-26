@@ -128,7 +128,7 @@ model shipped, the inventory worth breaking did not.*
    antagonist rather than scenery, and it gives `L-023`'s designed features
    something to do. The scope is deliberately *deep*, not a toast notification:
    impact, then deformation, then sound, then the written verdict — see
-   `docs/design/damage.md`.
+   `docs/design/rig/damage.md`.
 2. **The ledger** (`L-029` — closed). Itemised, named, priced, condescending. Its
    attribution half — *what was driving when this happened* — is what makes it
    teach instead of score, and that is why it comes after (3) in dependency even
@@ -174,7 +174,7 @@ behind it, not zero.
 
 ### Horizon — deliberately abstract
 
-Missions and Zachtronics-style budgeting (`docs/design/missions.md`) are the
+Missions and Zachtronics-style budgeting (`docs/design/rig/missions.md`) are the
 strongest known candidate for what v1 *is*, and the thing that would make
 cross-browser determinism worth paying for: a solution verified across several
 sites. The Phantom Labor (`L-009`) is what keeps the ladder non-monotonic and

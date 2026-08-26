@@ -10,7 +10,7 @@
  *
  * The register is the debrief's, because it is the same institution talking —
  * L.A.B.O.R., procedural and faintly disappointed in advance
- * (`docs/design/training-frame.md`). It is a **paper form**, not a title screen:
+ * (`docs/design/rig/training-frame.md`). It is a **paper form**, not a title screen:
  * no art, no logo bigger than a stamp, and nothing that reads as a game asking
  * you to choose a level.
  *

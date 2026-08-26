@@ -3,9 +3,9 @@
 How a manufacturer's house style is expressed in code, what an author may and
 may not touch, and what a subagent authoring one is handed.
 
-Companion to `docs/design/components.md`, which says what the *parts* are. This
+Companion to `docs/design/cab/components.md`, which says what the *parts* are. This
 says how to *make* one. Rendering technology and why it is DOM at all:
-`docs/design/instrument-rendering.md`.
+`docs/design/cab/instrument-rendering.md`.
 
 ---
 
@@ -227,7 +227,7 @@ the last two are the ones that make a theme feel authored rather than tinted:
 - **`voice`** — the maker's own strings: the warranty notice when its safety kit
   is bypassed, and its house safety tips. This is the first channel where a
   manufacturer speaks for itself, and it must never be confused with
-  L.A.B.O.R.'s (`docs/design/training-frame.md`).
+  L.A.B.O.R.'s (`docs/design/rig/training-frame.md`).
 
 ## The sandbox is how you look at it
 
@@ -263,7 +263,7 @@ The packet is:
 
 1. **The maker's entry in `LORE.md`** — its temperament, its doctrine, and
    above all *how its kit fails*, because that is what the player learns.
-2. **`docs/design/components.md`** — the invariants and the freedoms.
+2. **`docs/design/cab/components.md`** — the invariants and the freedoms.
 3. **This file** — the substrate, the tokens, the sandbox loop.
 4. **The `UNMARKED`/KIBA reference implementation** — the worked example. Read
    it; do not read the other makers'.

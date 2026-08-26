@@ -5,7 +5,7 @@
  * Attribution is the design: a failure you cannot reproduce cannot be blamed on
  * a design decision, and the whole loop collapses to vibes.
  *
- * See docs/design/architecture-rules.md.
+ * See docs/design/code/architecture-rules.md.
  */
 
 /** A seeded, explicitly-advanced source of randomness. */

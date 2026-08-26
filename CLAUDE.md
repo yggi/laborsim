@@ -4,12 +4,16 @@
 KSP-inspired build/sim loop, multi-layer educational physics & kinematics engine.
 
 This file is the contract for how to work in this repo. It is short on purpose.
-Everything else lives in the surfaces below, each with a hard size gate.
+Everything else lives in the surfaces below, each with a target size and a line
+where it gets condensed.
 
 ## Read order (every session, before touching anything)
 
 1. `CLAUDE.md` — this file. Rules of engagement.
-2. `MEMORY.md` — what the project *is*. Crystallized, durable, index to `docs/`.
+2. `MEMORY.md` — what the project *is*. Crystallized, durable, and the index to
+   `docs/design/`'s four clusters — **machine**, **cab**, **rig**, **code**.
+   Each cluster page indexes its own five and cross-links the siblings, so a
+   subject is found by walking two hops, not by scanning one long list.
 3. `META.md` — how the work *goes*. Method lessons, each with the scar that
    earned it. Short. Read it; it is cheaper than re-earning them.
 4. `NOTES.md` — what is *unresolved right now*. Open threads only.
@@ -31,7 +35,7 @@ A change that touches code and leaves these files untouched is incomplete.
 
 ## The surfaces
 
-| File | Holds | Never holds | Gate |
+| File | Holds | Never holds | Target |
 |---|---|---|---|
 | `MEMORY.md` | durable facts, decisions, structure, conventions | tasks, status, speculation | 300 lines |
 | `META.md` | method lessons, each with its incident | project facts, tasks | 150 lines |
@@ -39,19 +43,49 @@ A change that touches code and leaves these files untouched is incomplete.
 | `BOARD.md` | task cards | rationale, narrative | see below |
 | `LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
 
-Gate overflow is a signal, not an error. Handle it:
+### Target, and the line where you act
 
-- **MEMORY.md > 300** → spill the fattest section to `docs/design/<topic>.md`,
-  leave a one-line entry + link in the MEMORY index. The index never spills.
-- **META.md > 150** → entries have gone abstract. Merge or cut; an entry that
-  has lost the incident that earned it has probably stopped being true.
-- **NOTES.md > 100** → threads have gone stale. Each one either crystallizes
-  into MEMORY, becomes a BOARD card, or gets deleted. Nothing else.
-- **BOARD.md** → `doing` ≤ 3 cards, `ready` ≤ 10, `backlog` ≤ 40,
-  `history` ≤ 10 most-recent cards; older history moves to `LOG.md`.
-- **LOG.md > 1000** → cut the oldest year into `docs/log/<year>.md`, link it.
+The number above is the **target** — the size the surface should sit at. You act
+when it is **20% over**, and not before:
 
-Never let a surface grow past its gate to avoid the trim. Trimming *is* the work.
+| | target | act at |
+|---|---|---|
+| `MEMORY.md` | 300 | 360 |
+| `META.md` | 150 | 180 |
+| `NOTES.md` | 100 | 120 |
+| `LOG.md` | 1000 | 1200 |
+| `BOARD.md` | doing 3 · ready 10 · backlog 40 · history 10 | 4 · 12 · 48 · 12 |
+
+**The band exists to stop line-shaving.** A hard limit at the target buys you the
+wrong work: a surface one line over gets a sentence reflowed, a word deleted, an
+entry compressed by exactly one line — and nothing is condensed, because nothing
+*needed* condensing. Every such round costs a real edit's worth of attention and
+leaves the surface as sprawling as it was. It has happened here often enough to
+name it.
+
+So: below the target, add freely. Between target and the line, you are on notice
+— write what the work needs and let it sit. At the line, **condense back to the
+target or below, in one deliberate pass**. Not to the line: a trim that lands you
+at 359 has bought one line of room and you will be back next session.
+
+The band is room to breathe, not a place to live. A surface that sits in it for
+three sessions running is telling you a section wants spilling, not trimming.
+
+### How each one is handled when it is time
+
+- **MEMORY.md** → spill the fattest section to a `docs/design/` cluster page's
+  tree, leave a one-line entry + link in the MEMORY index. The index never
+  spills, and it indexes **cluster pages**, not every content page.
+- **META.md** → entries have gone abstract. Merge or cut; an entry that has lost
+  the incident that earned it has probably stopped being true.
+- **NOTES.md** → threads have gone stale. Each one either crystallizes into
+  MEMORY, becomes a BOARD card, or gets deleted. Nothing else.
+- **BOARD.md** → history past its target moves to `LOG.md`; ready past its target
+  means something goes back to backlog, not that ready is bigger now.
+- **LOG.md** → cut the oldest sessions into a `docs/log/` archive and link it.
+
+Never let a surface grow past the line to avoid the work. Condensing *is* the
+work.
 
 ## Guiding principles (the reason the code exists)
 

@@ -1,6 +1,6 @@
 # Sound — the fourth channel, and who owns it
 
-Spilled from `docs/design/damage.md`, which is where the machine's voice started
+Spilled from `docs/design/rig/damage.md`, which is where the machine's voice started
 because the first thing worth hearing was something breaking. It has outgrown a
 table in somebody else's file.
 
@@ -242,7 +242,7 @@ Two more, both about *scenes* rather than about the machine:
   hearing which side you clipped something on is a real cue; it wants the hull
   pose and a decision about what "left" means in the chase camera.
 - **The suspension has no instrument** — it is heard and felt, and read only on
-  the developer's telemetry line. An instrument costs glass (`docs/design/cockpit.md`),
+  the developer's telemetry line. An instrument costs glass (`docs/design/cab/cockpit.md`),
   so what the running gear should cost the operator's view is a design decision
   rather than a line of markup.
 - **Nothing fitted makes a noise of its own.** A component's *switchgear* is in

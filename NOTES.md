@@ -5,8 +5,9 @@ record (that's `LOG.md`), not settled truth (that's `MEMORY.md`). A thread leave
 exactly three ways: it crystallizes into `MEMORY.md`, becomes a card in
 `BOARD.md`, or is deleted as no longer interesting.
 
-**Gate: 100 lines.** Overflow means threads have gone stale — resolve, promote or
-delete. Do not grow the file.
+**Target: 100 lines, act at 120** (`CLAUDE.md`). The band is there so that being
+a line or two over buys a reflow rather than a reckoning. At 120 the threads have
+gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ---
 
@@ -32,7 +33,7 @@ complexity is parts plus *operator interaction*. Lever changes? Seconds
 hands-on? Distinct inputs? It is the load-bearing number in the only axis that
 puts two goods in tension, and until it is answered a score would measure
 whichever thing was easiest to count. The clock is recorded and commits to
-nothing; the interaction term commits to everything. `docs/design/missions.md`.
+nothing; the interaction term commits to everything. `docs/design/rig/missions.md`.
 
 ## Can a generator be given an objective?
 
@@ -60,7 +61,7 @@ that follows the six compressions, which nobody has costed.
 
 ## What does "multi-layer" cut along, for the player?
 
-The physics tiers in `physics-migration.md` are a *development* fidelity ladder,
+The physics tiers in `machine/physics-migration.md` are a *development* fidelity ladder,
 not a player-facing one. Unanswered: whether the player sees a **domain stack**
 (structure / mechanics / power / thermal / signal), a **fidelity ladder** they
 descend, or both as a matrix. Shapes `src/sim/layers/`, which is still empty.
@@ -92,7 +93,7 @@ cues.
 
 The cab sweeps 1:1, so a look takes the levers, the E-STOP and every instrument
 off the glass within about 15°, and past 35° you are looking at the door
-(`docs/design/cockpit.md`). Honest, and the intended price — but you cannot find
+(`docs/design/cab/cockpit.md`). Honest, and the intended price — but you cannot find
 a touchscreen lever by feel, and only somebody who did not build it can say if
 that is the right price. Two dials if it is too much: shorten the pan range (you
 see less of the site), or damp the sweep below 1:1 (the cab stops being rigid).

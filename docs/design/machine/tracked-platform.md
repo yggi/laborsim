@@ -131,7 +131,7 @@ Slip is the *lagging* half of the pair and traction is the leading one: measured
 over 7200 steps their correlation is only **0.267**, and on a 40° ramp the
 machine sits at 0.93 traction with slip below the slipping threshold 89% of the
 time — out of margin, still gripping. Both are on the panel's TRACTION head
-(`docs/design/cockpit.md`).
+(`docs/design/cab/cockpit.md`).
 
 **`traction` is `null`, never 0, when a track has no ground.** There is no
 friction cone to report a fraction of, and 0 is what a parked machine reports —

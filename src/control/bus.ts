@@ -8,7 +8,7 @@
  *
  * This supersedes the earlier "highest active layer wins the bus" model, and it
  * is strictly more expressive: a module with verb SET ignores its input, which
- * *is* suppression. See docs/design/arbitration.md.
+ * *is* suppression. See docs/design/machine/arbitration.md.
  *
  * Ordering is the game. The same two modules in two orders are two different
  * machines — put the pilot above autonav and your levers become a governor on
@@ -125,7 +125,7 @@ export interface Module {
   /**
    * Numbers this module publishes for its own instrument.
    *
-   * Components ship mandatory instruments (docs/design/cockpit.md), and an
+   * Components ship mandatory instruments (docs/design/cab/cockpit.md), and an
    * instrument reads a snapshot rather than the live module — so whatever it
    * needs has to travel through here. Plain numbers only: this crosses the
    * one-directional boundary and has to stay a value.

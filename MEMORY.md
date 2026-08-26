@@ -3,33 +3,28 @@
 Durable, crystallized truth about `laborsim`. Facts and settled decisions only.
 Status in `BOARD.md`, threads in `NOTES.md`, history in `LOG.md`, method in `META.md`.
 
-**Gate: 300 lines.** On overflow, spill the fattest section to
-`docs/design/<topic>.md` and leave a one-line index entry below.
+**Target: 300 lines**, act at 360 (`CLAUDE.md`). On overflow, spill the fattest
+section into the cluster it belongs to and leave the index below untouched.
 
-## Index — spill files
+## Index — four clusters
 
-| File | Holds |
+**This index names clusters, not pages.** It used to name all twenty spill files,
+which made the docs a star with a long list at the centre: everything one hop
+from here and nothing near anything else. Each cluster page below indexes its own
+five, one line each, and cross-links the siblings — so *where does this belong* is
+answered one level down, by a page that knows the subject, rather than by a row in
+a table that has to be re-read in full every time it grows.
+
+| Cluster | Ask it about |
 |---|---|
-| `docs/design/architecture-rules.md` | the three non-negotiable code constraints, and how each is checked |
-| `docs/design/arbitration.md` | the rack as a pipeline, the verbs, components-as-loops, attribution |
-| `docs/design/cockpit.md` | panel budget, occlusion, placement, and both cameras |
-| `docs/design/components.md` | the triptych — plate/cell/pod, the three currencies, invariants and freedoms |
-| `docs/design/conventions.md` | the coding conventions, each with the bug that earned it |
-| `docs/design/theming.md` | the substrate, the token contract, the sandbox, and the brief an author is given |
-| `docs/design/training-frame.md` | what the training-rig frame licenses, where it stops, who speaks |
-| `docs/design/instrument-rendering.md` | why panels are DOM+SVG, and what 3D/canvas/CSS3D would cost |
-| `docs/design/damage.md` | the ledger, the machine breaking, the reset |
-| `docs/design/load-chart.md` | the Δv analogue; the shared artifact binding build and OS |
-| `docs/design/machinery-ladder.md` | the six rungs, one invariant each; build order |
-| `docs/design/mechanics.md` | Phantom Labor, LOTO hot-patching, component curriculum |
-| `docs/design/missions.md` | **exploratory** — Zachtronics budgeting, and why it inverts the chase camera |
-| `docs/design/physics-migration.md` | Rapier tiers and the virtual-crane recommendation |
-| `docs/design/prototype-findings.md` | what `concept-3` proved, faked, and cost |
-| `docs/design/sound.md` | the voices, who owns each one, and what a sound house may not decide |
-| `docs/design/roadmap.md` | **forward-looking** — critical-path review and the argument behind the board's order |
-| `docs/design/stack.md` | the stack, and the rejected options with their reasons |
-| `docs/design/tracked-platform.md` | rung 1: the track friction model, what falls out of it, the controls |
-| `docs/design/tone.md` | the operator-not-demigod inversion, the damage ledger, the voice |
+| [`docs/design/machine.md`](docs/design/machine.md) | the thing on the site: what it is made of, what stops it, how much fidelity is under it, and who commands the tracks |
+| [`docs/design/cab.md`](docs/design/cab.md) | the glass and the kit bolted to it — the panel budget, the triptych, how instruments are drawn, how the machine sounds |
+| [`docs/design/rig.md`](docs/design/rig.md) | the training system: what the frame licenses, the tone it speaks in, the ledger, the exercises |
+| [`docs/design/code.md`](docs/design/code.md) | how the code is written and in what order — the three rules, the conventions, the stack, the prototype, the roadmap |
+
+Two pages are marked in their cluster as not-yet-settled: `rig/missions.md` is
+**exploratory** and `code/roadmap.md` is **forward-looking**. Everything else in
+`docs/design/` is as durable as this file.
 
 ---
 
@@ -56,7 +51,7 @@ teaches people to. Tonal anchor: the simulator sequence that opens *Patlabor 2*.
 Not flavour: it licenses inspectability, replay, affordable failure,
 sandbox-as-native, procedural sites and the UI register — so check it **before**
 inventing machinery to justify something. Where the frame stops and which
-institution speaks: `docs/design/training-frame.md`.
+institution speaks: `docs/design/rig/training-frame.md`.
 
 ## 2. The design thesis
 
@@ -68,9 +63,9 @@ Everything in this project either serves that loop or is decoration and should
 be cut. This is the sharpest available statement of the guiding principles in
 `CLAUDE.md`, and it is the test to apply first. Four commitments follow:
 
-1. **The load chart is the Δv** → `docs/design/load-chart.md`
-2. **Arbitration is the game** → `docs/design/arbitration.md`
-3. **The rack is a pipeline** — order is the machine → `docs/design/arbitration.md`
+1. **The load chart is the Δv** → `docs/design/machine/load-chart.md`
+2. **Arbitration is the game** → `docs/design/machine/arbitration.md`
+3. **The rack is a pipeline** — order is the machine → `docs/design/machine/arbitration.md`
 4. **Panel budget and occlusion** — § 6 below
 
 ## 3. Scope of v0
@@ -85,7 +80,7 @@ inline** — no separate screen. You move instruments around the glass and you
 swap, reorder and reconfigure modules in the rack, in the cab, while it runs.
 Order, verb, enable and a module's settings are four real design decisions, so
 the loop closes over them without a parts model. Additive later, not foreclosed
-(`docs/design/roadmap.md`).
+(`docs/design/code/roadmap.md`).
 
 The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 
@@ -100,7 +95,7 @@ If that scenario cannot be constructed on rung one, the rack is decoration.
 ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage is
 **joules absorbed**, never hit points, so it is a quantity the player can be
 shown — and now hear; **harming a citizen is categorical failure**, never a
-priced line item. Model, numbers and build order: `docs/design/damage.md`.
+priced line item. Model, numbers and build order: `docs/design/rig/damage.md`.
 
 ### 3.2 An exercise is a site plus an objective, and the verdict can say yes
 
@@ -110,7 +105,7 @@ ladder is the *ground* rather than the task. `Exercise` is world data
 (`src/world/exercises.ts`); `Goal` is on the snapshot, settles once, and is the
 first thing the third beat can say **yes** with. Failure stays one thing: a
 citizen involved. **No score, no gate, no par time** — every exercise is on the
-schedule from session one. Steps 3–5 each cost a verb: `docs/design/missions.md`.
+schedule from session one. Steps 3–5 each cost a verb: `docs/design/rig/missions.md`.
 
 ## 4. Core loop
 
@@ -130,7 +125,7 @@ are sprung**, so a contact's normal load is measured off its own spring, not
 shared equally. **Slip is rung 1's teaching quantity**, alongside traction and
 now suspension travel; traction is **`null` and never 0 for a track with no
 ground** — nothing measured is not a low reading, and every consumer has to
-decide what to show for it. Detail: `docs/design/tracked-platform.md`.
+decide what to show for it. Detail: `docs/design/machine/tracked-platform.md`.
 
 ## 5. The machinery ladder
 
@@ -142,13 +137,13 @@ balance controller — tipping is emergent from contacts alone.
 
 **Sequence the ladder, not the biped.** The biped is the worst entry point for
 physics and the best for concept art, which is why the probe started there and
-production must not (`docs/design/machinery-ladder.md`). The ladder is
+production must not (`docs/design/machine/machinery-ladder.md`). The ladder is
 non-monotonic by design — the Phantom Labor attacks the sensor surface capability
 created — so the two-lever cage at rung one stays a good machine, not a tutorial.
 
 ## 6. The cockpit — panel budget and occlusion
 
-Full detail: `docs/design/cockpit.md`. The load-bearing claims:
+Full detail: `docs/design/cab/cockpit.md`. The load-bearing claims:
 
 - Every instrument installed **obscures your direct view**. Fixed glass area;
   instruments declare their size. **Installed, not toggled.** This is the rare
@@ -168,7 +163,7 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 
 ### 6.1 A component is a triptych, and each kind bills you differently
 
-Spilled in full to `docs/design/components.md` (index). What must stay here:
+Spilled in full to `docs/design/cab/components.md` (index). What must stay here:
 
 - **Three currencies.** A chassis component costs nothing and brings the
   cockpit; a **capability** component costs **glass**; a **safety** component
@@ -178,11 +173,11 @@ Spilled in full to `docs/design/components.md` (index). What must stay here:
 - **A manufacturer is one house** (`src/makers/`): colours, words **and sound**.
   The machine's voice is its **chassis maker's**, a component's is its own, the
   site's belongs to materials, and **the rig's is the exercise and nothing
-  else**. A house sets timbre, never level (`docs/design/sound.md`).
+  else**. A house sets timbre, never level (`docs/design/cab/sound.md`).
 
 ## 7. Mechanics that fall out of the above
 
-Detail: `docs/design/mechanics.md`. Each *follows* from a core commitment, which
+Detail: `docs/design/rig/mechanics.md`. Each *follows* from a core commitment, which
 is the argument for keeping it.
 
 - **Phantom Labor** — attacks the sensor surface capability created.
@@ -202,7 +197,7 @@ limits, and **determinism you can replay a failure with** — attribution is the
 design, so replay is not a nice-to-have. Target tier is the **virtual crane**:
 full dynamics plus a stabilising wrench on the hull with a finite authority
 budget. That wrench **is** STAB-2 — switching it off does not fake a fall, it
-removes the thing that was holding you up: `docs/design/physics-migration.md`.
+removes the thing that was holding you up: `docs/design/machine/physics-migration.md`.
 
 ## 9. Stack — settled
 
@@ -217,7 +212,7 @@ stack, layout and control design alike.
 
 Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
 aspiration. What that costs, and the rejected options with their reasons —
-**Godot**, **Babylon.js**, **Jolt** — are in `docs/design/stack.md`.
+**Godot**, **Babylon.js**, **Jolt** — are in `docs/design/code/stack.md`.
 
 No further dependencies without a reason, and **no asset pipeline** — the art is
 procedural boxes and cylinders and the sound is synthesised, so there is nothing
@@ -229,7 +224,7 @@ to load. Do not build one preemptively.
 *can this look and feel right in a browser, on a phone?* — yes. It is **concept
 art with working mechanisms**: **do not port its structure**, do port the named
 mechanisms — the footstep policy above all, then the analytic 2-bone IK, the
-hydraulic rams, the cel pipeline: `docs/design/prototype-findings.md`.
+hydraulic rams, the cel pipeline: `docs/design/code/prototype-findings.md`.
 
 ## 11. Repo map
 
@@ -279,7 +274,7 @@ sound in one object per manufacturer, above both renderers that read it.
 Adopted before any production code. Each is load-bearing for a pillar, each is
 enforced by `tests/architecture.test.ts`, and breaking one is not a style
 disagreement — say so out loud and change that file first. Rationale, the reasons
-and the checks: `docs/design/architecture-rules.md`.
+and the checks: `docs/design/code/architecture-rules.md`.
 
 1. **The sim runs headless.** No `three`, no DOM, no canvas under `src/sim/`,
    `src/control/`, `src/modules/`.
@@ -297,4 +292,4 @@ and the checks: `docs/design/architecture-rules.md`.
 **One fact, one place** — three of the four probe defects came from keeping one
 fact in two. The rest, each with the bug that earned it — body axes, the
 rotation triple, the two custom-property namespaces:
-`docs/design/conventions.md`. Do not invent conventions there in advance.
+`docs/design/code/conventions.md`. Do not invent conventions there in advance.

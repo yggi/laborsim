@@ -57,7 +57,7 @@ committee decided a scooter is ¥3,000.
 Its culture is the culture of the examination hall. It is patient, meticulous,
 and entirely unimpressed. It is not cruel — cruelty would imply it cares how you
 feel — it simply records. The voice of the ledger and the debrief is L.A.B.O.R.'s
-house voice (`docs/design/tone.md`): condescending institutional politeness, the
+house voice (`docs/design/rig/tone.md`): condescending institutional politeness, the
 register of a body that has watched ten thousand trainees make this exact
 mistake and priced each one.
 
@@ -112,10 +112,10 @@ engineers know it and their salespeople do not.
 problem is one more sensor away from solved, and it will happily sell you the
 sensor. Its modules are genuinely good and genuinely narrow — NAV-1 steers to a
 pin beautifully and considers nothing else, and TOWA would rather you not dwell
-on the "nothing else" (`docs/design/arbitration.md`).
+on the "nothing else" (`docs/design/machine/arbitration.md`).
 
 **How its kit fails:** it believes what it is told. Every TOWA sensor is a
-surface a **Phantom Labor** can attack (`docs/design/mechanics.md`): spoof the
+surface a **Phantom Labor** can attack (`docs/design/rig/mechanics.md`): spoof the
 positioning, blind the radar, feed the autopilot a pin that isn't there. The
 more TOWA you fit, the more capable you are and the more there is to scramble.
 TOWA is why the ladder is non-monotonic. It is also why the honest, blind KIBA
@@ -138,7 +138,7 @@ the operator and refuses to help, HANSA distrusts the operator and insists on
 helping whether or not you want it. A HANSA component ships **enabled**,
 conservative, and slightly in your way — TILT-GUARD stopping you halfway up a
 grade the machine could have climbed is HANSA behaving exactly as designed
-(`docs/design/cockpit.md`). It is usually right. It is right in a manner
+(`docs/design/cab/cockpit.md`). It is usually right. It is right in a manner
 calculated to make you resent being kept alive.
 
 **How its kit fails:** by being obeyed too well, or bypassed in frustration. A
@@ -166,9 +166,9 @@ each earns its place when its rung is built.
   surface needs a source in the fiction — a rogue machine, a jammer, an
   environmental hazard (radiation, EMF) that the world generates rather than a
   villain that authored it. Kept vague on purpose; it is a difficulty curve
-  wearing a mask, not a plot (`docs/design/mechanics.md`).
+  wearing a mask, not a plot (`docs/design/rig/mechanics.md`).
 - **The police / municipal Labor** — the "fancy" chassis opposite the KIBA
-  bulldozer, and the first customer for a themed cockpit (`docs/design/cockpit.md`,
+  bulldozer, and the first customer for a themed cockpit (`docs/design/cab/cockpit.md`,
   cockpit identity). Same code path as KIBA, a completely different cab: cleaner,
   more instrumented, more to lose.
 

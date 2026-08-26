@@ -3,7 +3,7 @@
  *
  * A component is one thing you bought, seen from three places at once — the
  * **plate** in the rack, the **cell** on the dash, the **pod** on the glass
- * (`docs/design/components.md`). They were not written that way: cells were
+ * (`docs/design/cab/components.md`). They were not written that way: cells were
  * given a stage and a style, pods went and found their own stage on the
  * snapshot and hardcoded their maker's colours, and the difference was an
  * accident of which one was built first.
@@ -60,7 +60,7 @@ export interface FaceProps extends PartProps {}
  * A **cell** is the periphery view of a component: always in sight, glanced at
  * rather than read, and cheap. It costs nothing to fit — the indicator row has
  * no budget and nothing to configure, because fighting for space on three fronts
- * (glass, rack, dash) is one front too many (`docs/design/components.md`).
+ * (glass, rack, dash) is one front too many (`docs/design/cab/components.md`).
  *
  * That is why a cell gets `controls` but must never call `setParam`: a cell with
  * a setting on it is a cell competing for room. The rule is enforced in
@@ -74,7 +74,7 @@ export interface CellProps extends PartProps {
 /**
  * A **pod** is the eyes view: an instrument on an arm, permanently in front of
  * the world. It is the only part that costs you something to own, and what it
- * costs is view (`docs/design/cockpit.md`).
+ * costs is view (`docs/design/cab/cockpit.md`).
  *
  * It gets the whole snapshot because an instrument reads the *machine* — the
  * route scope needs the hull's pose to plot a pin, and no readout its own module

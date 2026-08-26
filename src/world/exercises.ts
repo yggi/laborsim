@@ -16,7 +16,7 @@
  * and encoding them as two objectives would have made the second one a feature
  * rather than a consequence.
  *
- * The shape this extends into is in `docs/design/missions.md`: use a tool at a
+ * The shape this extends into is in `docs/design/rig/missions.md`: use a tool at a
  * location, collect something, move X to Y. Each of those is a new verb and will
  * cost one; none of them is this one wearing a hat.
  */

@@ -4,7 +4,7 @@
  * touch the DOM, or read a canvas.
  *
  * That is what makes this testable in plain Node, and what keeps a worker
- * possible later. See docs/design/architecture-rules.md.
+ * possible later. See docs/design/code/architecture-rules.md.
  */
 
 import RAPIER from "@dimforge/rapier3d-deterministic-compat";

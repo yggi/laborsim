@@ -45,10 +45,10 @@ is always an argument for a legible world.
 Two institutions, two voices, and they must not blur:
 
 - **L.A.B.O.R.** certifies and bills. The ledger, the debrief and the verdict are
-  its house voice (`docs/design/tone.md`) — condescending institutional
+  its house voice (`docs/design/rig/tone.md`) — condescending institutional
   politeness. It never sells anything.
 - **A manufacturer** sells and warns. Faceplates, warranty notices and safety
-  tips are its voice (`docs/design/components.md`). It never issues a verdict.
+  tips are its voice (`docs/design/cab/components.md`). It never issues a verdict.
 
 Anything with a price tag or a spec sheet came from a manufacturer; anything with
 a verdict came from L.A.B.O.R. (`LORE.md`, canon rule 3).

@@ -406,7 +406,7 @@ describe("the rattle is the ground, not the drivetrain", () => {
 
 /**
  * The knock a rut makes, which is the voice this project **refused to build**
- * until there was a quantity behind it (`docs/design/sound.md`). What makes it
+ * until there was a quantity behind it (`docs/design/cab/sound.md`). What makes it
  * honest now is the springs, and what makes it useful is that it belongs to one
  * track: nothing else on the machine can tell you which side took something.
  */

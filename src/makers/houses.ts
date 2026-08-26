@@ -53,7 +53,7 @@ export interface Lexicon {
  * The maker's own voice.
  *
  * L.A.B.O.R. certifies and bills, and the ledger speaks in its register
- * (`docs/design/tone.md`). A manufacturer sells and warns, and this is the first
+ * (`docs/design/rig/tone.md`). A manufacturer sells and warns, and this is the first
  * channel where one speaks for itself — the warranty notice when somebody
  * bypasses its safety kit, and the house safety tips.
  */
@@ -69,7 +69,7 @@ export interface Voice {
  *
  * SVG rather than more CSS: this is graphic design, and the cheapest place to
  * put character without a combinatorial explosion of rules. See
- * docs/design/instrument-rendering.md for why the panels are DOM at all.
+ * docs/design/cab/instrument-rendering.md for why the panels are DOM at all.
  */
 export interface MakerStyle {
   /** Small type on the plate. Uppercase, as printed. */
@@ -100,7 +100,7 @@ const MAKERS: Record<string, MakerStyle> = {
   // The chassis OEM. Its own controls, in its own machine yellow, with the
   // stamped-steel look of something that came bolted in. KIBA is also the
   // fallback: an unmarked part reads as OEM kit until the grey-market maker
-  // exists to claim it (docs/design/components.md).
+  // exists to claim it (docs/design/cab/components.md).
   "KIBA WORKS": {
     wordmark: "KIBA WORKS",
     plate: "#2b2a20",

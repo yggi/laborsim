@@ -9,7 +9,7 @@
  * quiet, which is the whole "pop the hood" bargain and is exactly the kind of
  * thing that would rot silently.
  *
- * **The theme contract** — `docs/design/components.md` lists invariants every
+ * **The theme contract** — `docs/design/cab/components.md` lists invariants every
  * manufacturer must honour, and `META.md` says a rule enforced by a document is
  * a rule that gets violated anyway (rule 2 was written down, read, and broken
  * twice). These are about to be handed to authors working independently and
@@ -329,7 +329,7 @@ describe("the parts contract — one shape for three postures", () => {
 
   /**
    * A cell has no budget and nothing to configure — that is the deal that lets
-   * the indicator row exist at all (`docs/design/components.md`). It gets the
+   * the indicator row exist at all (`docs/design/cab/components.md`). It gets the
    * same `Controls` as everything else, so the rule that it must not reach the
    * settings has to be a test rather than a type.
    */

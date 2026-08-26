@@ -46,7 +46,7 @@ into work areas rather than scattering evenly, because a site reads as *worked*
 when things gather and as litter when they do not. Rocks are the exception —
 they are landscape, so they stay scattered.
 
-**Recorded a play-session direction as `docs/design/missions.md`, marked
+**Recorded a play-session direction as `docs/design/rig/missions.md`, marked
 exploratory and explicitly not v0**: Zachtronics-style budgeting, scored on
 budget, time and complexity, where complexity trades parts and weight against
 operator interaction.
@@ -107,7 +107,7 @@ angle, which a painted stripe would not.
 
 Housekeeping: MEMORY had drifted to 307 against its 300 gate — I called the
 gates clear in an earlier session when they were not. The stack section's
-rejected-options block spilled to `docs/design/stack.md`.
+rejected-options block spilled to `docs/design/code/stack.md`.
 
 ## 2026-08-23 — playable from GitHub Pages
 
@@ -217,7 +217,7 @@ source tree and fails the build on a violation: no renderer import under
 `src/sim`, `src/control`, `src/modules` or `src/core`; no DOM access in sim
 code; no `Math.random` anywhere in `src`; no renderer or physics import under
 `src/ui`; no reactive scene-graph wrapper in dependencies. Breaking a rule now
-has to be a deliberate act that edits `docs/design/architecture-rules.md` first.
+has to be a deliberate act that edits `docs/design/code/architecture-rules.md` first.
 
 That test caught itself on the first run — `rng.ts` has to name `Math.random` in
 order to forbid it, and the scan flagged its own doc comment. Fixed by stripping
@@ -260,7 +260,7 @@ It earns principle status because it *decides arguments* — if a change makes t
 machine feel heroic rather than awkward, it is working against the game, and
 that is now a check anyone can apply without asking.
 
-`docs/design/tone.md` carries the detail, including a working-with / working-
+`docs/design/rig/tone.md` carries the detail, including a working-with / working-
 against table for proposals, because this is the kind of decision that erodes
 quietly rather than being overturned.
 
@@ -311,7 +311,7 @@ never be strictly better than the cab. Specific contexts may disable it as a
 challenge condition. The last chase-camera thread closed; only panel field-
 stowing survives from that cluster.
 
-**The three architecture rules are anchored** in `docs/design/architecture-rules.md`
+**The three architecture rules are anchored** in `docs/design/code/architecture-rules.md`
 and cited from `MEMORY.md` § 12: the sim runs headless, fixed timestep with a
 seeded PRNG and no `Math.random` sim-visible, and a one-directional snapshot
 boundary (instruments read snapshots, Svelte never owns the canvas, no Threlte).
@@ -319,8 +319,8 @@ Each is written with the pillar it serves and a mechanical check, so none can
 quietly rot. Breaking one now requires editing that file first, out loud.
 
 MEMORY hit 292/300 taking this on. Spilled two sections rather than waiting for
-the gate to force it: the cockpit material to `docs/design/cockpit.md` and the
-downstream mechanics to `docs/design/mechanics.md`. Six spill files now.
+the gate to force it: the cockpit material to `docs/design/cab/cockpit.md` and the
+downstream mechanics to `docs/design/rig/mechanics.md`. Six spill files now.
 
 ## 2026-08-23 — diegetic frame, cockpit resolved, damage counter
 

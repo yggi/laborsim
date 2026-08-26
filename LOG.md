@@ -3,8 +3,9 @@
 Append-only. Newest first. What was actually done, and closed cards.
 Not plans, not open questions.
 
-**Gate: 1000 lines.** On overflow, cut the oldest year into `docs/log/<year>.md`
-and link it from the archive list below.
+**Target: 1000 lines, act at 1200** (`CLAUDE.md`). At 1200, cut the oldest
+sessions into a `docs/log/` archive and link it from the list below. Cut back to
+1000 or under: an archive pass that leaves you at 1199 is one you will repeat.
 
 Archives:
 - `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first deploy.
@@ -24,10 +25,80 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — a band instead of a line, and four clusters instead of a star
+
+Cards: [L-071] closed, [L-064] closed with it. `CLAUDE.md` changed, which is
+rare and deliberate.
+
+**The gates became targets with a band.** Every surface keeps the size it had;
+what changed is where you act — 20% over, so 300/150/100/1000 become 360/180/120/
+1200 and the board's card counts become 4 · 12 · 48 · 12.
+
+The reason is a habit worth naming. A hard limit at the target buys the *wrong*
+work: one line over, and what happens is a sentence reflowed, a word deleted, an
+entry compressed by exactly one line. This session alone did it three times —
+`NOTES.md` from 105 to 100 by rewording a paragraph that was fine, `META.md` from
+154 to 150 the same way, `MEMORY.md` from 301 to 300 by shortening a sentence
+about exercises that nobody had complained about. None of that condensed
+anything; it cost a real edit's worth of attention each time and left the
+surfaces exactly as sprawling. The band's rule is *condense to the target or
+below in one pass, not to the line* — a trim landing at 359 has bought one line
+and will be back next session. And sitting in the band for three sessions running
+means a section wants spilling, not trimming.
+
+Immediately visible: `BOARD.md`'s history sits at 11 against a target of 10 and
+nothing is owed, which under the old rule would have been a card moved to the
+archive to buy one row.
+
+**The docs were a star, and are now four clusters.** `MEMORY.md`'s index named
+all twenty spill files. That is one hop to everything and no distance between
+anything: no page knew it had siblings, `sound.md` sat between `roadmap.md` and
+`stack.md` in a table sorted by nothing in particular, and each new page made the
+list worse to read. Worst, the question a reader actually has — *where does this
+belong* — could only be answered by scanning twenty rows.
+
+Four clusters of five, each with an entrypoint page:
+
+- **machine/** — tracked-platform, machinery-ladder, physics-migration,
+  load-chart, arbitration. *A limit with a person attached.*
+- **cab/** — cockpit, components, instrument-rendering, theming, sound.
+  *A budget: glass is finite and so is attention.*
+- **rig/** — training-frame, tone, damage, missions, mechanics. *The reason
+  failure is affordable.*
+- **code/** — architecture-rules, conventions, stack, prototype-findings,
+  roadmap. *A constraint with a receipt.*
+
+Each cluster page says what the cluster is about, indexes its five in one line
+apiece, and — the part that a flat list cannot do — carries a **go there
+instead** section. "An instrument's needle is cab, the limit it reads is
+machine." "The rig may read the machine; the machine knows nothing of the rig."
+Those sentences had nowhere to live before. `MEMORY.md` now names four things
+instead of twenty and got five lines shorter doing it, which closed [L-064]
+without spilling anything.
+
+Files moved rather than only re-indexed, so the shape is on disk and not just in
+a table: 145 references across docs, source comments and tests were rewritten.
+`LOG.md` and `docs/log/` were deliberately **not** rewritten — they are
+append-only history and record paths that were right when written.
+
+**`tests/docs.test.ts`** checks the three things that rot without a sound: a path
+that no longer resolves (links and backticked prose both, because both get
+followed), a page in no cluster, and a content page creeping back into the
+`MEMORY` index — that last one being the star topology regrowing. Verified by
+breaking each in turn.
+
+Which is where the session's own mistake came from. Undoing the third probe with
+`git checkout MEMORY.md` reverted the file to HEAD and took the entire index
+rewrite with it, because the work was uncommitted — while `git checkout` on the
+*untracked* cluster page failed and left its planted broken link in place. Both
+were caught and redone. **A probe you undo with the VCS needs the work committed
+or copied first**; on a tree with uncommitted edits, `git checkout <file>` is not
+an undo, it is a discard.
+
 ## 2026-08-26 — one kit for a hand-built snapshot
 
 Cards: [L-068] closed. Opened: [L-069] and [L-070], both found rather than
-planned. Convention added to `docs/design/conventions.md`.
+planned. Convention added to `docs/design/code/conventions.md`.
 
 A foundation pass, and the seam it picked was the one three feature branches had
 each bent in the same week.
@@ -311,7 +382,7 @@ of the ramp, because a claim about sides needs ground with a known shape.
 Cards: [L-065] closed. [L-064] made room for this entry but is **not** closed —
 `MEMORY.md` is back to 299 of 300, which is where it started.
 
-Missions, as far as the first two steps of `docs/design/missions.md` go: reach a
+Missions, as far as the first two steps of `docs/design/rig/missions.md` go: reach a
 marker, then reach all of them. The interesting decisions were nearly all about
 what *not* to build.
 
@@ -597,7 +668,7 @@ bench's trick, one layer down. Seven poses, gitignored output. It paid for
 itself inside the same hour: the roll direction was confirmed from a screenshot
 rather than argued about.
 
-Recorded in `docs/design/cockpit.md` as its own section, with the two
+Recorded in `docs/design/cab/cockpit.md` as its own section, with the two
 consequences: screen-fixed pods now read as wrong rather than unfinished
 (L-050's case just got stronger), and roll is the classic sim-sickness signal —
 if it ever needs mitigation the honest form is a damped *fraction* of hull roll,
@@ -922,8 +993,8 @@ fallback — renaming `--dash-h` had already left a stale `var(--dash-h, 128px)`
 in the toasts, which reads as working.
 
 Bookkeeping, all of it forced rather than chosen: `MEMORY.md` hit 309 and lost
-its § 9 Rapier paragraph to `docs/design/stack.md`, where the same text already
-was, and its coding conventions to a new `docs/design/conventions.md` — each one
+its § 9 Rapier paragraph to `docs/design/code/stack.md`, where the same text already
+was, and its coding conventions to a new `docs/design/code/conventions.md` — each one
 now carries the bug that earned it, which the four-bullet version had lost.
 `META.md` hit 152, so *look at the numbers* and *ask what ran before your first
 observation* merged into **suspect the probe before the system** — they are the

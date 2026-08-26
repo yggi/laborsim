@@ -158,7 +158,7 @@ const terminal = $derived(stages.at(-1)?.output ?? { left: 0, right: 0 });
         <div class="plate" class:tight={module.params?.length}>
           <div class="ident">
             <!-- The maker's mark. Graphic design belongs in SVG, not in more
-                 CSS — see docs/design/instrument-rendering.md. -->
+                 CSS — see docs/design/cab/instrument-rendering.md. -->
             <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
               <path d={style.mark} />
             </svg>

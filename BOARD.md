@@ -3,8 +3,10 @@
 One task per card. Cards carry *what* and *done-when*, never rationale — that
 belongs in `MEMORY.md` or `NOTES.md`.
 
-**Gates:** `doing` ≤ 3 · `ready` ≤ 10 · `backlog` ≤ 40 · `history` ≤ 10.
-History past 10 cards moves to `LOG.md`.
+**Targets:** `doing` 3 · `ready` 10 · `backlog` 40 · `history` 10.
+**Act at** 4 · 12 · 48 · 12 (`CLAUDE.md`). History past its target moves to
+`LOG.md`; ready past its target means a card goes back to backlog, not that
+ready is bigger now.
 
 Card format:
 
@@ -25,7 +27,7 @@ Card format:
 
 ## ready
 
-Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
+Order and reasoning: `docs/design/code/roadmap.md`. These close the core loop at rung
 1 over the rack as the build surface. The verdict, its voice, the dash and the
 exercises are built; what remains is more to break, replay, and the path to the
 conflict.
@@ -131,11 +133,11 @@ bends them again.
 
 ### [L-049] Themes, authored independently — the agentic round
 - **what:** one author per manufacturer, each given only its own `LORE.md`
-  entry, `components.md`, `theming.md` and the KIBA reference — blind to the
+  entry, `cab/components.md`, `cab/theming.md` and the KIBA reference — blind to the
   other makers' work. Each produces that maker's plate, cell and pod. Then a
   **non-blind** adversarial comparison pass over all three side by side.
 - **done-when:** three racks read as kit from three suppliers *and* as one game,
-  and the pre-registered failure conditions in `theming.md` are answered either
+  and the pre-registered failure conditions in `cab/theming.md` are answered either
   way — including the one where a person cannot pick the maker of an unlabelled
   plate.
 - **needs:** L-048 (built)
@@ -196,13 +198,6 @@ bends them again.
   same instruments, no clipped cage and no geometry that only works at one
   aspect ratio.
 
-### [L-064] MEMORY.md is one line from its gate — spill a section
-- **what:** 299 of 300 lines, and durable facts are now parked in spill files
-  because there is no room for their index-level statement (the cab has no
-  gimbal; the cab is one rigid object). § 6 is the fattest section and the
-  obvious candidate. Trim on purpose, not under pressure (META).
-- **done-when:** `MEMORY.md` has room again and nothing true was lost — the
-  spilled section has a one-line index entry pointing at it.
 
 ### [L-041] SPEED-LIM — the third dumb module
 - **what:** caps track speed to a number on its faceplate. The obvious partner
@@ -240,7 +235,7 @@ bends them again.
   wrecked or **unrecoverable** (flipped / high-centred, a real state to detect),
   a citizen harmed (hard to reach; NPCs dodge; may defer to an NPC round), or
   the operator calling RESET. Degradation before destruction is the strong
-  version and explicitly not v0. See docs/design/damage.md.
+  version and explicitly not v0. See docs/design/rig/damage.md.
 - **done-when:** an unrecoverable machine ends the exercise and offers RESET, and
   nothing is lost but the run.
 - **needs:** L-031
@@ -336,6 +331,19 @@ bends them again.
 ---
 
 ## history
+
+### [L-071] Four clusters instead of a twenty-row index — **closed**
+`MEMORY.md` indexed all twenty spill files, which made `docs/design/` a star: a
+long list at the centre, everything one hop from it, nothing near anything else,
+and every addition making the list worse to read. Now four clusters of five —
+machine, cab, rig, code — each with an entrypoint page that indexes its own five,
+says what the cluster is *about*, and cross-links the siblings with *go there
+instead* rather than a bare pointer. `MEMORY.md` names the four. 145 references
+across docs, source comments and tests were rewritten to the new paths.
+`tests/docs.test.ts` checks the three things that rot silently: a path that no
+longer resolves, a page in no cluster, and a content page creeping back into the
+index. Closed [L-064] on the way — it wanted MEMORY spilled for room, and the
+band plus the shorter index gave it five lines back instead.
 
 ### [L-068] One kit for a hand-built snapshot — **closed**
 Three places built `Snapshot` values by hand and each grew its own kit; adding

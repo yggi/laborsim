@@ -58,7 +58,7 @@ a tick on it. Failure is still exactly one thing — a citizen involved — and 
 outranks completion on the same step.
 
 **The rig got a voice**, narrowly and for the first time: see
-`docs/design/sound.md`. Nothing else could announce a marker.
+`docs/design/cab/sound.md`. Nothing else could announce a marker.
 
 ### What is deliberately still missing
 
@@ -96,7 +96,7 @@ but it preserves the trade.
 **Targeting autopilot solutions makes chase the rewarding "hands OFF" view.**
 
 The chase camera was settled as a *cost*: you get to look, and it takes your
-controls away (`docs/design/cockpit.md`). Under mission scoring that inverts.
+controls away (`docs/design/cab/cockpit.md`). Under mission scoring that inverts.
 A solution good enough to run itself is one you can watch — so the view that
 punishes a hand-flown run becomes the reward for an automated one.
 

@@ -7,7 +7,8 @@ Every entry names the incident that earned it. An abstract rule nobody paid for
 is advice; a rule with a scar is a lesson. If an entry loses its incident, it
 has probably stopped being true.
 
-**Gate: 150 lines.** Overflow means entries have gone abstract — merge or cut.
+**Target: 150 lines, act at 180** (`CLAUDE.md`). At 180 the entries have gone
+abstract — merge or cut, back to 150 or below in one pass.
 
 ---
 
@@ -80,6 +81,14 @@ at the right instants, measured the same with its gain zeroed. If silencing what
 you added changes nothing you did not add it — *unless the instrument cannot see
 the claim*, as the bogie knock's null test proved by measuring one channel when
 the claim was about **sides**.
+
+**Breaking a thing on purpose needs an undo that is not `git checkout`.**
+Three probes planted a fault each to prove a new checker could see it — and the
+third was undone with `git checkout MEMORY.md`, on a tree whose index rewrite was
+not committed. That is not an undo, it is a discard, and it took the session's
+work with it. The same command on the *untracked* page failed silently and left
+its planted fault in place, so the two files ended up wrong in opposite
+directions. Copy the file, or commit first, before you break it.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both

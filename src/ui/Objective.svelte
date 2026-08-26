@@ -4,7 +4,7 @@
  * long you have been at it.
  *
  * **It is not an instrument and it does not cost glass.** The panel budget
- * (`docs/design/cockpit.md`) prices things a *manufacturer* bolted into your
+ * (`docs/design/cab/cockpit.md`) prices things a *manufacturer* bolted into your
  * cab; this is the training system's overlay, on the same surface the debrief
  * and the live voice already use. If it were fitted kit it would have a maker
  * and a faceplate, and the machine would have to know what a marker is — which

@@ -100,7 +100,7 @@ export interface LedgerEvent extends Stamped {
  * tick and is over — but also for a sharper one: the goal state on the snapshot
  * is sampled at 10 Hz by readers, and at 2.2 m/s a machine crosses the whole
  * reach radius in seven seconds, so a state alone could not tell a cue *when*
- * it happened to within a frame. `docs/design/sound.md` is the consumer.
+ * it happened to within a frame. `docs/design/cab/sound.md` is the consumer.
  */
 export interface WaypointEvent extends Stamped {
   readonly kind: "waypoint";

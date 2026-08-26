@@ -78,7 +78,7 @@ enforces itself. This is where the node-graph danger reappears in a new coat.
 
 The verb is a **property of the module**, switchable on it. Modules may also
 carry **settings** — bounded numbers with units, on the faceplate; see
-`docs/design/cockpit.md` for why those are never gains.
+`docs/design/cab/cockpit.md` for why those are never gains.
 
 `AMP` earned its keep with TILT-GUARD, the first module whose intent is a
 fraction rather than a speed. That module also shows why the verbs are not

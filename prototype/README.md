@@ -12,7 +12,7 @@ Rules:
   bought an answer cheaply. Copying their layout into `src/` would be importing
   a shape that was chosen to avoid a bundler.
 - **Do port named mechanisms**, and only the ones the handover marks as worth
-  carrying. Those are listed in `docs/design/prototype-findings.md`.
+  carrying. Those are listed in `docs/design/code/prototype-findings.md`.
 - **Do not edit them.** They are a record of what was true on a date. A probe
   that gets patched stops being evidence. Write a new one instead.
 

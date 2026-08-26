@@ -2,7 +2,7 @@
  * Architecture rule 2: the sim advances in fixed steps, decoupled from frame
  * rate. Rendering interpolates; it never drives.
  *
- * See docs/design/architecture-rules.md.
+ * See docs/design/code/architecture-rules.md.
  */
 
 /** Seconds per simulation step. 60 Hz. Do not vary this at runtime. */

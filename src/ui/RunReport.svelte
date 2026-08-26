@@ -5,7 +5,7 @@
  * trainee's account before you reset it.
  *
  * Itemised, scrollable, never aggregated. The total is shown but it is never
- * the only thing shown, because a total teaches nothing (docs/design/tone.md).
+ * the only thing shown, because a total teaches nothing (docs/design/rig/tone.md).
  * The voice is condescending institutional politeness: the rig is not angry, it
  * is disappointed, patiently, and it has written everything down.
  *

@@ -156,7 +156,7 @@ name for.
 The cage is also **structure the cockpit measures against**, not scenery: the
 pillars and the beam are where a pod's arm clamps, and they are one set of
 numbers shared by the frame you see and the frame a drop is judged against
-(`src/cockpit/cage.ts`, and the arms in `docs/design/components.md`).
+(`src/cockpit/cage.ts`, and the arms in `docs/design/cab/components.md`).
 
 ## The dash is the seam, and it travels (built, L-048)
 
@@ -233,7 +233,7 @@ Three rules, each of which cost something:
   engraved legend across a row lands on one line, with the controls ragged above
   it — the stop standing taller than the lamp, HANSA's beacon taller again.
   Grouping parts into boxes is what makes a wrapping flow leave holes, so only
-  the masters are a group. See `docs/design/components.md` for both mistakes and
+  the masters are a group. See `docs/design/cab/components.md` for both mistakes and
   the measurements that closed them.
 - **The panel does not talk.** There was a status line along the bottom naming
   the worst thing happening. It was the dash reading its own lamp out loud, and
