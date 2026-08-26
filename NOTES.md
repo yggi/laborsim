@@ -11,24 +11,21 @@ gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ---
 
-## The mobile budget — the frame half, and the cab that is not in it
+## The cab is the part of the frame nobody has read
 
-The bytes half is answered and has left this thread for
-`docs/design/code/mobile-budget.md`: **the payload is Rapier** — 1.30 MB over the
-wire, 1.24 MB of it one chunk, and everything built since the empty scaffold
-added 0.05 MB. The levers are named there and none of them is "write less game".
+L-034 measured the world and the machine and closed;
+`docs/design/code/mobile-budget.md` holds the budget. What the bench does *not*
+put on the glass is the cab — the cage, the dash, the pods and the levers are
+DOM, and by design their per-frame cost is one custom property written on
+`:root` plus a 10 Hz reactive pass. That is the last part of the frame still
+asserted rather than read, and the measured half came back with enough headroom
+that it is not urgent — only unknown.
 
-*Frames.* The instrument exists (`profile.html`) and no device has run it yet.
-Open until one has: ~130 props, ink shells doubling every mesh, greebles,
-per-grouser belts and twelve sprung contacts, at a phone's buffer.
-
-*The cab is not in it.* The bench times the world and the machine; the cage, the
-dash, the pods and the levers are DOM over the glass and none of it is on that
-page. By design that is one custom property a frame plus a 10 Hz reactive pass —
-a claim, and the only part of the frame still asserted rather than read. Whether
-it can be measured without mounting the app in the bench, or whether the app has
-to learn to time itself, is the open question, and `App.svelte` being ten
-concerns already (L-070) is why it is a thread and not a card.
+The open question is *how*, not *whether*: measuring it means either mounting
+the app inside the bench, or teaching the app to time itself. The second is the
+honest one and `App.svelte` being ten concerns already (L-070) is why this is a
+thread rather than a card — a self-timing loop is a good reason to extract the
+loop, and a bad reason to add an eleventh concern to the file.
 
 ## What counts as "operator interaction"?
 

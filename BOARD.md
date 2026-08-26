@@ -21,16 +21,7 @@ Card format:
 
 ## doing
 
-### [L-034] Measure the mobile frame
-- **what:** frame time and draw-call count on a real mid-range phone, with the
-  current scene (~130 props, ink shells doubling meshes, greebles, grousers).
-  Mobile-first is a pillar we have never measured. **The instrument is built** —
-  `profile.html`, six passes, one button, ninety seconds — and the bytes half is
-  answered: the payload is Rapier, and the game is 0.05 MB of it
-  (`docs/design/code/mobile-budget.md`). What is left is a device row and the
-  budget written off it.
-- **done-when:** a number exists, and a written first-load and frame budget with
-  it.
+*(empty)*
 
 ---
 
@@ -322,6 +313,24 @@ bends them again.
 ---
 
 ## history
+
+### [L-034] Measure the mobile frame — **closed**
+`profile.html` and `src/probe/`: six passes over the same six seconds of the
+same run, one button, on the device itself. **The frame fits** — a Pixel 9 holds
+its panel's 120 Hz through every pass — so the answer is not a rendering crisis
+but the first price list: **a prop is 0.75 draw calls**, the site can triple
+before the furniture matters, and **the machine already costs more draw calls
+than the entire site does** (chase adds 170 over the cab's 225), which makes
+rung 2's arm the thing to watch rather than L-039's inventory. The ceiling is
+CPU, not GPU: ~4 ms of an 8.34 ms frame is already sim, snapshot and render
+submit. Bytes: 1.32 MB over the wire, 95 % of it Rapier's base64 wasm, and
+everything built since the empty scaffold adds 0.05 MB.
+The device found a defect in the bench on contact — every pass returned the
+refresh period, so every delta read 0 % and the fill verdict said *pixels are
+not what is costing you* about a scene where halving the buffer removes 43 % of
+the GPU's work. Deltas now fall back to GPU-owed time when the frame is pinned,
+and `tests/probe.test.ts` holds both branches.
+Budget, method and the device table: `docs/design/code/mobile-budget.md`.
 
 ### [L-069] `hands` — one channel across the reactive boundary — **closed**
 Five values crossed into the loop by three mechanisms: two mirrored through

@@ -82,6 +82,18 @@ you added changes nothing you did not add it — *unless the instrument cannot s
 the claim*, as the bogie knock's null test proved by measuring one channel when
 the claim was about **sides**.
 
+**A quantity with a ceiling reports the ceiling, and it looks like a result.**
+The frame profiler compared six passes on frame time. The first phone it ran on
+held its panel's 120 Hz in all six, so every pass reported 8.34 ms, every delta
+read 0 %, and the printed verdict was *pixels are not what is costing you* about
+a scene where halving the buffer removed 43 % of the GPU's work. Nothing was
+broken and no null test would have caught it: the instrument could see, it was
+just reading something saturated. **Before comparing on a quantity, ask what
+clamps it** — vsync, a cap, a timeout, a rate limit — and compare on something
+downstream of the clamp instead. The same reflex catches the *sibling* trap it
+was found next to: a duration measured on a clock quantized to 1 ms is an
+integer, and an integer nobody warned you about is read as precision.
+
 **Breaking a thing on purpose needs an undo that is not `git checkout`.**
 Three probes planted a fault each to prove a new checker could see it — and the
 third was undone with `git checkout MEMORY.md`, on a tree whose index rewrite was

@@ -156,6 +156,17 @@ export interface PassReport {
   readonly fps: number;
   /** Wall clock between one frame and the next: what the operator feels. */
   readonly frame: Spread;
+  /**
+   * Everything the frame does on the CPU — the steps, the snapshot and the
+   * render submit — timed as one span.
+   *
+   * Measured rather than added up from the two below: `sim` is taken only over
+   * the frames that owed a step, so a sum of those medians is a number about no
+   * particular frame. This is the one a budget is written against, because it
+   * is the part of the frame that is ours whatever the panel is doing — and on
+   * the first device profiled it was the only part with a ceiling in sight.
+   */
+  readonly cpu: Spread;
   /** The fixed steps this frame owed, plus the snapshot it reads. */
   readonly sim: Spread;
   /** `viewport.render()` — the CPU half, which returns before the GPU is done. */
@@ -375,6 +386,7 @@ async function runPass(
 
   const clock = makeClock();
   const frames: number[] = [];
+  const cpus: number[] = [];
   const sims: number[] = [];
   const renders: number[] = [];
   const gpus: number[] = [];
@@ -426,6 +438,7 @@ async function runPass(
     // costs approximately nothing. What is wanted is what a step costs; how
     // often one is owed is the `steps` column's job, next to it.
     if (owed > 0) sims.push(afterSim - beforeSim);
+    cpus.push(afterRender - beforeSim);
     renders.push(afterRender - afterSim);
     steps.push(owed);
     calls.push(counted.calls);
@@ -447,6 +460,7 @@ async function runPass(
     seconds,
     fps: seconds > 0 ? frames.length / seconds : 0,
     frame: spread(frames),
+    cpu: spread(cpus),
     sim: spread(sims),
     render: spread(renders),
     gpu: spread(gpus),

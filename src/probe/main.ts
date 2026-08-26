@@ -91,7 +91,13 @@ run.addEventListener("click", async () => {
     const profile = await runProfile(glass, (progress) => {
       status.textContent = describe(progress);
     });
-    text = formatReport(profile, payload, device, new Date().toISOString());
+    text = formatReport(
+      profile,
+      payload,
+      device,
+      new Date().toISOString(),
+      location.href,
+    );
     output.textContent = text;
     output.hidden = false;
     copy.hidden = false;

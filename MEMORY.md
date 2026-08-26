@@ -211,10 +211,13 @@ cockpit would be a different mechanic wearing the same name. This is upstream of
 stack, layout and control design alike.
 
 **It is measured, not asserted** — `profile.html` times the real world through
-the real renderer on the device in your hand, and what it has found so far is in
-`docs/design/code/mobile-budget.md`. First finding: **the payload is Rapier**.
-1.30 MB over the wire, of which 1.24 MB is one chunk, and everything built since
-the empty scaffold added 0.05 MB.
+the real renderer on the device in your hand, and the budget is in
+`docs/design/code/mobile-budget.md`. Two findings so far. **The payload is
+Rapier**: 1.32 MB over the wire, 1.26 MB of it one chunk, and everything built
+since the empty scaffold added 0.05 MB. **The frame fits** — a Pixel 9 holds
+120 Hz through every pass — so the ceiling is the **CPU**, at ~4 ms of an 8.34 ms
+frame, and the object to watch is the *machine*, which already costs more draw
+calls than the whole site does.
 
 Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
 aspiration. What that costs, and the rejected options with their reasons —

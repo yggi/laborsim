@@ -25,6 +25,17 @@ export interface Device {
   readonly ratio: number;
   /** Hz, measured off an idle frame loop. */
   readonly refresh: number;
+  /**
+   * The finest gap `performance.now()` will report, ms — the resolution of
+   * every duration in the report.
+   *
+   * Not a curiosity. Firefox quantizes its clock to 1 ms against timing attacks,
+   * so a 3 ms render on that browser is anything from 2.5 to 3.5 and a 0.4 ms
+   * one reads as either 0 or 1. A column of integers is the tell, and a reader
+   * who does not know why they are integers will believe the third digit of a
+   * number that does not have one.
+   */
+  readonly timer: number;
 }
 
 /** Frames sampled to find the panel's ceiling. A third of a second at 120 Hz. */
@@ -45,6 +56,29 @@ async function measureRefresh(): Promise<number> {
   return floor > 0 ? Math.round(1000 / floor) : 0;
 }
 
+/** Milliseconds of wall clock spent looking for the clock's own step. */
+const TIMER_SAMPLE_MS = 20;
+
+/**
+ * The smallest non-zero gap two back-to-back `performance.now()` calls report.
+ *
+ * Bounded by wall clock rather than by an iteration count on purpose: on a
+ * coarse clock the interesting event is *rare*, and a loop that waited for a
+ * fixed number of them would spin for a second on the browser that most needs
+ * asking.
+ */
+function timerResolution(): number {
+  let smallest = Number.POSITIVE_INFINITY;
+  const until = performance.now() + TIMER_SAMPLE_MS;
+  while (performance.now() < until) {
+    const a = performance.now();
+    const b = performance.now();
+    const gap = b - a;
+    if (gap > 0 && gap < smallest) smallest = gap;
+  }
+  return Number.isFinite(smallest) ? smallest : 0;
+}
+
 export async function readDevice(): Promise<Device> {
   const nav = navigator as Navigator & {
     deviceMemory?: number;
@@ -58,5 +92,6 @@ export async function readDevice(): Promise<Device> {
     dpr: devicePixelRatio || 1,
     ratio: Math.min(devicePixelRatio || 1, 2),
     refresh: await measureRefresh(),
+    timer: timerResolution(),
   };
 }
