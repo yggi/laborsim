@@ -10,7 +10,7 @@ import type { SimEvent } from "./events.ts";
  * An instrument is a view of a recording. That is not a metaphor — it is why
  * the same instrument code can drive a live cockpit and a replay.
  *
- * See docs/design/code/architecture-rules.md.
+ * See doc/design/code/architecture-rules.md.
  */
 
 /** A plain, structurally-cloneable pose. No three.js types cross this line. */
@@ -118,7 +118,7 @@ export interface Waypoint {
  *
  * It is on the snapshot rather than held by the shell for the same reason the
  * route is: an exercise that cannot be read off a recording is an exercise a
- * replay cannot score, and scoring a replay is what `docs/design/rig/missions.md`
+ * replay cannot score, and scoring a replay is what `doc/design/rig/missions.md`
  * eventually wants. It is also why `outcome` is a settled fact with a tick on
  * it rather than something a consumer derives — three surfaces answer to it
  * (the overlay, the debrief, the cue), and three derivations of one fact is

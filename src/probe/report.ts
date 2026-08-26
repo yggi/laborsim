@@ -3,7 +3,7 @@
  *
  * The output is fixed-width plain text and not JSON-first, because the first
  * consumer of a device measurement is a person deciding whether to worry, and
- * the second is a table in `docs/design/code/mobile-budget.md` that somebody
+ * the second is a table in `doc/design/code/mobile-budget.md` that somebody
  * types by hand. A machine-readable copy rides along at the end for the day
  * there are six devices' worth and a hand-typed table stops being the answer.
  *

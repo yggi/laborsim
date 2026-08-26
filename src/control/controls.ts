@@ -28,7 +28,7 @@ export interface Controls {
    * Switch the component off or on.
    *
    * Safety kit must **not** offer this: bypassing a guard costs you the glass,
-   * so it happens in the rack, not from a cell (`docs/design/cab/components.md`).
+   * so it happens in the rack, not from a cell (`doc/design/cab/components.md`).
    * That is a contract on the *part*, enforced in `tests/cockpit.test.ts` —
    * nothing here can tell who is calling.
    */

@@ -7,7 +7,7 @@
  * scene graph fights a fixed-step imperative loop and reintroduces per-frame
  * reactivity cost on exactly the platform that cannot afford it.
  *
- * See docs/design/code/architecture-rules.md.
+ * See doc/design/code/architecture-rules.md.
  */
 
 import * as THREE from "three";
@@ -24,7 +24,7 @@ import { ink, inked, terrainMaterial, toon } from "./toon.ts";
 /**
  * Cab is the primary view: rung 1's whole claim is that the two-lever cage
  * with a clear windscreen is a genuinely good machine. Chase is the extra, and
- * it costs you the controls — see docs/design/cab/cockpit.md.
+ * it costs you the controls — see doc/design/cab/cockpit.md.
  */
 export type CameraMode = "cab" | "chase";
 
@@ -40,7 +40,7 @@ export interface Viewport {
    *
    * The renderer publishes it because the renderer owns the projection. Read it
    * once per frame and write it to one custom property; never let it become
-   * reactive state (architecture rule 3, and `docs/design/cab/components.md`).
+   * reactive state (architecture rule 3, and `doc/design/cab/components.md`).
    */
   head(): { x: number; y: number };
   /**

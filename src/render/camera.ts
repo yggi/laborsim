@@ -81,7 +81,7 @@ export function focalPixels(fovDegrees: number, heightPx: number): number {
  * to `f·tan θ`, which is exact at the centre of the glass — where the pods sit
  * and where the eye actually is during a glance — and increasingly generous
  * towards the edges. That error is the price of the whole cab being one flat
- * translate instead of a second 3D renderer (`docs/design/cab/components.md`).
+ * translate instead of a second 3D renderer (`doc/design/cab/components.md`).
  */
 export function cabOffset(pan: number, tilt: number, focalPx: number) {
   return { x: -focalPx * Math.tan(pan), y: focalPx * Math.tan(tilt) };

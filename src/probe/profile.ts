@@ -1,7 +1,7 @@
 /**
  * The mobile frame, measured — L-034.
  *
- * Mobile-first is a hard pillar (`MEMORY.md` § 9) and until this existed no
+ * Mobile-first is a hard pillar (`doc/MEMORY.md` § 9) and until this existed no
  * frame had ever been timed on a phone. What the board asked for is a number.
  * What a *budget* needs is one number and three dials, because "18 ms" tells
  * you whether you are in trouble and nothing at all about what to cut.
@@ -31,8 +31,8 @@
  * What this does **not** measure is the cab: the cage, the dash, the pods and
  * the levers are DOM over the glass, and none of it is on this page. By design
  * that is one custom-property write a frame plus a 10 Hz reactive pass
- * (`App.svelte`) — which is a claim, not a reading. It is the remainder, and it
- * is written down as one in `NOTES.md`.
+ * (`platform/run.ts`) — which is a claim, not a reading. It is the remainder,
+ * and it is written down as one in `doc/NOTES.md`.
  */
 
 import { CHASSIS, type Module } from "../control/bus.ts";
@@ -357,9 +357,18 @@ async function buildStand(
 /**
  * One pass: a fresh world on an existing stand, warmed, measured, then probed.
  *
- * The loop is `App.svelte`'s, deliberately — same clamp, same clock, same
- * snapshot-then-render order. A bench whose loop differed from the game's would
- * be measuring a game nobody ships.
+ * **The loop is `platform/run.ts`'s, deliberately** — same clamp, same clock,
+ * same snapshot-then-render order. A bench whose loop differed from the game's
+ * would be measuring a game nobody ships.
+ *
+ * It is a *copy* rather than a call, because the game's loop owns
+ * `requestAnimationFrame`, the pointer handlers and the `:root` writes, and
+ * exposes no seam to time the halves of a frame separately or to end on a tick
+ * count. Widening it to suit a bench is the thing this bench does not do
+ * (`gl.ts` makes the same argument about the renderer). But a copy is a second
+ * place for one fact, and this repo has the scar — so
+ * `tests/architecture.test.ts` fails if the two stop agreeing about the clamp
+ * or the order of the four calls.
  */
 async function runPass(
   stand: Stand,

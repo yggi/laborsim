@@ -1,7 +1,7 @@
 /**
  * Screenshot the cockpit sandbox.
  *
- * `META.md` says it twice — *screenshots catch what CI cannot* and *ask the
+ * `doc/META.md` says it twice — *screenshots catch what CI cannot* and *ask the
  * browser what it computed, do not re-read the CSS* — and both lessons were
  * paid for. A faceplate collapsed to 7px with lint, types and 71 tests green; a
  * cab rendered as a solid black wall with a green build. Neither is expressible

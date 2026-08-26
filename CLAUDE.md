@@ -4,44 +4,77 @@
 KSP-inspired build/sim loop, multi-layer educational physics & kinematics engine.
 
 This file is the contract for how to work in this repo. It is short on purpose.
-Everything else lives in the surfaces below, each with a target size and a line
-where it gets condensed.
+Everything else lives in `doc/`, in surfaces that each have one job, a target
+size, and a line where they get condensed.
+
+**The repository root holds this file, `README.md` and configuration.** Those
+two are the entrypoints for a reader who has not been told where to look — this
+one is found by the agent, that one by GitHub. Every other document is in
+`doc/`, for readers who have been told.
 
 ## Read order (every session, before touching anything)
 
 1. `CLAUDE.md` — this file. Rules of engagement.
-2. `MEMORY.md` — what the project *is*. Crystallized, durable, and the index to
-   `docs/design/`'s four clusters — **machine**, **cab**, **rig**, **code**.
+2. `doc/MEMORY.md` — what the project *is*. Crystallized, durable, and the index to
+   `doc/design/`'s four clusters — **machine**, **cab**, **rig**, **code**.
    Each cluster page indexes its own five and cross-links the siblings, so a
    subject is found by walking two hops, not by scanning one long list.
-3. `META.md` — how the work *goes*. Method lessons, each with the scar that
+3. `doc/META.md` — how the work *goes*. Method lessons, each with the scar that
    earned it. Short. Read it; it is cheaper than re-earning them.
-4. `NOTES.md` — what is *unresolved right now*. Open threads only.
-5. `BOARD.md` — what to *do next*. Cards in doing / ready / backlog.
+4. `doc/NOTES.md` — what is *unresolved right now*. Open threads only.
+5. `doc/BOARD.md` — what to *do next*. Cards in doing / ready / backlog.
 
-Read `LOG.md` only when you need history (why was X done, what was tried).
-Do not read it as context by default.
+`doc/HISTORY.md` is the arc — read it once when you are new, or when a decision
+looks arbitrary and you want to know what it cost. `doc/LOG.md` is the detail behind
+the last few weeks of it; read that only when you need to know why X was done or
+what was tried. Neither is context by default.
 
 ## Write order (before ending a session)
 
-1. `LOG.md` — append what you actually did and closed. Newest first.
-2. `BOARD.md` — move cards, add cards you discovered. Trim history.
-3. `NOTES.md` — delete threads you closed, add threads you opened.
-4. `MEMORY.md` — only if something became *durably true*. Rare. Deliberate.
-5. `META.md` — only when the work taught you something about *working*, and it
+1. `doc/LOG.md` — append what you actually did and closed. Newest first. When it is
+   over its line, fold its oldest sessions into `doc/HISTORY.md` rather than moving
+   them anywhere.
+2. `doc/BOARD.md` — move cards, add cards you discovered. Trim history.
+3. `doc/NOTES.md` — delete threads you closed, add threads you opened.
+4. `doc/MEMORY.md` — only if something became *durably true*. Rare. Deliberate.
+5. `doc/META.md` — only when the work taught you something about *working*, and it
    cost something to learn. Rarer still.
 
-A change that touches code and leaves these files untouched is incomplete.
+## Gates — what makes a change finished
+
+Not a checklist to feel good about. Four conditions, each of which has been
+failed here before, and each cheap to check and expensive to miss.
+
+**1. The suites are green, and you ran them.** `npm test`, `npm run typecheck`
+and `npm run lint`, plus the bench that covers what you touched — `npm run
+shots` or `npm run cab` for anything visual, `npm run listen` for anything
+audible. **Print the number rather than estimating it**: a gate you do not check
+is not a gate, and this repo has shipped "within its limit" at 307 of 300.
+
+**2. The surfaces moved.** A change that touches code and leaves `doc/` alone is
+incomplete. The minimum is a `doc/LOG.md` entry; anything that closed or opened
+work also touches `doc/BOARD.md` and `doc/NOTES.md`.
+
+**3. Nothing new is unverifiable.** If the change adds a rule, a claim about
+appearance or sound, or a fact about the tree, something has to fail when it
+stops being true. If it adds a check, **the check must be able to fail** — plant
+the fault and watch it, every branch of it. A bench has no assertion to fail, so
+a bench that stops reaching its subject stays silent: run it.
+
+**4. A measured claim is re-measured.** Numbers in `doc/` are readings, not
+decoration. If the change can move one — a peak level, a percentile, a line
+count — take it again and write what it now says.
 
 ## The surfaces
 
 | File | Holds | Never holds | Target |
 |---|---|---|---|
-| `MEMORY.md` | durable facts, decisions, structure, conventions | tasks, status, speculation | 300 lines |
-| `META.md` | method lessons, each with its incident | project facts, tasks | 150 lines |
-| `NOTES.md` | open, uncrystallized threads | anything settled, anything actionable-as-a-task | 100 lines |
-| `BOARD.md` | task cards | rationale, narrative | see below |
-| `LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
+| `doc/MEMORY.md` | durable facts, decisions, structure, conventions | tasks, status, speculation | 300 lines |
+| `doc/META.md` | method lessons, each with its incident | project facts, tasks | 150 lines |
+| `doc/NOTES.md` | open, uncrystallized threads | anything settled, anything actionable-as-a-task | 100 lines |
+| `doc/BOARD.md` | task cards | rationale, narrative | see below |
+| `doc/LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
+| `doc/HISTORY.md` | the arc — decisions, reversals, what each cost | this session's detail | 250 lines |
 
 ### Target, and the line where you act
 
@@ -50,11 +83,12 @@ when it is **20% over**, and not before:
 
 | | target | act at |
 |---|---|---|
-| `MEMORY.md` | 300 | 360 |
-| `META.md` | 150 | 180 |
-| `NOTES.md` | 100 | 120 |
-| `LOG.md` | 1000 | 1200 |
-| `BOARD.md` | doing 3 · ready 10 · backlog 40 · history 10 | 4 · 12 · 48 · 12 |
+| `doc/MEMORY.md` | 300 | 360 |
+| `doc/HISTORY.md` | 250 | 300 |
+| `doc/META.md` | 150 | 180 |
+| `doc/NOTES.md` | 100 | 120 |
+| `doc/LOG.md` | 1000 | 1200 |
+| `doc/BOARD.md` | doing 3 · ready 10 · backlog 40 · history 10 | 4 · 12 · 48 · 12 |
 
 **The band exists to stop line-shaving.** A hard limit at the target buys you the
 wrong work: a surface one line over gets a sentence reflowed, a word deleted, an
@@ -73,19 +107,37 @@ three sessions running is telling you a section wants spilling, not trimming.
 
 ### How each one is handled when it is time
 
-- **MEMORY.md** → spill the fattest section to a `docs/design/` cluster page's
+- **MEMORY.md** → spill the fattest section to a `doc/design/` cluster page's
   tree, leave a one-line entry + link in the MEMORY index. The index never
   spills, and it indexes **cluster pages**, not every content page.
 - **META.md** → entries have gone abstract. Merge or cut; an entry that has lost
   the incident that earned it has probably stopped being true.
 - **NOTES.md** → threads have gone stale. Each one either crystallizes into
   MEMORY, becomes a BOARD card, or gets deleted. Nothing else.
-- **BOARD.md** → history past its target moves to `LOG.md`; ready past its target
-  means something goes back to backlog, not that ready is bigger now.
-- **LOG.md** → cut the oldest sessions into a `docs/log/` archive and link it.
+- **BOARD.md** → ready past its target means something goes back to backlog, not
+  that ready is bigger now. **History past its target folds into
+  `doc/HISTORY.md` and is deleted**, exactly as a log session does — a closed
+  card is already a condensed session, so parking it in a third file was the
+  same dump one level down: 56 lines of cards describing things the arc already
+  said.
+- **LOG.md** → **fold** the oldest sessions into the paragraph of
+  `doc/HISTORY.md` they belong to, and delete them. Not moved intact: a verbatim
+  archive is what git already is, and what git cannot give you cheaply is the
+  arc — it hands you commits rather than periods, and changes rather than
+  changes of mind. The one that existed grew to 1,577 lines, condensed 2%,
+  duplicated four entries between its own files, and was read by nothing.
+- **HISTORY.md** → the older sections are too fine-grained. A month becomes a
+  section, a quarter a paragraph, a year a line. It has to converge.
 
 Never let a surface grow past the line to avoid the work. Condensing *is* the
 work.
+
+`tests/doc.test.ts` checks the shape, not the prose: every cluster page indexes
+its own tree, no content page creeps into the MEMORY index, and every markdown
+path written down anywhere resolves. It runs in `npm test`. `doc/LOG.md` is
+exempt from path resolution because it is append-only and records paths that
+were correct when written; `doc/HISTORY.md` is **not** exempt, because it is
+rewritten rather than appended to.
 
 ## Guiding principles (the reason the code exists)
 
@@ -123,11 +175,27 @@ These decide design arguments. If a change makes one weaker, say so out loud.
   deferred — but no v0 decision may foreclose them. Note it when one might.
 - Scope down before you scope out. Prefer a thin vertical slice that runs over a
   broad layer that doesn't.
-- Uncertain about intent? Put it in `NOTES.md` as a thread and keep going on the
+- Uncertain about intent? Put it in `doc/NOTES.md` as a thread and keep going on the
   parts that don't depend on it. Do not silently pick and bury the choice.
-- The stack is settled (`MEMORY.md` § 9) and its rejected options are recorded
+- The stack is settled (`doc/MEMORY.md` § 9) and its rejected options are recorded
   with reasons. Do not reopen one as a side effect of another task.
+
+## Git
+
+- **Push any branch freely.** Branch, commit, push, iterate.
+- **`main` requires explicit instruction**, every time. A standing permission to
+  push branches is not permission to push `main`.
+- **Pushing a branch publishes it.** `.github/workflows/pages.yml` builds every
+  `main` and `claude/**` push and puts it on the web: `main` at the site root,
+  every other branch at `/b/<slug>/`, indexed at `/b/`. A branch's build is
+  withdrawn when the branch is deleted, and every publish also prunes any
+  directory whose branch is gone — the delete event is an optimisation, not the
+  mechanism. A push is not a private act.
+
+CI gates the publish on lint, typecheck and the suite, so a red branch does not
+reach the site. Run them before pushing rather than finding out in the log.
 
 ## Repo map
 
-Directory-level intent lives in `MEMORY.md` § Repo map. Keep it there, not here.
+Directory-level intent lives in `doc/MEMORY.md` § Repo map. Keep it there, not
+here.

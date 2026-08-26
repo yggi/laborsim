@@ -3,7 +3,7 @@
  * The cockpit sandbox — every component, in every state, at phone width, with
  * no physics behind it.
  *
- * This exists because of a `META.md` lesson that predicts exactly how the
+ * This exists because of a `doc/META.md` lesson that predicts exactly how the
  * theming work fails without it: *screenshots catch what CI cannot; look at the
  * thing.* A manufacturer's house style is graphic design, and design authored
  * without ever seeing the result is guessing. Types, lint and 85 tests were all
@@ -82,7 +82,7 @@ const dead = () => inertControls();
           the hard one for waste, and the panel's rule is that it wraps rather
           than scrolls — so *how* it wraps is a thing to look at, not to reason
           about. The glass and the camera behind it are a separate problem
-          (`NOTES.md`); this row is only the panel. -->
+          (`doc/NOTES.md`); this row is only the panel. -->
   {#snippet dash(specimen: (typeof SPECIMENS)[number])}
     <!-- The conditions are derived here rather than passed in, because they
          moved out of the panel and into the shell when the horn arrived. The

@@ -4,6 +4,13 @@
  * renderer and the loop (architecture rule 3). The only thing crossing from
  * sim to UI is a snapshot, and it crosses at SNAPSHOT_HZ, not 60.
  *
+ * That second clause was aspirational for a long time — the loop was a 155-line
+ * effect in the middle of this file. It is `platform/run.ts` now, and what is
+ * left here is the cab: what is fitted, what the operator is doing, what the
+ * panel says about it, and one effect that says what a run is made of. Two
+ * objects cross the seam and nothing else does — `hands` going down
+ * (`control/hands.ts`) and a snapshot coming back.
+ *
  * Note how little the chase camera costs to implement: hiding the levers
  * *is* "hands off the wheel". The bus keeps carrying whatever the levers were
  * last set to, the machine keeps doing it, and the player simply cannot
@@ -26,14 +33,13 @@ import {
 } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
 import { restingHands } from "./control/hands.ts";
-import { makeClock } from "./core/clock.ts";
-import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
+import type { Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
 import { styleOf } from "./makers/houses.ts";
 import { createAutonav } from "./modules/autonav.ts";
 import { createTiltGuard } from "./modules/tiltguard.ts";
-import { type CameraMode, createViewport } from "./render/scene.ts";
-import { createWorld, initPhysics } from "./sim/world.ts";
+import { createRun, type Run } from "./platform/run.ts";
+import type { CameraMode } from "./render/scene.ts";
 import Briefing from "./ui/Briefing.svelte";
 import Objective from "./ui/Objective.svelte";
 import RunReport from "./ui/RunReport.svelte";
@@ -64,7 +70,7 @@ const hands = restingHands();
  * It is also **the chassis component**: it brings the dashboard, the cage and
  * the glass, and it costs nothing, which is why it has no cell on the dash. You
  * do not need a lamp to tell you the levers are fitted
- * (`docs/design/cab/components.md`).
+ * (`doc/design/cab/components.md`).
  */
 const pilot: Module = {
   id: CHASSIS,
@@ -169,7 +175,7 @@ $effect(() => {
  * A Labor's horn has no cut-out — that is what a horn is for — so this is not a
  * dash control and does not live on the panel. It is the training rig's own
  * knob, and it sits with the camera, which is the other control that belongs to
- * the room rather than to the machine (`docs/design/rig/training-frame.md`).
+ * the room rather than to the machine (`doc/design/rig/training-frame.md`).
  */
 let sound = $state(true);
 let audio: Audio | undefined;
@@ -186,7 +192,7 @@ let audio: Audio | undefined;
  *
  * The camera and the volume are deliberately **silent**: they belong to the
  * training rig rather than to the machine, and the rig does not reach into the
- * cab and make noises (`docs/design/rig/training-frame.md`).
+ * cab and make noises (`doc/design/rig/training-frame.md`).
  */
 const CAB_MAKER = "KIBA WORKS";
 const click = (maker = CAB_MAKER) => audio?.panel("click", maker);
@@ -225,7 +231,16 @@ $effect(() => {
   };
 });
 
-let setViewMode: (m: CameraMode) => void = () => {};
+/**
+ * The run in progress, or nothing while one is being built or torn down.
+ *
+ * This replaced a `let setViewMode = () => {}` that the sim effect reassigned
+ * from inside its `.then()` — so a camera press before the wasm landed reached a
+ * function that did nothing and said nothing. A handle that is *absent* until
+ * there is a run says the same thing honestly, and `run.setView` remembers a
+ * mode given during the boot rather than dropping it.
+ */
+let current: Run | undefined;
 function toggleRack() {
   rackOpen = !rackOpen;
   // A cabinet door, not a switch: the latch is the heaviest thing on the panel
@@ -241,7 +256,7 @@ function toggleRack() {
  * A manufacturer sells and warns, and this is the first channel where one speaks
  * for itself. Keeping them visually distinct matters: a warranty notice is not
  * a verdict, and the player has to be able to tell whose opinion they are
- * reading (`docs/design/rig/training-frame.md`).
+ * reading (`doc/design/rig/training-frame.md`).
  */
 interface Notice {
   readonly id: number;
@@ -284,7 +299,7 @@ const controls = createControls(rack, {
 
 function setView(next: CameraMode) {
   mode = next;
-  setViewMode(mode);
+  current?.setView(mode);
 }
 
 /**
@@ -376,7 +391,7 @@ function begin(next: Exercise = exerciseById(picked) ?? FIRST_EXERCISE) {
  *
  * The cage is KIBA's structure, so the nag is KIBA's voice — and it is the
  * first thing to consume `voice.tips`, which has been populated for all three
- * makers and read by nothing (`docs/design/cab/components.md`).
+ * makers and read by nothing (`doc/design/cab/components.md`).
  *
  * It fires when a long look comes back to centre, and then not again for a
  * while: a reminder you get every time you glance is one you learn to ignore,
@@ -430,30 +445,23 @@ $effect(() => {
 });
 
 $effect(() => {
-  // Reading runId here makes RESET SIMULATOR rebuild the whole world: the effect
-  // re-runs, cleaning up the old sim and building a new one. Reading the
-  // exercise makes choosing one do the same — a different site, a different
-  // route, a different objective, all of it rebuilt rather than patched.
+  // Reading `runId` and `exercise` here is what makes RESET and choosing an
+  // exercise rebuild the world: the effect re-runs, disposes the old run and
+  // starts a new one. Everything below the seam is `platform/run.ts` — this is
+  // now a statement of what a run is made of, and nothing about how it turns.
   runId;
-  const brief = exercise;
-  let frame = 0;
-  let disposed = false;
-  let cleanup = () => {};
-
-  void initPhysics().then(() => {
-    if (disposed) return;
-
-    // Re-racking must not duplicate modules: mutate the rack back to just the
-    // pilot in place (its identity is held by the world we are about to build),
-    // then re-add the components below.
-    rack.splice(0, rack.length, pilot);
-
-    const world = createWorld({ exercise: brief, modules: rack });
-    // NAV needs the pose of the machine it is driving, so it is built once the
-    // world exists and pushed onto the rail below the pilot. Nothing keeps a
-    // reference to it: its instrument reads the snapshot and commands through
-    // the same handles as everything else.
-    rack.push(
+  const run = createRun({
+    canvas,
+    exercise,
+    rack,
+    pilot,
+    hands,
+    // NAV needs the pose of the machine it is driving and TILT-GUARD its
+    // attitude, so both are built once the world exists. Which kit that is stays
+    // the cab's decision; the run only knows when there is something to fit it
+    // to. Nothing keeps a reference to either: their instruments read the
+    // snapshot and command through the same handles as everything else.
+    fit: (world) => [
       createAutonav(
         world.waypoints,
         () => {
@@ -462,127 +470,28 @@ $effect(() => {
         },
         { verb: "CAP", enabled: false },
       ),
-    );
-
-    // TILT-GUARD sits at the bottom of the rail, below everything: it is the
-    // last thing between the rack and the tracks, which is where a safety
-    // component belongs and also where it is most annoying. Move it up and it
-    // guards only what is above it — that is the ordering lesson, in one slot.
-    // It ships **enabled**, because safety kit does. Finding out that the thing
-    // stopping you halfway up a grade is your own machine being careful — and
-    // then finding its LED — is the best first lesson rung 1 has to offer.
-    rack.push(createTiltGuard(() => world.machine.body.rotation()));
-    const viewport = createViewport(
-      canvas,
-      world.terrain,
-      world.props,
-      world.waypoints,
-    );
-    const clock = makeClock();
-    setViewMode = viewport.setMode;
-
-    const resize = () => viewport.resize(innerWidth, innerHeight);
-    addEventListener("resize", resize);
-    resize();
-
-    const pointers = new Map<number, { x: number; y: number }>();
-    const down = (e: PointerEvent) => {
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // **Capture, or the spring never lets go.** A thumb that leaves the glass
-      // mid-swipe — off the edge of the phone, onto the dash, onto a pod — takes
-      // its `pointerup` with it, and the canvas is left believing a hand is
-      // still on it. Before the neck was sprung that only meant a look you had
-      // to undo; now it means a cab parked over your shoulder for good. Capture
-      // makes every event for this pointer come back here whatever it is over.
-      canvas.setPointerCapture(e.pointerId);
-      viewport.hold(true);
-    };
-    const up = (e: PointerEvent) => {
-      pointers.delete(e.pointerId);
-      if (pointers.size === 0) viewport.hold(false);
-    };
-    const drag = (e: PointerEvent) => {
-      const prev = pointers.get(e.pointerId);
-      if (!prev) return;
-      // Eyes down at the cabinet is a posture, not a camera mode: while the
-      // rack is open you cannot look around, the same way you cannot reach the
-      // levers. The strip of windscreen shows you what is ahead and nothing
-      // else — which is the whole cost of reading while the machine is moving.
-      if (!hands.headDown) viewport.look(e.clientX - prev.x, e.clientY - prev.y);
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    };
-    canvas.addEventListener("pointerdown", down);
-    canvas.addEventListener("pointermove", drag);
-    canvas.addEventListener("pointerup", up);
-    canvas.addEventListener("pointercancel", up);
-    // The belt to the braces: a capture can be broken from outside (a system
-    // gesture, another element taking it), and a lost capture is a released
-    // hand as far as the neck is concerned.
-    canvas.addEventListener("lostpointercapture", up);
-
-    // `:root`, not the shell: the sweep is written imperatively every frame and
-    // the shell's `style` attribute belongs to Svelte, which would overwrite it
-    // the next time the dash changes height.
-    const root = document.documentElement;
-
-    let last = performance.now();
-    let sinceSnapshot = 0;
-    let current = world.snapshot();
-
-    const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      const elapsed = Math.min((now - last) / 1000, 0.25);
-      last = now;
-
-      // Held while the schedule is open: the site is built and standing there,
-      // and the exercise has not started. Time is fed to the clock rather than
-      // to a flag, so nothing downstream needs to know there is such a thing as
-      // a menu — a paused frame is simply a frame that owed no steps.
-      const { steps } = clock.advance(hands.seated ? elapsed : 0);
-      for (let i = 0; i < steps; i++) world.step();
-
-      current = world.snapshot();
-      // The UI reads a value at 10 Hz. It never watches the sim.
-      sinceSnapshot += elapsed;
-      if (sinceSnapshot >= 1 / SNAPSHOT_HZ) {
-        sinceSnapshot = 0;
-        latest = current;
-      }
-      viewport.render(current);
-      // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
-      // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
-      // after you watched it land is heard as a second event.
-      audio?.render(current, { alarm: hands.alarm, horn: hands.horn });
-
-      // The cab sweeps with the head. **One DOM write a frame, on one element**,
-      // and the compositor moves the cage, the pods, the levers and the dash
-      // between them — per-instrument reactivity at 60 Hz is the shape
-      // architecture rule 3 exists to prevent (`docs/design/cab/components.md`).
-      const head = viewport.head();
-      root.style.setProperty("--cab-look-x", `${head.x}px`);
-      root.style.setProperty("--cab-look-y", `${head.y}px`);
-      mindTheRoad(head.x);
-    };
-    frame = requestAnimationFrame(tick);
-
-    cleanup = () => {
-      cancelAnimationFrame(frame);
-      removeEventListener("resize", resize);
-      canvas.removeEventListener("pointerdown", down);
-      canvas.removeEventListener("pointermove", drag);
-      canvas.removeEventListener("pointerup", up);
-      canvas.removeEventListener("pointercancel", up);
-      canvas.removeEventListener("lostpointercapture", up);
-      root.style.removeProperty("--cab-look-x");
-      root.style.removeProperty("--cab-look-y");
-      viewport.dispose();
-      world.free();
-    };
+      // TILT-GUARD sits at the bottom of the rail, below everything: it is the
+      // last thing between the rack and the tracks, which is where a safety
+      // component belongs and also where it is most annoying. Move it up and it
+      // guards only what is above it — that is the ordering lesson, in one slot.
+      // It ships **enabled**, because safety kit does. Finding out that the
+      // thing stopping you halfway up a grade is your own machine being careful
+      // — and then finding its LED — is the best first lesson rung 1 has.
+      createTiltGuard(() => world.machine.body.rotation()),
+    ],
+    onSnapshot: (snapshot) => {
+      latest = snapshot;
+    },
+    onLook: mindTheRoad,
+    audio: () => audio,
   });
-
+  // The camera survives the boot: `setView` before the wasm lands is remembered,
+  // not dropped, so `mode` is the truth from the first frame either way.
+  run.setView(mode);
+  current = run;
   return () => {
-    disposed = true;
-    cleanup();
+    current = undefined;
+    run.dispose();
   };
 });
 </script>
@@ -654,7 +563,7 @@ $effect(() => {
        the cabinet, not on the controls — the same bargain as the chase view,
        made with a different part of the body. The bus keeps carrying whatever
        they were last set to and the machine keeps doing it; you simply cannot
-       reach them while you are reading (docs/design/cab/cockpit.md). -->
+       reach them while you are reading (doc/design/cab/cockpit.md). -->
   {#if mode === "cab" && !rackOpen}
     <div class="levers left">
       <Lever side="left" label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} />
@@ -777,7 +686,7 @@ $effect(() => {
   /* width/height must be explicit: an abs-positioned <canvas> with width:auto
      lays out at its INTRINSIC (drawing-buffer) size, not the inset box. This
      cost the concept-3 probe a debugging round — see
-     docs/design/code/prototype-findings.md. */
+     doc/design/code/prototype-findings.md. */
   .viewport {
     position: fixed;
     inset: 0;

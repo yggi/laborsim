@@ -2,7 +2,7 @@
 /**
  * The glass, and everything hanging in front of it.
  *
- * A pod is the third posture of a component (`docs/design/cab/components.md`) and it
+ * A pod is the third posture of a component (`doc/design/cab/components.md`) and it
  * is the expensive one: fitting kit that ships one costs you view, permanently,
  * for as long as it is in the rack. So this is the pile that L-025's budget will
  * one day price, and it has to be a pile — one place that knows what is fitted

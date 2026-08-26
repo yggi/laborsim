@@ -9,8 +9,8 @@
  * quiet, which is the whole "pop the hood" bargain and is exactly the kind of
  * thing that would rot silently.
  *
- * **The theme contract** — `docs/design/cab/components.md` lists invariants every
- * manufacturer must honour, and `META.md` says a rule enforced by a document is
+ * **The theme contract** — `doc/design/cab/components.md` lists invariants every
+ * manufacturer must honour, and `doc/META.md` says a rule enforced by a document is
  * a rule that gets violated anyway (rule 2 was written down, read, and broken
  * twice). These are about to be handed to authors working independently and
  * blind to each other, so every invariant that can be checked mechanically is
@@ -109,7 +109,7 @@ describe("severity crosses the boundary as a number", () => {
   /**
    * The one that matters. Reintroducing the bug — dropping the `safety` branch
    * in `conditionOf` — makes exactly this fail, which is what makes it a real
-   * test rather than one that passes either way (`META.md`).
+   * test rather than one that passes either way (`doc/META.md`).
    */
   it("stands a bypassed safety module at WARN, not nominal", () => {
     const { stages } = runRack([module({ safety: true, enabled: false })]);
@@ -329,7 +329,7 @@ describe("the parts contract — one shape for three postures", () => {
 
   /**
    * A cell has no budget and nothing to configure — that is the deal that lets
-   * the indicator row exist at all (`docs/design/cab/components.md`). It gets the
+   * the indicator row exist at all (`doc/design/cab/components.md`). It gets the
    * same `Controls` as everything else, so the rule that it must not reach the
    * settings has to be a test rather than a type.
    */
@@ -501,7 +501,7 @@ describe("the theme contract — invariants every maker must honour", () => {
    * property that *works* when nothing defines it — so renaming `--dash-h` to
    * `--cab-dash-h` left the toasts silently sitting 128px off the bottom, with
    * types, lint and every test green, exactly the way a scripted edit that
-   * matched nothing once removed the dash's background (`META.md`).
+   * matched nothing once removed the dash's background (`doc/META.md`).
    *
    * A `--mfg-` token is allowed to go undefined: a maker's component offers
    * them to whatever it is bolted into, and the fallback *is* the offer.

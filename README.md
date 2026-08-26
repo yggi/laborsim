@@ -66,12 +66,12 @@ mobile-first is a pillar, so it times the real world through the real renderer
 ninety seconds. `npm run profile` drives the same page headlessly, which is a
 check that the bench still works rather than a reading — a laptop's frame time is
 a fact about a different machine. What it has found so far:
-`docs/design/code/mobile-budget.md`.
+`doc/design/code/mobile-budget.md`.
 
 ### The three architecture rules
 
 Non-negotiable, and `npm test` fails if you break them. Full rationale in
-`docs/design/code/architecture-rules.md`.
+`doc/design/code/architecture-rules.md`.
 
 1. **The sim runs headless** — no `three`, no DOM, no canvas under `src/sim/`,
    `src/control/` or `src/modules/`.
@@ -84,14 +84,14 @@ Non-negotiable, and `npm test` fails if you break them. Full rationale in
 | | |
 |---|---|
 | `CLAUDE.md` | agent entrypoint; how to work here, and the size gates |
-| `MEMORY.md` | what the project is — durable decisions and structure |
-| `META.md` | what building it has taught us about building it |
-| `NOTES.md` | open, unresolved threads |
-| `BOARD.md` | task board |
-| `LOG.md` | worklog and closed tasks |
-| `LORE.md` | the world — manufacturers, the L.A.B.O.R. institution, how kit fails |
-| `docs/design/` | four clusters — [machine](docs/design/machine.md), [cab](docs/design/cab.md), [rig](docs/design/rig.md), [code](docs/design/code.md) — each indexing its own pages |
-| `docs/log/` | `LOG.md` archives, cut when it hits its gate |
+| `doc/MEMORY.md` | what the project is — durable decisions and structure |
+| `doc/META.md` | what building it has taught us about building it |
+| `doc/NOTES.md` | open, unresolved threads |
+| `doc/BOARD.md` | task board |
+| `doc/LOG.md` | worklog and closed tasks, this session first |
+| `doc/HISTORY.md` | the arc — decisions, reversals, and what each cost |
+| `doc/LORE.md` | the world — manufacturers, the L.A.B.O.R. institution, how kit fails |
+| `doc/design/` | four clusters — [machine](doc/design/machine.md), [cab](doc/design/cab.md), [rig](doc/design/rig.md), [code](doc/design/code.md) — each indexing its own pages |
 | `prototype/` | frozen feasibility probes — evidence, not a starting point |
 
-Start with `MEMORY.md` for the design, `BOARD.md` for what's next.
+Start with `doc/MEMORY.md` for the design, `doc/BOARD.md` for what's next.
