@@ -21,7 +21,16 @@ Card format:
 
 ## doing
 
-*(empty)*
+### [L-034] Measure the mobile frame
+- **what:** frame time and draw-call count on a real mid-range phone, with the
+  current scene (~130 props, ink shells doubling meshes, greebles, grousers).
+  Mobile-first is a pillar we have never measured. **The instrument is built** —
+  `profile.html`, six passes, one button, ninety seconds — and the bytes half is
+  answered: the payload is Rapier, and the game is 0.05 MB of it
+  (`docs/design/code/mobile-budget.md`). What is left is a device row and the
+  budget written off it.
+- **done-when:** a number exists, and a written first-load and frame budget with
+  it.
 
 ---
 
@@ -101,13 +110,6 @@ bends them again.
 - **done-when:** someone who has never seen the game reaches the conflict in
   under ten minutes without being told how.
 - **needs:** L-018
-
-### [L-034] Measure the mobile frame
-- **what:** frame time and draw-call count on a real mid-range phone, with the
-  current scene (~130 props, ink shells doubling meshes, greebles, grousers).
-  Mobile-first is a pillar we have never measured.
-- **done-when:** a number exists, and a written first-load and frame budget with
-  it.
 
 ### [L-015] The rail — drag to reorder
 - **what:** the pipeline model, verbs, settings and reordering all work, and the

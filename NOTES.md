@@ -11,19 +11,24 @@ gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ---
 
-## The mobile budget — bytes, frames, and world size
+## The mobile budget — the frame half, and the cab that is not in it
 
-One thread, because they are one question: mobile-first is a hard pillar and
-**nothing about it has been measured.**
+The bytes half is answered and has left this thread for
+`docs/design/code/mobile-budget.md`: **the payload is Rapier** — 1.30 MB over the
+wire, 1.24 MB of it one chunk, and everything built since the empty scaffold
+added 0.05 MB. The levers are named there and none of them is "write less game".
 
-*Bytes.* The empty scaffold already built to 3.44 MB raw / 1.25 MB gzipped, and
-`-compat` inlines Rapier's wasm as base64 at about a third more. Levers, cheapest
-first: `vite-plugin-wasm`, code-split build from sim, lazily load instruments.
+*Frames.* The instrument exists (`profile.html`) and no device has run it yet.
+Open until one has: ~130 props, ink shells doubling every mesh, greebles,
+per-grouser belts and twelve sprung contacts, at a phone's buffer.
 
-*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser belts,
-twelve sprung contacts — and no frame ever timed on a phone. L-034 gets the number;
-world size and part counts follow from it. One dial arrived by accident: E-01 runs
-22 props where the full site runs 130 — a cheap site, unmeasured like the dear one.
+*The cab is not in it.* The bench times the world and the machine; the cage, the
+dash, the pods and the levers are DOM over the glass and none of it is on that
+page. By design that is one custom property a frame plus a 10 Hz reactive pass —
+a claim, and the only part of the frame still asserted rather than read. Whether
+it can be measured without mounting the app in the bench, or whether the app has
+to learn to time itself, is the open question, and `App.svelte` being ten
+concerns already (L-070) is why it is a thread and not a card.
 
 ## What counts as "operator interaction"?
 

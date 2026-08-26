@@ -180,6 +180,28 @@ describe("rule 3 — the snapshot boundary is one-directional", () => {
     },
   );
 
+  /**
+   * `src/probe/` is not in that list and must not be added to it.
+   *
+   * The profiling bench builds a real world and a real viewport and times them
+   * (L-034), so it touches both halves by construction — a bench that could
+   * reach neither would be profiling neither. That is not a hole in rule 3, it
+   * is the other side of it, and *this* is the half worth enforcing: the bench
+   * reads everything, and nothing reads the bench. Something that imported it
+   * would be shipping a timer into the game.
+   */
+  it("nothing outside src/probe imports the profiling bench", () => {
+    const offenders: string[] = [];
+    for (const file of filesUnder(SRC)) {
+      if (file.includes("/probe/")) continue;
+      const imports = valueImports(stripComments(readFileSync(file, "utf8")));
+      if (imports.some((s) => s.includes("/probe/"))) offenders.push(file);
+    }
+    expect(offenders, "the bench reads the game; the game knows nothing of it").toEqual(
+      [],
+    );
+  });
+
   it("no reactive scene-graph wrapper is installed", () => {
     const manifest = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),

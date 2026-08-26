@@ -25,6 +25,71 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — an instrument for the pillar nobody had measured
+
+Cards: [L-034] in progress — the bench is built, the device row is not taken.
+
+`profile.html` and `src/probe/`: a fourth entry point that builds the **real**
+world and the **real** viewport on the device in your hand and times them. One
+button, ninety seconds, and a block of fixed-width text to paste back — because
+the numbers had to come off a phone and a phone is not where anybody reads a
+console.
+
+Six passes over the same six seconds of the same run, each changing exactly one
+thing, because a single frame time says whether to worry and nothing about what
+to cut: the pixel count, the prop count, the motion, the view, and last of all
+nothing at all, so a minute of thermal load shows up as itself. **A pass ends on
+a tick count, not a frame count, and each gets a fresh world** — that is what
+makes two devices comparable at all, and the user has more devices coming.
+
+Three decisions worth the next session's time:
+
+- **Draw calls are counted at the driver**, by shadowing the draw entry points
+  on the canvas's own context. `renderer.info` was the obvious route and would
+  have meant publishing the `WebGLRenderer` out of `render/scene.ts` — a bench
+  is not a reason to widen an interface. It also counts the shadow pass, which
+  three.js's own figure does not present as part of a frame. A `Proxy` was
+  rejected: three.js makes thousands of context calls a frame and a trap on each
+  would be timing the profiler.
+- **The GPU column is measured in a separate second.** `render()` returns when
+  the commands are queued, so seeing what is still owed needs a fence, and a
+  fence kills the CPU/GPU overlap the real loop lives on. Timing the frame with
+  one in it would report a game slower than the one that ships. First cut used
+  `gl.finish()` alone and read a flat **0.00 everywhere** — the instrument could
+  not see the claim (META). A one-pixel `readPixels` after it cannot be faked;
+  the same column then read 167 ms against a 183 ms frame, which is a software
+  rasteriser telling the truth about itself.
+- **`sim` is measured over the frames that owed a step.** A 120 Hz phone steps a
+  60 Hz sim every other frame, so half the samples would be a snapshot and
+  nothing else, and the median would report a physics engine that costs nothing.
+
+`src/probe/` is a new seam and deliberately outside rule 3's scan: the bench
+touches both halves because a profiler that could reach neither would be
+profiling neither. The half that *is* enforced is the other one — nothing
+outside `src/probe/` may import it, checked in `tests/architecture.test.ts`, and
+verified by planting an import in `src/ui/format.ts` and watching it fail.
+
+`npm run profile` drives the same page headlessly. Not a reading — SwiftShader
+is a rasteriser, not a phone — but the thing META keeps asking for: a bench that
+fails silently fails *in somebody's hand*, ninety seconds into their evening.
+`--build` builds first, which is the only way it can report the payload at all.
+
+The bytes half of the budget is answered and crystallized into
+`docs/design/code/mobile-budget.md`: **1.30 MB over the wire, 1.24 MB of it one
+chunk, and that chunk is Rapier.** `NOTES.md` had carried 1.25 MB gzipped for an
+*empty scaffold* — so the scene, the cockpit, the audio graph and the exercises
+have between them added 0.05 MB, and `-compat` inlining wasm as base64 is the
+entire budget. The levers are named in order and none of them is "write less
+game". The frame half stays open until a device runs it, and the budget itself
+is deliberately **unset**: a budget written before a measurement is a guess with
+a table around it, which is the thing the page exists to stop.
+
+What the bench does not measure, and now says so on its own face: the cab. The
+cage, the dash, the pods and the levers are DOM over the glass and none of it is
+on that page. It is a `NOTES.md` thread rather than a card because measuring it
+means either mounting the app in the bench or teaching `App.svelte` to time
+itself, and `App.svelte` is already ten concerns (L-070).
+
 ## 2026-08-26 — one channel for what the loop reads
 
 Cards: [L-069] closed. Rule 3 gained an edge in
