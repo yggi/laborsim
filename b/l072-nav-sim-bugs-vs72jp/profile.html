@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- **The same viewport as `index.html`, exactly.** The whole point of this
+         page is to render into the buffer the game renders into, and the glass
+         is `innerWidth × innerHeight × devicePixelRatio` — so a viewport tag
+         that differed by a word would produce a number for a screen nobody
+         plays on. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314171a'/%3E%3Cpath d='M8 2 L13 14 L8 10 L3 14 Z' fill='%23e8b53a'/%3E%3C/svg%3E" />
+    <title>LABOR SIM — profiling bench</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #101314;
+        color: #c6d0cb;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      /* The glass, behind everything. The canvas the passes render into is
+         created here at run time and is the real one: full viewport, at the
+         renderer's own clamped pixel ratio. */
+      .host {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background: #0d1012;
+      }
+      .host .glass {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      #probe {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 24px 14px calc(40px + env(safe-area-inset-bottom));
+        background: #101314;
+      }
+      /* While a pass is running the panel gets out of the way: the machine is
+         driving behind it, and being able to watch it drive is the cheapest
+         possible check that the bench is timing the game and not a blank
+         screen. */
+      body.running #probe {
+        inset: auto 0 0 0;
+        background: rgba(16, 19, 20, 0.92);
+        border-top: 1px solid #232829;
+        padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+        overflow: hidden;
+      }
+      h1 {
+        font-size: 13px;
+        letter-spacing: 0.22em;
+        color: #6fe3c4;
+        margin: 0 0 6px;
+      }
+      .blurb {
+        color: #78827f;
+        font-size: 11px;
+        margin: 0 0 22px;
+        max-width: 62ch;
+      }
+      .blurb b {
+        color: #c6d0cb;
+        font-weight: 400;
+      }
+      /* After the two rules it overrides, not before: a lower-specificity
+         selector further down the sheet never applies, and the linter is right
+         that a reader cannot tell which of these two wins by looking. */
+      body.running #probe .blurb,
+      body.running #probe h1 {
+        display: none;
+      }
+
+      button {
+        font: inherit;
+        letter-spacing: 0.14em;
+        background: #1a1e20;
+        border: 1px solid #333a3b;
+        color: #6fe3c4;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
+      button:disabled {
+        color: #4a5250;
+        cursor: default;
+      }
+      .copy {
+        margin-left: 8px;
+        color: #e8b53a;
+      }
+
+      .status {
+        color: #78827f;
+        font-size: 11px;
+        margin: 10px 0 0;
+        min-height: 1.5em;
+      }
+
+      /* The report. Selectable — the COPY button is the happy path and a long
+         press is the one that always works. */
+      .out {
+        margin: 18px 0 0;
+        padding: 12px;
+        background: #0d1012;
+        border: 1px solid #232829;
+        color: #c6d0cb;
+        font-size: 10px;
+        line-height: 1.45;
+        white-space: pre;
+        overflow-x: auto;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+    </style>
+    <script type="module" crossorigin src="/laborsim/b/l072-nav-sim-bugs-vs72jp/assets/profile-CdsPYKpc.js"></script>
+    <link rel="modulepreload" crossorigin href="/laborsim/b/l072-nav-sim-bugs-vs72jp/assets/snapshot-DoE0ZbR1.js">
+    <link rel="modulepreload" crossorigin href="/laborsim/b/l072-nav-sim-bugs-vs72jp/assets/rng-D6BJqmEu.js">
+    <link rel="modulepreload" crossorigin href="/laborsim/b/l072-nav-sim-bugs-vs72jp/assets/vec-oiZEOHGR.js">
+    <link rel="modulepreload" crossorigin href="/laborsim/b/l072-nav-sim-bugs-vs72jp/assets/world-YyftUAuL.js">
+  </head>
+  <body>
+    <div id="probe">
+      <h1>PROFILING BENCH</h1>
+      <p class="blurb">
+        Mobile-first is a pillar and nothing about it has ever been measured
+        (<code>BOARD.md</code> L-034). This drives the real machine through the real
+        renderer, on this device, and times it — six passes over the same six
+        seconds of the same run, each changing one thing: the pixel count, the
+        prop count, the motion, the view, and finally nothing at all, so that
+        drift over a minute of load shows up as itself.
+        <br /><br />
+        It takes about a minute and a half and the machine will be driving behind
+        this panel the whole time. <b>Leave the screen on and the page in front —
+        a backgrounded tab stops getting frames and the run stalls.</b> When it
+        finishes, press COPY and send the block back.
+        <br /><br />
+        What it does not measure is the cab: the cage, the dash, the pods and the
+        levers are DOM over the glass and none of it is on this page.
+      </p>
+    </div>
+  </body>
+</html>
