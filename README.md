@@ -15,7 +15,10 @@ Best on a phone. Two levers, one per thumb — tank steering, and you fight it t
 go straight. They do not self-centre, so what you leave them at is what the
 machine keeps doing. Watch **SLIP**: that is the whole of rung 1.
 
-Deployed from the default branch on every green push.
+Deployed from `main` on every green push. Every other branch is published
+beside it — **[branch builds](https://yggi.github.io/laborsim/b/)** — so a piece
+of work in progress is one tap away too, and a branch's build goes when the
+branch does.
 
 **Status: v0.** Rung 1 of the machinery ladder drives — a tracked platform on
 procedural terrain, with a cab view and a telemetry line. No rack yet; that is
@@ -37,6 +40,7 @@ npm run lint       # biome
 npm run format     # biome, writing fixes
 npm run build      # typecheck, then production bundle
 npm run shots      # screenshot every cockpit specimen  → shots/
+npm run cab        # screenshot the cab at poses you cannot drive to → shots/cab/
 npm run listen     # render every voice to WAV, measured → renders/
 ```
 
@@ -44,7 +48,7 @@ npm run listen     # render every voice to WAV, measured → renders/
 real phone from day one, because desktop-only iteration hides touch problems
 that are mechanics here, not polish.
 
-The last two are benches, and they exist because the things they check are not
+The last three are benches, and they exist because the things they check are not
 expressible as assertions. `/sandbox.html` is every component in every state;
 `/listen.html` is every voice the machine has. Both ship with the site.
 

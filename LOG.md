@@ -24,6 +24,49 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — a build per branch, and the one that was eating the others
+
+Cards: none. Found while answering "how do I always get a build per branch": the
+answer was *you do not, and you have not been*.
+
+**The deploy was a race, and had been since branches were added to it.**
+`pages.yml` triggered on `main` and `claude/**`, but the `deploy` job had no
+branch condition and `actions/deploy-pages` replaces the entire site with one
+artifact. So every branch push overwrote whatever was live, including `main`'s.
+The evidence was sitting in the run list: the suspension and exercises branches
+deployed twenty-three seconds apart, both green, and only one of them was on the
+site afterwards. Nothing reported this, because from CI's point of view both
+deploys succeeded.
+
+**One site, one directory per branch.** `main` at the root, everything else at
+`/b/<slug>/`, with `/b/` an index of what is currently up. That needs a site
+that can be *modified* rather than replaced, so publishing moved off
+`actions/deploy-pages` and onto the `gh-pages` branch (Pages source is now
+**Deploy from a branch**, which is a one-time switch in Settings).
+
+The read-modify-write is in `scripts/publish.sh` rather than inline in the
+workflow, for one reason: its failure mode is deleting somebody else's preview.
+Publishing `main` clears the root **except `b/`**, which is the whole trick and
+is one line worth being able to find. `SITE_REMOTE` overrides the remote, so it
+was rehearsed against a scratch bare repo instead of against the live site —
+publish main, publish two branches, republish main and watch the branch
+directories survive while a stale hashed asset does not, remove a branch, remove
+it twice, refuse to remove the root.
+
+`.build` is stamped from the **commit**, not the clock. With a timestamp, every
+re-run produced a diff and the "nothing to push" path could never be taken; with
+the commit, a workflow re-run on an unchanged commit is genuinely a no-op and
+the gh-pages history is a list of real changes.
+
+The index is a surface, so it was looked at rather than reasoned about — 390 px,
+light and dark. It wraps the stamp under long branch names, which is fine.
+
+Not done: the older `claude/**` branches still carry the previous `pages.yml`,
+so a push to one of them would still try the old whole-site deploy. They are
+merged or stale; the first one that is not gets rebased.
+
+---
+
 ## 2026-08-26 — the springs and the exercises meet
 
 Cards: none closed. Merged `suspension-springloaded-audio` and

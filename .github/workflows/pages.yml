@@ -1,26 +1,53 @@
 name: deploy
 
 # The training rig should be one tap away on a phone, which is the only place
-# the cockpit can honestly be judged. Every push to the default branch
-# republishes it — but only if the checks pass, so a broken machine cannot
-# reach the site.
+# the cockpit can honestly be judged — and that has to be true of *every*
+# branch, not just whichever one pushed last.
+#
+# `main` is published at the site root. Every other branch is published beside
+# it under `/b/<slug>/`, and `/b/` is an index of what is currently up. A
+# branch's directory is removed when the branch is, so the index cannot outlive
+# the work.
+#
+# This publishes to the `gh-pages` branch rather than through
+# `actions/deploy-pages`, because that action replaces the whole site with one
+# artifact — which is exactly what used to happen here: any `claude/**` push
+# silently overwrote what `main` had published. Pages source must therefore be
+# **Deploy from a branch: gh-pages / (root)** in Settings -> Pages.
 on:
   push:
     branches: [main, "claude/**"]
+  delete:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Let a running deploy finish rather than cancelling it; skip superseded ones.
+# The publish is a read-modify-write of one branch, so runs must not overlap.
+# Let a running one finish rather than cancelling it; skip superseded ones.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
+  # A branch being deleted has nothing to build, and its checkout is gone.
+  # Nothing here but the removal and a fresh index.
+  cleanup:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/publish.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Withdraw the deleted branch
+        run: scripts/publish.sh remove "${{ github.event.ref }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build:
+    if: github.event_name != 'delete'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -38,32 +65,24 @@ jobs:
           npm run typecheck
           npm test
 
-      # Pages must be switched on once by a human: Settings -> Pages ->
-      # Source: GitHub Actions. The workflow token cannot do it — creating a
-      # Pages site needs administration rights that GITHUB_TOKEN is not given,
-      # so `enablement: true` fails with "Resource not accessible by
-      # integration". After that one click this step just reports the base path.
-      - uses: actions/configure-pages@v5
-        id: pages
-
+      # Project pages are served from /<repo>/, and a branch build one level
+      # deeper again, so the bundle has to be told its own base or every asset
+      # 404s. `vite.config.ts` reads BASE_PATH; nothing is hardcoded, so
+      # renaming the repo cannot silently break asset paths.
       - name: Build
-        # Project pages are served from /<repo>/, so the bundle needs to know
-        # its own base. Taken from the Pages config rather than hardcoded, so
-        # renaming the repo cannot silently break asset paths.
-        run: npm run build
+        run: |
+          slug=$(scripts/publish.sh slug "$GITHUB_REF_NAME")
+          if [ "$slug" = "." ]; then
+            echo "BASE_PATH=/$REPO/" >> "$GITHUB_ENV"
+          else
+            echo "BASE_PATH=/$REPO/b/$slug/" >> "$GITHUB_ENV"
+          fi
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          REPO: ${{ github.event.repository.name }}
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+      - run: npm run build
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
+      - name: Publish
+        run: scripts/publish.sh put "$GITHUB_REF_NAME" dist
+        env:
+          GH_TOKEN: ${{ github.token }}
