@@ -11,9 +11,10 @@ between what a machine is rated to do and what it does on the day.**
 
 ### ▶ [Drive it](https://yggi.github.io/laborsim/)
 
-Best on a phone. Two levers, one per thumb — tank steering, and you fight it to
-go straight. They do not self-centre, so what you leave them at is what the
-machine keeps doing. Watch **SLIP**: that is the whole of rung 1.
+Best on a phone. Pick an exercise, then two levers, one per thumb — tank
+steering, and you fight it to go straight. They do not self-centre, so what you
+leave them at is what the machine keeps doing. Watch **TRACTION**: how much of
+the grip you have is already spent is the whole of rung 1.
 
 Deployed from `main` on every green push. Every other branch is published
 beside it — **[branch builds](https://yggi.github.io/laborsim/b/)** — so a piece
@@ -21,8 +22,11 @@ of work in progress is one tap away too, and a branch's build goes when the
 branch does.
 
 **Status: v0.** Rung 1 of the machinery ladder drives — a tracked platform on
-procedural terrain, with a cab view and a telemetry line. No rack yet; that is
-`BOARD.md` L-015. Feasibility was proven separately in `prototype/concept-3/`,
+procedural terrain, sprung at every contact point, with an industrial panel, a
+pipeline rack you reorder in the cab, a damage ledger, a synthesised voice, and
+three graded exercises alongside the open site. What is not built is the rest of
+the ladder, part assembly, persistence, replay, and the mission verbs past
+*reach the markers*. Feasibility was proven separately in `prototype/concept-3/`,
 which needs no build step.
 
 **Stack:** TypeScript · Vite · Svelte 5 · Vitest · Biome · Three.js · Rapier
@@ -49,8 +53,11 @@ real phone from day one, because desktop-only iteration hides touch problems
 that are mechanics here, not polish.
 
 The last three are benches, and they exist because the things they check are not
-expressible as assertions. `/sandbox.html` is every component in every state;
-`/listen.html` is every voice the machine has. Both ship with the site.
+expressible as assertions. `/sandbox.html` is every component in every state and
+`/listen.html` is every voice the machine has — both ship with the site, because
+a bench that only exists on somebody's laptop is one nobody uses. `npm run cab`
+has no page of its own: it drives the real app, and poses the hull at attitudes
+you cannot hold still long enough to look at.
 
 ### The three architecture rules
 
@@ -69,10 +76,13 @@ Non-negotiable, and `npm test` fails if you break them. Full rationale in
 |---|---|
 | `CLAUDE.md` | agent entrypoint; how to work here, and the size gates |
 | `MEMORY.md` | what the project is — durable decisions and structure |
+| `META.md` | what building it has taught us about building it |
 | `NOTES.md` | open, unresolved threads |
 | `BOARD.md` | task board |
 | `LOG.md` | worklog and closed tasks |
+| `LORE.md` | the world — manufacturers, the L.A.B.O.R. institution, how kit fails |
 | `docs/design/` | detail spilled out of `MEMORY.md` |
+| `docs/log/` | `LOG.md` archives, cut when it hits its gate |
 | `prototype/` | frozen feasibility probes — evidence, not a starting point |
 
 Start with `MEMORY.md` for the design, `BOARD.md` for what's next.

@@ -65,6 +65,20 @@ Not done: the older `claude/**` branches still carry the previous `pages.yml`,
 so a push to one of them would still try the old whole-site deploy. They are
 merged or stale; the first one that is not gets rebased.
 
+**And a doc pass, because the README had been lying for a while.** It said "no
+rack yet", which stopped being true around L-015's ancestors, and "watch SLIP",
+which stopped being true when SLIP folded into TRACTION. `META.md` and `LORE.md`
+were missing from its own map of the repo. Worse was `roadmap.md`, whose opening
+argument was *the damage ledger does not exist, in any form, not even a console
+line* — the single largest gap it named has been closed for days, and the
+document says in its own header to rewrite it when it stops matching the board.
+Marked reviewed rather than rewritten: the loop table gained a second column,
+the closed items in "Now" are marked closed, and the critical reading's first
+point is struck through and answered with what the largest gap is now — that
+everything the loop says, it says after the fact and in words. `L-032` is what
+changes that, which is an argument for the board's existing order rather than
+against it.
+
 ---
 
 ## 2026-08-26 — the springs and the exercises meet
