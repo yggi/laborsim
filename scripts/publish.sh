@@ -48,6 +48,7 @@ slug_of() {
 # it in CI means rehearsing it on the live site.
 checkout_site() {
   local url=${SITE_REMOTE:-"https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"}
+  SITE_URL=$url
   if git clone --quiet --depth 1 --branch gh-pages "$url" "$WORK/site" 2>/dev/null; then
     :
   else
@@ -59,6 +60,60 @@ checkout_site() {
   git -C "$WORK/site" config user.name "github-actions[bot]"
   git -C "$WORK/site" config user.email \
     "41898282+github-actions[bot]@users.noreply.github.com"
+}
+
+# Drop any `b/<slug>` whose branch no longer exists.
+#
+# The `delete` event is not a reliable broom, and finding that out cost nothing
+# only because it was found before it mattered. Runs share the `pages`
+# concurrency group, and GitHub keeps exactly **one** pending run per group — so
+# deleting three branches at once queues three cleanups and cancels two of them.
+# Those two directories would then be orphaned for ever, because nothing else
+# was ever going to look.
+#
+# So the delete event is an *optimisation* — it makes removal instant — and this
+# is the mechanism. Every publish re-checks, which means the site converges on
+# the truth no matter how many events were dropped.
+#
+# **Fails safe, deliberately.** A failed or empty `ls-remote` means *the answer
+# is unknown*, which is not the same as *there are no branches* — and confusing
+# the two would delete every preview on the site the first time the network
+# hiccuped. Unknown leaves `b/` exactly as it found it.
+prune_orphans() {
+  local site=$1 refs live slug
+  if ! refs=$(git ls-remote --heads "$SITE_URL" 2>/dev/null) || [ -z "$refs" ]; then
+    echo "could not list branches — leaving b/ alone"
+    return
+  fi
+
+  # `case`/`continue` rather than a `&&` chain: a `while` loop exits with the
+  # status of its *last* iteration, so a chain that ends in a failed test makes
+  # the whole command substitution non-zero and `set -e` kills the script —
+  # silently, with exit 1 and nothing printed. It survived only because `main`
+  # happens to sort after `gh-pages`.
+  live=$(printf '%s\n' "$refs" | sed 's|.*refs/heads/||' | while read -r ref; do
+    case "$ref" in "" | gh-pages) continue ;; esac
+    slug_of "$ref"
+    echo
+  done)
+
+  # Empty after filtering is *also* unknown, not "no branches exist". `main`
+  # publishes the root, so it is always in this list; an empty one means the
+  # listing did not mean what we think it means, and the safe reading of a
+  # sentence you cannot parse is to do nothing.
+  if [ -z "$live" ]; then
+    echo "branch list came back empty — leaving b/ alone"
+    return
+  fi
+
+  for dir in "$site"/b/*/; do
+    [ -d "$dir" ] || continue
+    slug=$(basename "$dir")
+    if ! printf '%s\n' "$live" | grep -qxF "$slug"; then
+      echo "pruning $slug — the branch is gone"
+      rm -rf "$dir"
+    fi
+  done
 }
 
 # Rewrite `b/index.html` from whatever is actually on disk.
@@ -168,6 +223,7 @@ case "${1:-}" in
       "$(git log -1 --date=format:'%Y-%m-%d %H:%M' --format=%cd 2>/dev/null || echo '?')" \
       > "$target/.build"
 
+    prune_orphans "$site"
     write_index "$site"
     publish "$site" "Publish ${ref#refs/heads/} to ${slug}"
     ;;

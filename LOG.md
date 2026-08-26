@@ -65,6 +65,30 @@ Not done: the older `claude/**` branches still carry the previous `pages.yml`,
 so a push to one of them would still try the old whole-site deploy. They are
 merged or stale; the first one that is not gets rebased.
 
+**The `delete` event is not a broom, and going to sweep found out why.** Runs
+share the `pages` concurrency group and GitHub keeps exactly **one** pending run
+per group — so deleting three branches at once queues three cleanups and cancels
+two. Those two directories would be orphaned for ever, because nothing else was
+ever going to look. So the event is now an *optimisation* (removal is instant)
+and the mechanism is that **every publish re-checks**: `git ls-remote` for the
+live branches, and any `b/<slug>` without one goes. The site converges on the
+truth however many events were dropped.
+
+It fails safe on purpose, and the interesting part is that "safe" needed saying
+twice. A failed listing means *unknown*, not *no branches* — confusing those
+deletes every preview the first time the network hiccups. But an **empty**
+listing is also unknown: `main` publishes the root, so it is always in that list,
+and an empty one means the output did not mean what the code thought it meant.
+
+And testing that second path is what caught a real defect. Under `set -e` a
+`while` loop exits with the status of its **last iteration**, so a body ending in
+a `&&` chain whose test fails makes the command substitution non-zero and kills
+the script — exit 1, nothing printed, in a step whose whole job is to say what it
+did. It had been passing only because `main` sorts after `gh-pages`, so the last
+ref read happened to be one that was kept. A `case`/`continue` fixed it. The bug
+was invisible on the happy path and on the live repo; it took building the
+unhappy remote to see it at all.
+
 **And a doc pass, because the README had been lying for a while.** It said "no
 rack yet", which stopped being true around L-015's ancestors, and "watch SLIP",
 which stopped being true when SLIP folded into TRACTION. `META.md` and `LORE.md`
