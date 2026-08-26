@@ -23,7 +23,7 @@
  */
 
 import type { DamageEvent } from "../sim/damage.ts";
-import type { PropKind } from "../world/props.ts";
+import type { MaterialId } from "../world/materials.ts";
 
 interface Stamped {
   /**
@@ -53,10 +53,20 @@ export interface ImpactEvent extends Stamped {
   readonly kind: "impact";
   /** Index into the world's prop list. */
   readonly prop: number;
-  /** What was hit. Carried so a consumer can react to the material without
-   *  holding the world's prop list — a voice for a cone is not a voice for a
-   *  pipe stack. */
-  readonly what: PropKind;
+  /**
+   * What it is made of, and how heavy it is.
+   *
+   * Between them these are a complete physical description of the thing that
+   * was struck, which is the whole reason they are carried: **a consumer can
+   * react without holding the world's prop list.** It used to be the prop's
+   * `kind`, which meant every consumer kept its own table of what a cone is —
+   * and that table had to grow a row per kind, which is exactly what stopped
+   * the inventory growing. Stuff and size are enough: the ear derives the note
+   * from them (`audio/voices.ts`), and a new kind needs no audio work at all.
+   */
+  readonly material: MaterialId;
+  /** Kilograms, as the body actually is — scale included. */
+  readonly mass: number;
   /** Joules delivered into it this step. */
   readonly joules: number;
   readonly at: readonly [number, number, number];
@@ -156,6 +166,16 @@ const CAPACITY = 128;
 export interface Recorder {
   /** The recent past, oldest first. */
   readonly events: readonly SimEvent[];
+  /**
+   * The sequence number of the last event stamped.
+   *
+   * The sim reads it back because `seq` is the one number in the run that is
+   * **monotonic, unique and on the recording**, which makes it the seed anything
+   * random about an event has to be drawn from: the wobble on an impact's voice,
+   * and the direction each piece of a written-off thing is thrown. A replay
+   * throws them the same way because it stamps the same numbers (rule 2).
+   */
+  readonly lastSeq: number;
   emit(tick: number, event: Emission): void;
   /** A value the UI can hold, rather than the live ring. Empty is free. */
   publish(): readonly SimEvent[];
@@ -170,6 +190,9 @@ export function createRecorder(): Recorder {
   return {
     get events() {
       return ring;
+    },
+    get lastSeq() {
+      return seq;
     },
     emit(tick, event) {
       seq++;

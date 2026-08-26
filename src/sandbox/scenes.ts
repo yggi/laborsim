@@ -28,7 +28,7 @@ import type { SimEvent } from "../core/events.ts";
 import { chassis, snapshot, stage, track } from "../core/fixture.ts";
 import type { Shake, Snapshot, Suspension, TrackState } from "../core/snapshot.ts";
 import { G, MAX_TRACK_SPEED } from "../core/spec.ts";
-import type { PropKind } from "../world/props.ts";
+import { PROP_SPEC, type PropKind } from "../world/props.ts";
 
 /** Linear from `a` to `b` between times `from` and `to`, held at both ends. */
 const ramp = (t: number, from: number, to: number, a: number, b: number): number => {
@@ -55,16 +55,62 @@ const settle = (
   seq: number,
 ): SimEvent => ({ kind: "outcome", seq, tick, outcome, count, total });
 
-/** An impact, on the channel, at a tick. */
+/**
+ * An impact, on the channel, at a tick.
+ *
+ * Named by **kind** rather than by material because that is what a note about
+ * the scene says out loud — *a pipe stack at speed* — and the stuff and the mass
+ * are then exactly the ones the real prop would put on the channel. A scene that
+ * invented its own numbers would be listening to something the site cannot do.
+ */
 const hit = (tick: number, what: PropKind, joules: number, seq: number): SimEvent => ({
   kind: "impact",
   seq,
   tick,
   prop: 0,
-  what,
+  material: PROP_SPEC[what].material,
+  mass: PROP_SPEC[what].mass ?? 1,
   joules,
   at: [0, 0, 0],
 });
+
+/**
+ * Something written off, on the channel, at a tick.
+ *
+ * The line carries what it was made of and how heavy it was, which is all the
+ * ear needs to decide what coming apart sounds like — a steel plate screeching,
+ * glass shattering, concrete crumbling, a tube dinging — so a scene names a
+ * **kind** and the material follows, exactly as the real ledger's does.
+ */
+const broke = (tick: number, what: PropKind, over: number, seq: number): SimEvent => {
+  const spec = PROP_SPEC[what];
+  const toughness = spec.toughness ?? 1;
+  return {
+    kind: "ledger",
+    seq,
+    tick,
+    line: {
+      tick,
+      prop: 0,
+      kind: what,
+      category: spec.category,
+      label: spec.label,
+      material: spec.material,
+      mass: spec.mass ?? 1,
+      state: "destroyed",
+      yen: spec.price ?? 0,
+      // `over` is how far past its rating it was hit — 1 is exactly written
+      // off, 3 is a full-speed slam. It is what decides how violently the thing
+      // comes apart, in the ear and in the dust alike.
+      energy: toughness * over,
+      toughness,
+      at: [0, 0, 0],
+      speed: 1.8,
+      driving: ["PILOT"],
+      bypassed: [],
+    },
+  };
+};
 
 export interface Scene {
   readonly name: string;
@@ -441,6 +487,56 @@ export const SCENES: readonly Scene[] = [
     },
   },
   {
+    name: "the-yard",
+    note: "a pipe stack pushed over and coming apart: the bang, then four lengths of steel tube clattering and ringing as they roll. The failure is the material's, not the prop's — a tube dings and clatters where a sheet would screech, and neither says so anywhere but in one table.",
+    seconds: 6,
+    frame: (t) => {
+      const events = [
+        hit(60, "pipes", 480, 1),
+        broke(62, "pipes", 1.4, 2),
+        hit(150, "pipes", 90, 3),
+        hit(186, "pole", 24, 4),
+        broke(188, "pole", 1.1, 5),
+      ];
+      return {
+        // A crawl, which is both how anybody actually pushes a stack over and
+        // the only way the bench can see the thing the scene is about: at 1.9
+        // the drive note owned the peak and the whole pile of steel measured
+        // as nothing. Same trap `exercise-failed` and `what-it-is-made-of`
+        // each fell into, three times now.
+        snapshot: both(t, { commanded: 0.45, traction: 0.55 }, events),
+        alarm: NOMINAL,
+      };
+    },
+  },
+  {
+    name: "what-it-is-made-of",
+    note: "five things written off, one a second, at the same energy over their rating: concrete crumbling, timber splintering, glass shattering, a steel sheet screeching, and ballast that does not break at all. Same mechanism, one table of numbers apart — if two of these sound the same, the table is not saying anything.",
+    seconds: 7,
+    frame: (t) => {
+      const events = [
+        broke(48, "block", 1.6, 1),
+        broke(108, "pallet", 1.6, 2),
+        broke(168, "floodlight", 1.6, 3),
+        broke(228, "slab", 1.6, 4),
+        broke(288, "sandbags", 1.6, 5),
+        hit(348, "sandbags", 200, 6),
+      ];
+      return {
+        // **Barely idling, on purpose.** The first version ran the drive at 0.9
+        // and the bed owned every number the bench printed: peak, RMS and
+        // brightness all measured *identically* with the failures silenced,
+        // which reads as "this voice does not exist". It did — a 0.9-gain probe
+        // in the same branch moved the peak 0.288 → 0.489, so the branch was
+        // firing and the scene could not see its own subject. Same trap the
+        // `exercise-failed` cue fell into, and the same fix: make the scene the
+        // thing it is actually about.
+        snapshot: both(t, { commanded: 0.12, traction: 0.15 }, events),
+        alarm: NOMINAL,
+      };
+    },
+  },
+  {
     name: "landing",
     note: "the machine itself, dropped 2.4 m. 140 kJ into the hull — the biggest thing rung 1 can make happen. Weightless on the way down, and the whole cab arrives with it.",
     seconds: 5,
@@ -519,9 +615,16 @@ export const SCENES: readonly Scene[] = [
           suspension: took(1, Math.round(t * FRAME_HZ), 0, rut(t, 2.7)),
         },
         [
-          hit(150, "pipes", 550, 1),
-          hit(156, "barrier", 46, 2),
-          hit(162, "cone", 12, 3),
+          hit(90, "pipes", 550, 1),
+          // …and the stack coming apart on top of the bang that broke it,
+          // **just before the horn goes down** rather than under it. Inside the
+          // duck it measured identically to no failure at all, which is the
+          // duck working and the scene not testing anything. A shatter is forty
+          // transients inside a third of a second, so if summed transients can
+          // clip this mix, they clip here.
+          broke(92, "slab", 2.4, 6),
+          hit(102, "barrier", 46, 2),
+          hit(108, "cone", 12, 3),
           // The rig, arriving in the middle of the worst moment the machine can
           // have. It ducks under the horn like everything else on the bed, and
           // it is the newest thing that can land on an already-full frame — so

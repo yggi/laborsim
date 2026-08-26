@@ -12,21 +12,25 @@ import { type Module, runRack, type Stage } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import { createRecorder } from "../core/events.ts";
 import { hashBytes } from "../core/hash.ts";
+import { makeRng } from "../core/rng.ts";
 import {
   attitudeOf,
+  type DebrisPose,
   type PropPose,
   type Shake,
   type Snapshot,
 } from "../core/snapshot.ts";
 import { G } from "../core/spec.ts";
-import { conjugate, rotate, vec } from "../core/vec.ts";
+import { conjugate, multiply, rotate, vec } from "../core/vec.ts";
 import { DEFAULT_EXERCISE, type Exercise } from "../world/exercises.ts";
 import {
   generateProps,
   isBreakable,
+  KIND,
   PROP_BOX,
   PROP_SPEC,
   type Prop,
+  volumeOf,
 } from "../world/props.ts";
 import {
   CELL,
@@ -66,6 +70,29 @@ const SETTLE_STEPS = 120;
  */
 const HULL_JOLT = 1.2;
 
+/**
+ * Pieces of wreckage the site may have lying about at once.
+ *
+ * A budget rather than a guess: a prop costs about 3.7 µs of sim per step
+ * (`doc/design/code/mobile-budget.md`), so 140 loose pieces is about half a
+ * millisecond in the worst case where every one of them is awake — and they are
+ * only awake while they are still moving. Past the budget a prop that is written
+ * off simply **stays whole** and takes the wrecked paint, which is exactly what
+ * every write-off did before this existed. The site degrades to the old
+ * behaviour instead of degrading the frame.
+ */
+const DEBRIS_BUDGET = 140;
+
+/**
+ * How hard the pieces are thrown apart, m/s.
+ *
+ * Small on purpose. The energy that actually scatters wreckage is the energy
+ * that broke it, and the pieces already inherit the parent's velocity — this is
+ * only the shove that stops four pipes from sitting in a perfect stack after the
+ * stack has ceased to exist.
+ */
+const SCATTER = 0.8;
+
 let ready: Promise<void> | undefined;
 export function initPhysics(): Promise<void> {
   ready ??= RAPIER.init();
@@ -77,6 +104,17 @@ export interface SimWorld {
   step(): void;
   /** A value, taken at a moment, safe for the UI to hold. */
   snapshot(): Snapshot;
+  /**
+   * Where every prop actually is, sleeping or not.
+   *
+   * `snapshot().props` reports only what is *moving*, which is the right answer
+   * sixty times a second and the wrong one exactly once: at construction. The
+   * site has already run its settle steps by then and 76 of the default seed's
+   * 130 props are asleep, so a renderer built from `world.props` draws them
+   * where they were **asked** to go rather than where they came to rest. Called
+   * once, when a scene or a bench is built.
+   */
+  poses(): readonly PropPose[];
   /** Fingerprint of full physics state — the determinism check. */
   fingerprint(): string;
   readonly terrain: Terrain;
@@ -114,7 +152,8 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   const world = new RAPIER.World({ x: 0, y: -G, z: 0 });
   world.timestep = STEP_SECONDS;
 
-  const terrain = options.terrain ?? generateTerrain(seed, exercise.relief);
+  const terrain =
+    options.terrain ?? generateTerrain(seed, exercise.relief, exercise.route);
   world.createCollider(
     RAPIER.ColliderDesc.heightfield(GRID, GRID, terrain.heights, {
       x: terrain.extent,
@@ -145,7 +184,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * which is right — a machine climbing a barrier should be able to.
    */
   const props = generateProps(terrain, exercise.props);
-  const propBodies: RAPIER.RigidBody[] = [];
+  const propBodies: Array<RAPIER.RigidBody | undefined> = [];
   /** Linear kinetic energy each breakable had at the end of the last step. */
   const propEnergy = new Float64Array(props.length);
   for (const prop of props) {
@@ -232,6 +271,9 @@ export function createWorld(options: SimOptions = {}): SimWorld {
   let stages: readonly Stage[] = [];
   /** The discrete half of the boundary. See `src/core/events.ts`. */
   const recorder = createRecorder();
+  /** Loose wreckage: which prop it used to be part of, and which piece. */
+  const debris: Array<{ prop: number; piece: number; body: RAPIER.RigidBody }> = [];
+  let debrisCount = 0;
 
   /**
    * Energy delivered into each breakable this step, priced by the ledger.
@@ -261,15 +303,124 @@ export function createWorld(options: SimOptions = {}): SimWorld {
           recorder.emit(tick, {
             kind: "impact",
             prop: i,
-            what: prop.kind,
+            material: PROP_SPEC[prop.kind].material,
+            mass,
             joules: delivered,
             at,
           });
         }
         const line = ledger.absorb(i, delivered, at, blame);
-        if (line) recorder.emit(tick, { kind: "ledger", line });
+        if (line) {
+          recorder.emit(tick, { kind: "ledger", line });
+          // The line is on the channel *before* the thing comes apart, so a
+          // consumer sees the write-off announced and then the pieces move —
+          // which is the order it happens in, and the order the ear needs.
+          if (line.state === "destroyed") comeApart(i, recorder.lastSeq);
+        }
       }
     }
+  }
+
+  /**
+   * A written-off thing stops being one box and becomes what it is made of.
+   *
+   * The part list in `world/props.ts` already says which solids a kind is
+   * assembled from, in which order, of what — it draws the art and it decides
+   * the voice. This is the third consumer of the same declaration: each piece
+   * gets a body of its own, placed by the transform its parent was in at the
+   * moment it went, carrying the parent's velocity plus a small shove.
+   *
+   * So a pipe stack pushed over is **four pipes**, on cylinder colliders, that
+   * roll down the slope and tumble into each other. Nothing about that is a
+   * special case for pipes: a pallet lets go of its boards and a floodlight
+   * drops its head, from the same eight lines.
+   *
+   * Debris is landscape. It is not in `props`, so `assessDamage` never looks at
+   * it, the ledger cannot bill it and it cannot be written off a second time —
+   * which is the rule *hitting the wreck again is free*, arriving where it was
+   * always going.
+   */
+  function comeApart(index: number, seq: number): void {
+    const prop = props[index];
+    const body = propBodies[index];
+    if (!prop || !body) return;
+    const pieces = KIND[prop.kind].pieces;
+    // Over budget, it stays whole and takes the wrecked paint, exactly as every
+    // write-off did before pieces existed. The site gives up the spectacle
+    // rather than the frame.
+    if (debrisCount + pieces.length > DEBRIS_BUDGET) return;
+    debrisCount += pieces.length;
+
+    const at = body.translation();
+    const spin = body.rotation();
+    const velocity = body.linvel();
+    const twist = body.angvel();
+    const [, hy] = PROP_BOX[prop.kind];
+    const mass = PROP_SPEC[prop.kind].mass ?? 0;
+    let bulk = 0;
+    for (const piece of pieces) bulk += volumeOf(piece);
+
+    for (const [n, piece] of pieces.entries()) {
+      // The part list measures from the prop's base; the body is centred, so
+      // the piece hangs one half-height below before it is turned into place.
+      const local = vec(
+        piece.at[0] * prop.scale,
+        (piece.at[1] - hy) * prop.scale,
+        piece.at[2] * prop.scale,
+      );
+      const offset = rotate(spin, local);
+      const turn = piece.turn
+        ? multiply(spin, {
+            x: piece.turn[0],
+            y: piece.turn[1],
+            z: piece.turn[2],
+            w: piece.turn[3],
+          })
+        : spin;
+      const shard = world.createRigidBody(
+        RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(at.x + offset.x, at.y + offset.y, at.z + offset.z)
+          .setRotation({ x: turn.x, y: turn.y, z: turn.z, w: turn.w }),
+      );
+      const [sx, sy, sz] = piece.size;
+      const s = prop.scale;
+      const shape =
+        piece.shape === "box"
+          ? RAPIER.ColliderDesc.cuboid(sx * s, sy * s, sz * s)
+          : piece.shape === "cylinder"
+            ? RAPIER.ColliderDesc.cylinder(sy * s, Math.max(sx, sz) * s)
+            : piece.shape === "cone"
+              ? RAPIER.ColliderDesc.cone(sy * s, Math.max(sx, sz) * s)
+              : RAPIER.ColliderDesc.ball(Math.max(sx, sy, sz) * s);
+      shape.setFriction(0.7).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max);
+      // The parent's mass, shared out by how much of it each piece is.
+      if (mass > 0 && bulk > 0) shape.setMass((mass * s * volumeOf(piece)) / bulk);
+      world.createCollider(shape, shard);
+
+      // Seeded off the ledger line's own sequence number, so a replay throws
+      // every piece exactly where the run did (rule 2).
+      const rng = makeRng(seq * 977 + n);
+      shard.setLinvel(
+        {
+          x: velocity.x + rng.range(-SCATTER, SCATTER),
+          y: velocity.y + rng.range(0, SCATTER),
+          z: velocity.z + rng.range(-SCATTER, SCATTER),
+        },
+        true,
+      );
+      shard.setAngvel(
+        {
+          x: twist.x + rng.range(-2, 2),
+          y: twist.y + rng.range(-2, 2),
+          z: twist.z + rng.range(-2, 2),
+        },
+        true,
+      );
+      debris.push({ prop: index, piece: n, body: shard });
+    }
+
+    world.removeRigidBody(body);
+    propBodies[index] = undefined;
   }
 
   /**
@@ -277,6 +428,22 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * hold, so this is a fresh array — and it is empty on a site standing still,
    * which is nearly always.
    */
+  function movedDebris(): readonly DebrisPose[] {
+    const moved: DebrisPose[] = [];
+    for (const shard of debris) {
+      if (shard.body.isSleeping()) continue;
+      const t = shard.body.translation();
+      const r = shard.body.rotation();
+      moved.push({
+        prop: shard.prop,
+        piece: shard.piece,
+        position: [t.x, t.y, t.z],
+        rotation: [r.x, r.y, r.z, r.w],
+      });
+    }
+    return moved;
+  }
+
   function movedProps(): readonly PropPose[] {
     const moved: PropPose[] = [];
     for (let i = 0; i < propBodies.length; i++) {
@@ -291,6 +458,23 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       });
     }
     return moved;
+  }
+
+  /** Every prop's pose, whatever it is doing. See `SimWorld.poses`. */
+  function poses(): readonly PropPose[] {
+    const all: PropPose[] = [];
+    for (let i = 0; i < propBodies.length; i++) {
+      const body = propBodies[i];
+      if (!body) continue;
+      const t = body.translation();
+      const r = body.rotation();
+      all.push({
+        index: i,
+        position: [t.x, t.y, t.z],
+        rotation: [r.x, r.y, r.z, r.w],
+      });
+    }
+    return all;
   }
 
   return {
@@ -397,6 +581,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         },
         stages,
         props: movedProps(),
+        debris: movedDebris(),
         route: waypoints,
         goal: goal.state,
         damage: ledger.events,
@@ -404,6 +589,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         events: recorder.publish(),
       };
     },
+    poses,
     fingerprint() {
       return hashBytes(world.takeSnapshot());
     },

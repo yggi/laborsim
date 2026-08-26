@@ -62,13 +62,6 @@ the one everything downstream of *attribution* waits on.
   it survives a reload.
 - **needs:** L-012 (persistence is where a record of a run belongs)
 
-### [L-039] Breakables worth breaking
-- **what:** the site as an inventory of expensive things. More props, more
-  kinds, materials and prices — five kinds and one scooter is not an inventory.
-  Quarry tier first: plenty to wreck, nobody to hurt. Also: work areas want to
-  be somewhere a driver actually goes, not scattered where nothing leads.
-- **done-when:** a careless run through a work area produces a list, not a line.
-
 ### [L-032] Record and playback — one engine
 - **what:** an input trace plus the seed reproduces a run exactly in this
   browser. Rack state (order, verbs, enables) is part of the trace, because the
@@ -122,26 +115,6 @@ the one everything downstream of *attribution* waits on.
 - **done-when:** the cage frame and the levers are recognisably the same
   manufacturer's as the panel they sit behind.
 
-### [L-057] The site stands up
-- **what:** most of the furniture falls over on its own. Measured on the default
-  seed, inside `createWorld`'s 120 settle steps where nothing can see it:
-  everything is upright for ten steps, and by step 120 seventeen of eighteen
-  marker poles, sixteen of twenty-two barriers and ten of forty-five cones are
-  flat. Nothing is wrong with the physics — a 3 m pole with a 0.16 m base cannot
-  stand on 20° noise. The fix is **footing**: grade the ground under a work area,
-  or place kit only where it can stand, or give the tall things a base. Rejected
-  already: placing a box on the highest point of its own footprint, which drops
-  it onto one corner and toppled 13 more cones.
-  Now audible as well as measurable: the event channel reports one impact at
-  tick 109 on the default seed, which is a pole hitting the ground. It is 1.6 J
-  and comes out as a tick rather than a bang, so nothing needs muting — but the
-  site making a noise before the operator has touched anything is the clearest
-  possible statement of the problem.
-- **done-when:** an untouched site is still standing when the exercise begins,
-  and the first line in the ledger came from the machine, and an untouched site
-  is silent.
-- **needs:** NOTES thread "the site is hard to crash into on purpose"
-
 ### [L-075] Nothing drives the app
 - **what:** four benches read the game and none of them *plays* it. `shots` and
   `listen` drive hand-built snapshots, `cab` poses the renderer, `profile` times
@@ -154,6 +127,40 @@ the one everything downstream of *attribution* waits on.
   fifth bench), and what it does about the fact that it needs a real browser.
 - **done-when:** one command drives the shipped app through its verbs and fails
   when one of them stops working.
+
+### [L-076] Fire, and the things that carry it
+- **what:** a drum of fuel and a scooter's tank are the two things on site that
+  should not merely break. Fire is a **hazard with a lifetime** — it starts, it
+  spreads, it threatens the machine — which makes it a system rather than a
+  residual, and it is the reason the residue work stopped where it did.
+  `MaterialSpec` is where a `volatile` flag lands; nothing forecloses it.
+- **done-when:** driving into a fuel drum at speed starts something that is still
+  happening ten seconds later, and the machine has a reason to be elsewhere.
+- **needs:** L-038 (the machine has to be able to be hurt by it)
+
+### [L-077] Smoke, and the machine's own symptoms
+- **what:** dust is a puff that is over in a second and has no state. Smoke is a
+  thing with a lifetime, a rise and a drift — and its first customer is not the
+  site but the *machine*: `doc/design/rig/damage.md` asks for smoke and oil as the
+  cheap tier of the lemon, before any degradation is simulated. One mechanism,
+  two consumers. The mote pool in `render/residue.ts` is the shape to extend.
+- **done-when:** an abused machine trails smoke that outlives the frame it
+  started in, and a concrete panel's dust hangs rather than popping.
+
+### [L-078] Deformation — the tier between painted and in pieces
+- **what:** a written-off thing repaints and comes apart; there is nothing in
+  between. Metal that *bends* — a barrier folded round the hull, a drum stove in —
+  is the strongest version of "you can see what you did" and the only one that
+  needs the mesh to move rather than the material to change.
+- **done-when:** a thing hit hard and not written off is visibly the wrong shape.
+
+### [L-079] Debris that is worth something
+- **what:** wreckage is landscape: never billed, never broken again. A pipe rolled
+  down a slope into a scooter is therefore free, which is right for v0 and wrong
+  eventually — it is the clearest case of *the thing you did, two steps later*,
+  and the ledger's attribution column is exactly what would have to carry it.
+- **done-when:** a line in the ledger names something you hit with something else.
+- **needs:** L-032 (a second-order line has to be arguable from a replay)
 
 ### [L-060] Impacts you can hear the side of
 - **what:** an impact's voice is centred. It knows where it happened — the event
@@ -317,6 +324,51 @@ the one everything downstream of *attribution* waits on.
 
 ## history
 
+### [L-039] Breakables worth breaking — **closed**
+Six kinds and a scooter became **fourteen kinds over nine materials**, and the
+reason it had not happened before was structural rather than lazy: every fact
+about a prop was a table keyed on its *kind* — mass and price, a collider box, a
+voice in `audio/voices.ts`, and its art as a branch of an if/else chain **with a
+boulder in its `else`**, so a kind that forgot the renderer drew a rock and said
+nothing. A prop is a **part list over materials** now, and five consumers read
+that one declaration. Toughness is derived (`tough × ½·m·v_max²`) so the
+indestructible-cone scar is not expressible; the ring pitch is derived from mass,
+so a new kind gets a voice with **no audio work at all**, which is what had been
+stopping the inventory. Prices spread ¥300–14,000 so a careless run itemises.
+
+Deriving the rating does not stop the *shape* being wrong, and only driving into
+every kind found that: a concrete block absorbed **zero joules** from a full-speed
+hit, because **the machine climbs anything shorter than its own tracks**.
+Lightening it changed nothing; making it taller fixed it at once. The same sweep
+is now a test, and it says ten of thirteen kinds are written off at full speed
+while a 900 kg panel, a cable drum and the ballast only crack — the at-rest guard
+working, not failing. Two shipped defects fell out of holding the declared box
+against the pieces: a pipe stack drawn end-to-end inside a collider that said
+side-by-side, and a cable drum boxed on the wrong axis.
+
+### [L-057] The site stands up — **closed**
+**46 of 102 breakables flat → 1 of 117**, and seventeen of eighteen marker poles
+→ none. All three of the card's clauses: an untouched site stands, the first line
+in the ledger comes from the machine, and `tests/events.test.ts` finally runs its
+silence check on the **generated** site — the comment naming this card as the
+reason it could not is deleted with it.
+
+The fix was an **ordering** mistake, not a number. Terrain was generated from
+noise and then `generateProps` invented six work-area centres of its own, so the
+ground and the furniture disagreed about where the work was. The site plan comes
+first now (`world/site.ts`), the ground is graded to each pad — the starting pad
+generalised from the one hardcoded at the origin, with itself as the datum — and
+a candidate is refused where its own tipping gradient says it cannot stand.
+
+A/B'd, because the first census passed with the footing test **removed** and
+proved nothing: pads alone leave 8 of 114 flat, the footing test alone leaves 13
+and **drops twenty props** for want of anywhere to say yes to, and together it is
+1 of 117 with everything placed. The assertion is pooled across all three
+exercises for that reason — a per-exercise bound loose enough for E-01's 22 props
+could not tell the two apart. Three stragglers were traced rather than tuned
+away: each alone, each at the edge of its own limit, each having *slid* one to two
+metres, because `sampleTerrain` is bilinear and the collider is triangulated.
+
 ### [L-072] The shell lets go of six concerns — **closed**
 `App.svelte` went 991 → 732 lines, its script half 497 → 237, and the six clumps
 of state the card named are modules: the annunciator's acknowledgement, the stop
@@ -435,32 +487,6 @@ is the claim a refactor has to make. Found on the way: the kits disagreed about 
 parked track's traction, and taking the loose answer made `idle` louder — a
 duplicate is two answers to a question nobody noticed was asked twice.
 `tests/architecture.test.ts` fails on a fourth copy.
-
-### [L-062] The running gear is sprung, and you can hear the side — **closed**
-Refused as a voice, built as a machine: **one spring and damper per contact
-point**, twelve of them, and the belts no longer touch the ground at all. The
-rate is not a number anybody picked — it is the weight divided by the sag the
-machine is specified to sit at, which puts the parked ride height exactly where
-it already was, so nothing in `render/` moved. Two consequences bigger than the
-card: normal load is now **measured off each spring** rather than shared out
-equally, which was the load chart's blocker (L-021); and the friction model's
-long-standing over-correction surfaced the moment the machine could roll —
-impulses at ground level were sized against an equal mass share, ignoring that
-the centre of mass is 1.3 m up, and the fix is the textbook **effective mass**.
-The voice is the watts the dampers dissipate, per side, floor and ceiling
-measured off 80 m of the default site. The bench learned to hear sides to prove
-it: silenced it reads 0.008, playing 0.048, at the seconds the scene puts the
-ruts.
-
-### [L-065] Exercises — one marker, then all of them — **closed**
-A site plus an objective, on one verb: `Exercise` is world data, `Goal` is on
-the snapshot, and the ladder is the *ground* rather than the task — E-01 is the
-same generator at `relief: 0.3` with its one pin in a forward cone, E-03 is the
-full site. The loop's third beat can say **yes** for the first time: a schedule
-before you sit down, an objective strip that is the rig's rather than fitted
-kit, split times and an outcome band in the debrief, and the rig's first three
-noises. `ObjectiveKind` was written and deleted. The open site is on the
-schedule so v0's sandbox could not be repealed by adding exercises.
 
 ### [L-050] Pods on arms, and the view that recentres — **closed**
 The whole cab sweeps, 1:1 with the look: pods, cage, levers and dash are one

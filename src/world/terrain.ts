@@ -16,16 +16,15 @@
  * See doc/design/code/architecture-rules.md, rule 2.
  */
 
+import { DATUM, type Pad, padHeight, sitePlan } from "./site.ts";
+import { DEFAULT_ROUTE, type RouteSpec } from "./waypoints.ts";
+
 /** Metres per terrain cell. */
 export const CELL = 2;
 /** Cells per side. The site is CELL * GRID metres across. */
 export const GRID = 128;
 /** Height quantum, metres. Belt and braces against float drift. */
 const QUANTUM = 1 / 1024;
-
-/** Radius of the graded pad the machine starts on, and its blend-out. */
-const PAD_INNER = 13;
-const PAD_OUTER = 34;
 
 /** Integer hash → [0, 1). Exact in IEEE-754: integer ops and a power-of-two divide. */
 function hash2(ix: number, iz: number, seed: number): number {
@@ -55,11 +54,13 @@ function valueNoise(x: number, z: number, seed: number): number {
 }
 
 /**
- * Height in metres at a world position. Used to *generate* the heightfield
- * only — the sim never calls this. Contact is measured against the collider,
- * which is what makes getting stuck real rather than scheduled.
+ * The noise, before anything is graded into it.
+ *
+ * Split out of `heightAt` because a pad has to be graded to the ground it is
+ * cut into, and asking `heightAt` for that would ask it about itself. Nothing
+ * outside this file and the site plan wants the ungraded ground.
  */
-export function heightAt(x: number, z: number, seed: number, relief = 1): number {
+function rawHeight(x: number, z: number, seed: number, relief: number): number {
   // Steeper than it was, and steeper on the short wavelengths especially: the
   // machine's whole character is what happens on a grade, and gentle ground
   // gives it nothing to be bad at. The climb limit is 43.5°, so the site should
@@ -78,15 +79,31 @@ export function heightAt(x: number, z: number, seed: number, relief = 1): number
     amplitude *= 0.55;
     frequency *= 2.13;
   }
-  // A graded working pad, so the machine does not start on a slope.
-  const r = Math.sqrt(x * x + z * z);
-  const t =
-    r <= PAD_INNER
-      ? 0
-      : r >= PAD_OUTER
-        ? 1
-        : smooth((r - PAD_INNER) / (PAD_OUTER - PAD_INNER));
-  h *= t;
+  return h;
+}
+
+/**
+ * Height in metres at a world position. Used to *generate* the heightfield
+ * only — the sim never calls this. Contact is measured against the collider,
+ * which is what makes getting stuck real rather than scheduled.
+ *
+ * **Graded, not just noisy.** Every pad in the site plan is cut into the ground
+ * here: flat out to its inner radius, blended back to the natural ground by its
+ * outer one. The starting pad used to be the only one and was written straight
+ * into this function; it is now the first entry of an ordinary list (`site.ts`),
+ * which is what makes a work area somewhere furniture can stand.
+ *
+ * With no pads it is still the datum pad alone, which is exactly what this
+ * function did before — so `heightAt(0, 0, …)` is 0 today as it always was.
+ */
+export function heightAt(
+  x: number,
+  z: number,
+  seed: number,
+  relief = 1,
+  pads: readonly Pad[] = [DATUM],
+): number {
+  const h = padHeight(rawHeight(x, z, seed, relief), x, z, pads);
   return Math.round(h / QUANTUM) * QUANTUM;
 }
 
@@ -102,6 +119,15 @@ export interface Terrain {
   readonly materials: Uint8Array;
   readonly seed: number;
   readonly extent: number;
+  /**
+   * The work areas this ground was graded for.
+   *
+   * A terrain knows where its pads are, so nothing downstream has to be told
+   * twice: `generateProps` gathers furniture on exactly the ground that was
+   * flattened for it. The fixture terrains have none, which is right — a bare
+   * ramp is not a site.
+   */
+  readonly pads: readonly Pad[];
 }
 
 /**
@@ -127,7 +153,7 @@ export function makeRampTerrain(degrees: number, flat = 30): Terrain {
       heights[ix * n + iz] = Math.round(rise / QUANTUM) * QUANTUM;
     }
   }
-  return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent };
+  return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent, pads: [] };
 }
 
 /**
@@ -156,21 +182,34 @@ export function makeRutTerrain(depth: number, at = 12): Terrain {
       heights[ix * n + iz] = inside ? step : 0;
     }
   }
-  return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent };
+  return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent, pads: [] };
 }
 
-export function generateTerrain(seed: number, relief = 1): Terrain {
+/**
+ * The site, graded for the work it is going to be asked to hold.
+ *
+ * The route is taken rather than assumed because the work areas are placed
+ * against it — a pad near enough to the markers that driving between two of them
+ * takes you past one (`site.ts`). It is the ordering that matters here: the plan
+ * is chosen first, the ground is cut to it, and only then is anything put on it.
+ */
+export function generateTerrain(
+  seed: number,
+  relief = 1,
+  route: RouteSpec = DEFAULT_ROUTE,
+): Terrain {
   const n = GRID + 1;
   const extent = GRID * CELL;
+  const pads = sitePlan(seed, route, extent, (x, z) => rawHeight(x, z, seed, relief));
   const heights = new Float32Array(n * n);
   for (let ix = 0; ix < n; ix++) {
     for (let iz = 0; iz < n; iz++) {
       const x = (ix / GRID - 0.5) * extent;
       const z = (iz / GRID - 0.5) * extent;
-      heights[ix * n + iz] = heightAt(x, z, seed, relief);
+      heights[ix * n + iz] = heightAt(x, z, seed, relief, pads);
     }
   }
-  return { heights, materials: new Uint8Array(GRID * GRID), seed, extent };
+  return { heights, materials: new Uint8Array(GRID * GRID), seed, extent, pads };
 }
 
 /**

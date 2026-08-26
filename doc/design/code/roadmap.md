@@ -118,9 +118,9 @@ only. Neither is a crisis; both are claims we are currently *asserting*.
 
 Consequence, then attribution, then the path a new player takes to both.
 
-*(1) and (2) are closed; (3) and (4) are still the top of the board, and are
-still in this order and for these reasons. `L-039` remains open inside (1) — the
-model shipped, the inventory worth breaking did not.*
+*(1) and (2) are closed, `L-039` included as of 2026-08-26 — the inventory worth
+breaking is built. (3) and (4) are still the top of the board, and are still in
+this order and for these reasons.*
 
 1. **Damage model** (`L-031` — closed), and **enough to break** (`L-039`). World
    objects gain mass, a price and a destruction threshold; contact energy above it

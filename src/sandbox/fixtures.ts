@@ -24,6 +24,7 @@ import { ACTIVE, ALARM, type Stage, WARN } from "../control/bus.ts";
 import { snapshot, stage, track } from "../core/fixture.ts";
 import type { Snapshot, Waypoint } from "../core/snapshot.ts";
 import type { DamageEvent } from "../sim/damage.ts";
+import { PROP_SPEC } from "../world/props.ts";
 
 /**
  * A route to plot. Fixed rather than generated: the scope is being *looked at*,
@@ -126,6 +127,8 @@ const SCOOTER: DamageEvent = {
   kind: "scooter",
   category: "citizen asset",
   label: "scooter",
+  material: PROP_SPEC.scooter.material,
+  mass: PROP_SPEC.scooter.mass ?? 0,
   state: "destroyed",
   yen: 3000,
   energy: 8200,

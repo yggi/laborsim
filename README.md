@@ -24,7 +24,9 @@ branch does.
 **Status: v0.** Rung 1 of the machinery ladder drives — a tracked platform on
 procedural terrain, sprung at every contact point, with an industrial panel, a
 pipeline rack you reorder in the cab, a damage ledger, a synthesised voice, and
-three graded exercises alongside the open site. What is not built is the rest of
+three graded exercises alongside the open site. The site is fourteen kinds of
+expensive thing over nine materials, standing on ground graded to hold them, and
+each one comes apart into what it is made of — with a noise to match. What is not built is the rest of
 the ladder, part assembly, persistence, replay, and the mission verbs past
 *reach the markers*. Feasibility was proven separately in `prototype/concept-3/`,
 which needs no build step.
@@ -45,6 +47,7 @@ npm run format     # biome, writing fixes
 npm run build      # typecheck, then production bundle
 npm run shots      # screenshot every cockpit specimen  → shots/
 npm run cab        # screenshot the cab at poses you cannot drive to → shots/cab/
+npm run yard       # photograph the site, and something coming apart → shots/yard/
 npm run listen     # render every voice to WAV, measured → renders/
 npm run profile    # drive the profiling bench headlessly and print the report
 ```
@@ -53,12 +56,15 @@ npm run profile    # drive the profiling bench headlessly and print the report
 real phone from day one, because desktop-only iteration hides touch problems
 that are mechanics here, not polish.
 
-The last four are benches, and they exist because the things they check are not
+The last five are benches, and they exist because the things they check are not
 expressible as assertions. `/sandbox.html` is every component in every state and
 `/listen.html` is every voice the machine has — both ship with the site, because
 a bench that only exists on somebody's laptop is one nobody uses. `npm run cab`
 has no page of its own: it drives the real app, and poses the hull at attitudes
-you cannot hold still long enough to look at.
+you cannot hold still long enough to look at. `npm run yard` is the same argument
+pointed outward — it stands over each graded work area, then drives into a pipe
+stack and photographs it coming apart, asking the sim *when* that happened rather
+than counting steps.
 
 `/profile.html` is the third page and the strongest version of that argument:
 mobile-first is a pillar, so it times the real world through the real renderer

@@ -225,6 +225,32 @@ export interface PropPose {
   readonly rotation: readonly [number, number, number, number];
 }
 
+/**
+ * One piece of something that has been written off.
+ *
+ * A destroyed prop stops being a single box and becomes the solids its part list
+ * says it is made of (`world/props.ts`), each with a body of its own — so a pipe
+ * stack pushed over is four pipes that roll downhill and tumble into each other,
+ * rather than one grey box that used to be a pipe stack.
+ *
+ * It is addressed by **prop and piece** rather than by a debris id, and that is
+ * what makes the renderer's side free: the art is already built out of exactly
+ * these pieces, in this order, so a write-off re-parents meshes that already
+ * exist instead of making any. No new geometry, no new draw calls.
+ *
+ * Debris is landscape. It is never billed and never breaks again, which is the
+ * existing rule — *hitting the wreck again is free* — arriving where it was
+ * always going to.
+ */
+export interface DebrisPose {
+  /** Index into the world's prop list: what it used to be part of. */
+  readonly prop: number;
+  /** Index into that kind's `pieces`. */
+  readonly piece: number;
+  readonly position: readonly [number, number, number];
+  readonly rotation: readonly [number, number, number, number];
+}
+
 export interface Snapshot {
   readonly tick: number;
   readonly simSeconds: number;
@@ -253,6 +279,13 @@ export interface Snapshot {
   readonly stages: readonly Stage[];
   /** Props that moved this step. Empty on an undisturbed site. */
   readonly props: readonly PropPose[];
+  /**
+   * Pieces of written-off furniture that are still moving.
+   *
+   * Same rule as `props`: only what is awake, so a site whose wreckage has come
+   * to rest costs nothing. Empty on a site nobody has hit.
+   */
+  readonly debris: readonly DebrisPose[];
   /**
    * The route the site was laid out with, unchanging for the run.
    *

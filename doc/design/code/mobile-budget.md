@@ -262,6 +262,40 @@ one number the rest of the board was waiting on, and it says: build the
 inventory L-039 wants, and measure again when the *machine* grows, not when the
 site does.
 
+### Re-measured after L-039 (2026-08-26)
+
+The inventory was built on that answer, so the number was taken again. Same
+counter, same passes; draw calls are counted at the driver and are a property of
+the scene rather than of the device, so this is comparable even though the frame
+times beside it were taken on software rendering and are not.
+
+| | before | after |
+|---|---|---|
+| cab, 130 props | 224 | **289** |
+| chase | 394 | **529** |
+| E-01, 22 props | ~150 | **150** |
+| triangles | — | 39k |
+| `sim` p50 / p95 | 3–3.4 ms cpu | 1.1 / 2.2 ms |
+
+**A prop is now ~1.3 draw calls rather than 0.75**, because a prop is a part
+list: the mean kind went from about three meshes to about four, and the ink
+shells double every one. The cab is 289 against a ceiling of 500, so the site can
+still grow by about half again — but the *headroom* claim above is the one that
+moved. "390 props lands the cab around 420" was true of the old furniture and is
+not true of this; at 1.3 calls each, 390 props is ~500 calls on its own.
+
+The chase view is the one to watch. It was 170 calls above the cab and is now
+240, because the extra props in frame each cost more. The budget is stated on the
+cab and the chase camera is "hands off the wheel" rather than the played view, so
+this is recorded rather than acted on — but a rung-2 arm arriving in the same
+view is the thing that would make it matter.
+
+Debris is not in these numbers, and by construction cannot be: coming apart
+**re-parents the prop's own meshes** rather than making any, so a written-off
+pipe stack is the same four pipes it always was. Dust is one instanced mesh per
+material, hidden while empty — at most nine calls, and only after something has
+broken.
+
 ## What would change this page
 
 - A slower device row. That is what the budget is really for, and the Pixel 9 is

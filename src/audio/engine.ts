@@ -33,6 +33,7 @@ import { makeRng } from "../core/rng.ts";
 import type { Snapshot, TrackState } from "../core/snapshot.ts";
 import { styleOf } from "../makers/houses.ts";
 import type { SoundHouse } from "../makers/sound.ts";
+import { KIND } from "../world/props.ts";
 import type { HornVoice } from "./voices.ts";
 import {
   alarmVoice,
@@ -50,6 +51,7 @@ import {
   type PanelEvent,
   panelVoice,
   rattleVoice,
+  rubbleVoice,
   squeakVoice,
 } from "./voices.ts";
 
@@ -977,6 +979,23 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         if (event.kind === "impact") knock(impactVoice(event), now, 0);
         // The hull is you, so it is never off to one side.
         else if (event.kind === "hull") knock(hullVoice(event), now, 0);
+        // **Something being written off.** The ledger has been on this channel
+        // since the channel existed and the ear ignored it, so the loudest
+        // moment in the game — the moment a thing stops being a thing — was the
+        // one thing that made no noise of its own. It is a cloud of grains, and
+        // which noise it is comes entirely out of the material's own table: a
+        // steel plate screeches, glass shatters, concrete crumbles, a tube
+        // dings. Played on the same transient as the impact that caused it.
+        else if (event.kind === "ledger" && event.line.state === "destroyed") {
+          for (const grain of rubbleVoice(
+            KIND[event.line.kind].pieces,
+            event.line.mass,
+            event.line.energy,
+            event.seq,
+          )) {
+            knock(grain, now + grain.at, 0);
+          }
+        }
         // The rig, on the one subject it is allowed to have a voice about.
         // Centred, and centred for a better reason than the others: it does not
         // happen anywhere. It is the training system, not the site.

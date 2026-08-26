@@ -43,14 +43,19 @@ nothing; the interaction term commits to everything. `doc/design/rig/missions.md
 ## Can a generator be given an objective?
 
 A twelve-year-old found the fun in seconds by driving at the material; a scripted
-driver went ten minutes without touching anything, because 130 props sit in six
-clusters the route never passes. A site-design problem, not a damage one, and
-carded twice: composed-not-scattered (L-039, L-027) and standing up at all
-(L-057). The exercises sharpened it without answering it — an `Exercise` is three
-dials on the same generator, and E-01 reads as *graded for a purpose* because it
-is nearly empty, which is not the same as designed. Still a thread: what
-"composed" means **as a generator** — footing, clearances, and an unsurveyed
-obstruction on the route you were actually given.
+driver went ten minutes without touching anything, because 130 props sat in six
+clusters the route never passed. **Two thirds of that is answered now** (L-039,
+L-057): the work areas are graded pads chosen in the route's own annulus and held
+off the markers, so driving between two pins takes you past one, and the footing
+that lets a thing stand is a rule rather than luck.
+
+What is left is the sharper third, and closing the other two made it sharper
+still: **proximity is not composition.** A pad near the route is somewhere you
+pass; it is not somewhere that was *laid out* — no bench you have to go round, no
+clearance you have to judge, no unsurveyed obstruction on the line you were
+actually given. The generator now has the vocabulary for it (a pad is a first-
+class thing with a target height) and none of the intent. L-027 is where that
+becomes a card; the thread is what "composed" would have to mean first.
 
 ## The suspension is simulated and heard, and neither drawn nor shown
 
