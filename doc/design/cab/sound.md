@@ -159,6 +159,44 @@ scooter, sheet steel, rubber and a headlamp, sounding like a sheet. Each piece's
 own mass places its own voice, so the headlamp rings an octave and a half above
 the frame by arithmetic rather than by anyone choosing it.
 
+### The second oscillator had never moved
+
+The note is *two* sawtooths a few cents apart, and the beating between them is
+what the section above calls **most of what separates a machine from a
+synthesiser playing a note**. It had never happened.
+
+`chase()` skips a write when the target already matches the last value it was
+handed — and the twin was handed `held.hz`, one line *after* `held.hz` had been
+set to that very target. Its guard was satisfied on every frame of every
+session, so `twin.frequency` was never written at all. It sat at the 56 Hz it
+was constructed with, at half the note's level, for the life of the context: not
+a detune, a **fixed bass drone under a moving note**.
+
+Three things made it invisible for as long as it was:
+
+- **At idle it was accidentally right.** The note's idle frequency *is* 56 Hz, so
+  the bug did not exist until you drove. `idle` measures identically either way.
+- **`listen` renders the real graph**, so the drone was in the very first
+  measurement and every one after it. There was nothing to compare against.
+- **`voices.ts` was correct throughout**, and it is the half that has tests.
+
+Measured by silencing the twin outright: `idle`'s peak went 0.122 → 0.081, so a
+third of an idling machine's peak was a note nobody had chosen.
+
+Fixing it raised the peak of every driving scene at unchanged RMS — `labouring`
+0.477 → 0.560 — which is exactly what the section above predicts that adding a
+real pair does, arriving four months late. **The level was left alone.**
+Compensating the pair as *coherent* rather than as incoherent was tried, since a
+pair fourteen cents apart is coherent at its beat peaks: it lands `labouring`
+back on 0.472, almost exactly the number the level was originally set to, and
+costs a quarter of the bed's loudness (RMS 0.078 → 0.060). That is a milder form
+of the version this file already rejected once — *peaks matched the old note and
+every RMS halved* — so the trade stands as it was written. The bed is no louder
+than it was; it is crestier, which is what two detuned oscillators are for.
+
+The worst case tightened with it: `everything-at-once` peaks **0.922**, against
+0.895 before. Still inside the limiter, and less room than there was.
+
 ### A big thing rings lower, and that is why the table stopped growing
 
 The material table used to be keyed on the **prop kind**, with a row per kind
@@ -222,6 +260,38 @@ worth hearing.
   every wobble in it — grit, plate spread, impact variation — is drawn from a
   seeded generator or from `seq`, so a replay sounds identical to the run it
   recorded.
+
+## The graph has tests now, and the arithmetic always did
+
+`tests/audio.test.ts` is fifty-odd assertions about `voices.ts` — given a
+snapshot, what numbers should a voice have — and it has caught real things.
+**`engine.ts` had none.** Nothing anywhere constructed `createAudio`, so the half
+that owns node lifetimes, automation and every path that can produce silence was
+checked by ear alone. Four defects were found in it in one sitting and all four
+had survived for the same reason.
+
+`tests/graph.test.ts` closes that. `createAudio` already takes a
+`BaseAudioContext` — which is why `listen` can render it offline — so it needed
+no new seam, only a context that writes down what was asked of it. The fake
+synthesises nothing; it is a **transcript**, and the tests are claims about the
+transcript:
+
+- **both oscillators of a side are retuned** when the levers move. Counted by
+  *which* oscillator rather than by how many writes, because every oscillator in
+  the graph has a `frequency` and the firing pulse's is chased too — a count of
+  writes is satisfied with the twin doing nothing, and that is what the first
+  version of the test did.
+- **everything built after construction stops.** Asserted over *all* of it, not
+  over the ones that happen to have a stop time: filtering to those and checking
+  them passes with the leak in place, because a source with no `stop()` drops out
+  of the sample.
+- **no non-finite value ever reaches an AudioParam**, and a sim clock that has
+  gone wrong does not silence the chains for the rest of the session.
+- **a rewind plays nothing from the run that was thrown away.**
+
+What it cannot do is say what anything sounds like, and it never will — that is
+what the bench below is for. What it *can* do is catch a voice that is not being
+driven, which is the shape every one of those defects had.
 
 ## Measuring is the only review
 

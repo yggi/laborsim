@@ -352,12 +352,41 @@ describe("the room's volume", () => {
   it("carries a knob turned before the context arrived", () => {
     // Muting during the boot used to be lost: `toggle` reached an `audio` that
     // did not exist yet, and the context opened at full volume regardless.
+    //
+    // `level()` is what carries it now, driven by its own one-line effect in
+    // the shell — and a test drives it by calling, which is the whole reason a
+    // fold lives in a module rather than in the component.
     const rig = fake();
     const sound = createSound(() => rig.live);
     sound.toggle();
     expect(sound.on).toBe(false);
     sound.open(new EventTarget());
+    sound.level();
     expect(rig.volumes).toEqual([0]);
+  });
+
+  it("turns the knob without throwing the context away", () => {
+    // The defect this split exists for. Applying the volume used to happen
+    // inside `open()`, so the effect that owns the `AudioContext` **read** the
+    // mute knob — and a read is a subscription. Every press of SND disposed the
+    // context, closed it, and rebuilt eighty nodes and a two-second noise
+    // buffer, then attached the listeners that wake a suspended context *after*
+    // the gesture that caused all of it.
+    const rig = fake();
+    const sound = createSound(() => rig.live);
+    sound.open(new EventTarget());
+    sound.level();
+    expect(rig.seen().disposed).toBe(0);
+
+    for (const expected of [0, 1, 0]) {
+      sound.toggle();
+      sound.level();
+      expect(sound.on).toBe(expected === 1);
+      // The knob reaches the machine every time…
+      expect(rig.volumes.at(-1)).toBe(expected);
+    }
+    // …and the context it reaches is the same one throughout.
+    expect(rig.seen().disposed).toBe(0);
   });
 
   it("passes a panel knock on to the maker whose furniture it is", () => {

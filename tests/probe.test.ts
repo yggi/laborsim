@@ -39,6 +39,8 @@ function pass(id: string, frame: number, gpu: number): PassReport {
     cpu: flat(4),
     sim: flat(1),
     render: flat(3),
+    audio: flat(0.2),
+    nodes: 4,
     gpu: flat(gpu),
     steps: flat(1),
     calls: 225,

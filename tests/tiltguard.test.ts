@@ -10,11 +10,14 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { fitRungOne } from "../src/build/rung-one.ts";
 import type { Module } from "../src/control/bus.ts";
-import { ALARM, runRack } from "../src/control/bus.ts";
+import { ALARM, NOMINAL, runRack, WARN } from "../src/control/bus.ts";
 import { MAX_TRACK_SPEED, RIGHT_X } from "../src/core/spec.ts";
 import type { Quat } from "../src/core/vec.ts";
 import { createTiltGuard } from "../src/modules/tiltguard.ts";
+import { createWorld, initPhysics } from "../src/sim/world.ts";
+import { makeRampTerrain } from "../src/world/terrain.ts";
 
 const LEVEL: Quat = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -175,4 +178,59 @@ describe("ordering turns the guard into an advisor", () => {
     // And it has not gone quiet — it still tells the dash what it thinks.
     expect(advising.stages.find((s) => s.id === "TILT")?.condition).toBe(ALARM);
   });
+});
+
+await initPhysics();
+
+describe("the condition is a state, not a flicker", () => {
+  /**
+   * The audio's panel voice fires a knock on **every rising condition**, with
+   * no rate limit of any kind (`audio/engine.ts`). That is safe only for as
+   * long as a condition is a thing that settles rather than a thing that
+   * chatters — a module whose condition flapped at frame rate would put sixty
+   * broadband transients a second onto the mix and hold the master limiter
+   * down, which reads as everything else going quiet.
+   *
+   * Measured, driving the real machine at full speed for thirty seconds: on the
+   * open site it rises **once**, and on a ramp at the guard's own ease
+   * threshold — 0.6 of a 25° pitch limit, so about 14.5° — it also rises once.
+   * It is damped by its own doing: the guard winds the machine down, which
+   * reduces the tilt, which is negative feedback; and the sprung running gear
+   * had already taken the knocks out of the hull's attitude (L-062).
+   *
+   * So the guard in the audio needs no hysteresis, and this is the assertion
+   * that keeps that true. If it ever fails, the fix is here and not there.
+   */
+  it("does not chatter across its own threshold while driving", async () => {
+    const rack: Module[] = [];
+    const world = createWorld({
+      modules: rack,
+      terrain: makeRampTerrain(14.5, 8),
+    });
+    rack.push(
+      {
+        id: "PILOT",
+        label: "PILOT",
+        maker: "KIBA WORKS",
+        considers: "the test",
+        verb: "SET",
+        enabled: true,
+        intent: () => ({ left: MAX_TRACK_SPEED, right: MAX_TRACK_SPEED }),
+      },
+      ...fitRungOne(world),
+    );
+
+    let rises = 0;
+    let last = NOMINAL;
+    for (let i = 0; i < 1800; i++) {
+      world.step();
+      const guard = runRack(rack).stages.find((s) => s.id === "TILT");
+      if (!guard) continue;
+      if (guard.condition > last && guard.condition >= WARN) rises++;
+      last = guard.condition;
+    }
+    // A handful over thirty seconds is a condition; sixty a second is a rasp.
+    expect(rises, "the tilt condition is chattering").toBeLessThan(10);
+    world.free();
+  }, 60_000);
 });

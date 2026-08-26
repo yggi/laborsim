@@ -360,6 +360,33 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
     ]);
   });
 
+  /**
+   * The same rule as the run effect above, on the other thing in the shell with
+   * a lifetime: the `AudioContext`.
+   *
+   * `open()` used to apply the volume, which meant reading the mute knob, which
+   * meant the effect that owns the context **depended on** it — so every press
+   * of SND closed the context, rebuilt eighty nodes and re-rendered a
+   * two-second noise buffer, and attached the listeners that wake a suspended
+   * context after the gesture that caused it. A read is a subscription, and
+   * nothing about the syntax says so.
+   */
+  it("an audio context is owned by an effect that depends on nothing", () => {
+    // The effect is asserted to be a **one-liner that calls `open()` and
+    // nothing else**, which is a stronger claim than listing its dependencies:
+    // it cannot acquire one. Expanding it into a block is exactly the change
+    // that would need thinking about, so the test makes that a deliberate act.
+    const line = CODE.split("\n").find((row) => row.includes("sound.open"));
+    expect(line, "the shell no longer opens the sound").toBeDefined();
+    expect(
+      line?.trim(),
+      "a context outlives every knob in the cab — keep this effect a one-liner",
+    ).toBe("$effect(() => sound.open());");
+    // And the volume really does still reach the machine — from an effect of
+    // its own, which is allowed to depend on the knob because that is its job.
+    expect(CODE).toContain("$effect(() => sound.level());");
+  });
+
   it("the component owns no frame loop", () => {
     // The shell's own header has claimed from the start that "a plain module
     // owns the renderer and the loop". It was aspirational for a long time; this
@@ -411,6 +438,25 @@ describe("one fact, one place — the bench's loop matches the game's", () => {
       "src/platform/run.ts no longer clamps the way this expects",
     ).toBeDefined();
     expect(inBench, "the bench must clamp elapsed time as the game does").toBe(inRun);
+  });
+
+  it("both give the voice the same frame the picture got", () => {
+    // The bench's copy of the loop simply **did not call `audio.render()`**, so
+    // its `cpu` column — documented as "the whole frame's CPU span" — stopped
+    // before the one half of a frame that can make the machine go silent. The
+    // omission was invisible because nothing said the two loops had to agree
+    // about audio: this test only pinned the other four calls.
+    // **Comments blanked first.** The first version of this matched the phrase
+    // `audio.render()` inside the bench's own doc comment about `audio.render()`
+    // — so deleting the call passed. A check that a file *mentions* something is
+    // not a check that it *does* it.
+    const code = blankComments(bench);
+    expect(blankComments(run), "the game no longer voices a frame").toContain(
+      "audio()?.render(",
+    );
+    expect(code, "the bench must voice a frame as the game does").toContain(
+      "audio.render(",
+    );
   });
 
   it("both step, snapshot, then render, in that order", () => {

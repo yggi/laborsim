@@ -43,6 +43,25 @@ export interface Sound {
    */
   voice(): Audio | undefined;
   /**
+   * Put the knob's position on the machine.
+   *
+   * Separate from `open()` on purpose, and it is the whole of a defect that had
+   * been sitting behind the mute button. `open()` used to apply the volume
+   * itself — reasonably: a player who muted before the context existed must not
+   * be shouted at when it arrives (L-072). But `open()` is called from an
+   * `$effect`, and **a read is a subscription**: reading `on` in there made the
+   * mute knob a dependency of the thing that owns the `AudioContext`, so every
+   * press of SND tore the context down, closed it, rebuilt the whole graph and
+   * re-rendered the noise buffer — and attached the gesture listeners that wake
+   * a suspended context *after* the gesture that caused all of it.
+   *
+   * That is the same lesson the run effect has a test for, one file over
+   * (`tests/architecture.test.ts`, "a run is made of the exercise and the reset").
+   * The fix is not `untrack`: it is that applying the volume is a different job
+   * from owning a context, and it wants its own one-line effect.
+   */
+  level(): void;
+  /**
    * The cab's own switchgear, for the few controls the machine does not record.
    *
    * Almost every switch is already audible without anyone asking: flipping a
@@ -75,6 +94,8 @@ export function createSound(make: () => LiveAudio = createLiveAudio): Sound {
     },
     toggle() {
       on = !on;
+    },
+    level() {
       live?.audio.setVolume(on ? 1 : 0);
     },
     voice: () => live?.audio,
@@ -84,14 +105,17 @@ export function createSound(make: () => LiveAudio = createLiveAudio): Sound {
     open(gestures: EventTarget = window) {
       const opened = make();
       live = opened;
-      // Whatever the knob was left at before the context existed.
-      opened.audio.setVolume(on ? 1 : 0);
       const wake = () => opened.resume();
       gestures.addEventListener("pointerdown", wake);
       gestures.addEventListener("keydown", wake);
+      // Coming back to the tab is not a gesture and used to wake nothing. It is
+      // the most ordinary way on a phone for a context to have been stopped
+      // while you were not looking.
+      gestures.addEventListener("visibilitychange", wake);
       return () => {
         gestures.removeEventListener("pointerdown", wake);
         gestures.removeEventListener("keydown", wake);
+        gestures.removeEventListener("visibilitychange", wake);
         live = undefined;
         opened.dispose();
       };

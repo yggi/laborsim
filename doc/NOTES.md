@@ -11,24 +11,16 @@ gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ---
 
-## The cab is the part of the frame nobody has read
+## The dropout that did not survive a refresh
 
-L-034 measured the world and the machine and closed;
-`doc/design/code/mobile-budget.md` holds the budget. What the bench does *not*
-put on the glass is the cab — the cage, the dash, the pods and the levers are
-DOM, and by design their per-frame cost is one custom property written on
-`:root` plus a 10 Hz reactive pass. That is the last part of the frame still
-asserted rather than read, and the measured half came back with enough headroom
-that it is not urgent — only unknown.
-
-The open question is *how*, not *whether*, and **L-070 closing changed the
-answer**. It used to be a thread because timing the app meant adding an eleventh
-concern to `App.svelte`; the loop is now `platform/run.ts`, a plain module with a
-tick and a snapshot hook, and teaching it to keep frame timings behind a flag is
-a small change rather than an argument. What is still undecided is the *readout*
-— a bench prints a block of text and the app has nowhere to put one, and a debug
-overlay that costs a frame to display the frame is its own joke. That is the
-sentence that has to be answered before this is a card.
+Reported once: complete silence for seconds during ordinary driving, no impacts,
+Android/Firefox, mute untouched — and gone after a full reload, never seen since.
+Four real defects in `engine.ts` were found looking for it (L-080) and **none of
+them explains it**: the twin was audible-but-wrong, the mute path needs a press,
+`dt` needs a NaN. What is left is a browser stopping its audio device under load,
+which the resume fix now covers, or a long dev session's stale context, which a
+refresh fixes and nothing records. A thread until it recurs on a fresh load;
+L-081 is the instrument that would say which.
 
 ## What counts as "operator interaction"?
 
@@ -62,12 +54,11 @@ becomes a card; the thread is what "composed" would have to mean first.
 Two halves of one gap. **No instrument:** travel is on the developer's telemetry
 line and nowhere else, and an instrument costs view (§ 6) — so does compression
 earn a head, join TRACTION's plan view as a third channel, or is it the first
-quantity the machine deliberately refuses to show you? That last is defensible
-and is either a good rule or a hole in principle 5. **Not drawn:** the bogies
-move and the belt is one rigid loop bolted to the hull, so under a big enough
-hit it passes through the ground — bounded by the bump stop, rare, visible if
-you look. A real track drapes over its wheels; the honest fix is a bottom run
-that follows the six compressions, which nobody has costed.
+quantity the machine deliberately refuses to show you? That last is either a good
+rule or a hole in principle 5. **Not drawn:** the belt is one rigid loop bolted
+to the hull while the bogies move, so a big enough hit passes it through the
+ground. A real track drapes over its wheels; the honest fix is a bottom run that
+follows the six compressions, which nobody has costed.
 
 ## What does "multi-layer" cut along, for the player?
 
@@ -107,5 +98,4 @@ off the glass within about 15°, and past 35° you are looking at the door
 a touchscreen lever by feel, and only somebody who did not build it can say if
 that is the right price. Two dials if it is too much: shorten the pan range (you
 see less of the site), or damp the sweep below 1:1 (the cab stops being rigid).
-Prefer the first; a sim-sickness mitigation is the same dial. The rig's own
-surfaces are exempt — they do not sweep, because they are not in the cab.
+Prefer the first; a sim-sickness mitigation is the same dial.
