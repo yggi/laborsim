@@ -296,6 +296,40 @@ pipe stack is the same four pipes it always was. Dust is one instanced mesh per
 material, hidden while empty — at most nine calls, and only after something has
 broken.
 
+## The voice has a number now (2026-08-26)
+
+`cpu` was documented as "the whole frame's CPU span" and was not: the bench's
+copy of the loop **did not call `audio.render()` at all**, so the one half of a
+frame that can make the machine go silent was the one half with no number. It
+does now, and the architecture test that pins the loops together pins the voice
+with them.
+
+Measured on this box, `FULL SITE`:
+
+| | p50 |
+|---|---|
+| `audio` — `audio.render()`, CPU side | **0.3 ms** |
+| `nodes` — audio nodes built in a frame | **12** |
+
+Twelve a frame is the chain: one plate per side per few frames, six nodes each.
+The number matters because it is unbounded by construction — **one prop written
+off builds up to 264 nodes synchronously inside one frame**, which is the audio
+equivalent of the draw-call ceiling and, until this column existed, was not a
+thing anyone could have known.
+
+Two caveats, both structural:
+
+- **It measures scheduling, not the audio thread.** The bench drives an
+  `OfflineAudioContext`, which does the same main-thread work — building nodes,
+  writing automation — without needing an audio device or the gesture a live
+  context waits for. Whether the browser's audio thread keeps up with the graph
+  it has been handed is a different question, and it is not observable from
+  here.
+- **Drift is not the instrument for that.** It was tried: driving the real app
+  in a headless browser, the audio clock fell 0.27 s behind wall time in 30 s,
+  which looks exactly like starvation — and a bare oscillator with no app at all
+  drifts 0.272 s over the same 30 s. The number was the container's.
+
 ## What would change this page
 
 - A slower device row. That is what the budget is really for, and the Pixel 9 is

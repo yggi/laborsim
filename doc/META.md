@@ -58,7 +58,14 @@ read the site "after one step", where `createWorld` had already settled 120.
 *It cannot fail.* Two `str.replace` edits matched nothing because the formatter
 had reflowed the file — one blanked the dash and everything stayed green, as did
 a deploy check that grepped for `lint/` and never saw a formatter diagnostic.
-Assert the edit matched; verify by exit code.
+Assert the edit matched; verify by exit code. A *test* fails the same way and it
+is harder to see: **a filter that selects on the property being asserted** — the
+leak check took the sources that *have* a stop time and checked those, so
+deleting a `stop()` dropped the source out of the sample; **a count of a unit
+every candidate produces** — counting frequency *writes* was satisfied at four
+when the claim was that six oscillators retune; and a scan that matched
+`audio.render(` inside the doc comment about `audio.render(`. Three assertions,
+each written to catch a known bug, each passing with that bug planted.
 
 *It cannot see the claim.* A bench measured brightness as zero-crossing rate,
 blind to the filter it existed to watch; the bogie knock's null test measured one

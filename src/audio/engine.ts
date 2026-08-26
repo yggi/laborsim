@@ -86,6 +86,22 @@ const GLIDE = 0.05;
  * equal pair, which is how anyone mixes a unison.
  */
 const TWIN = 0.5;
+/**
+ * What the pair costs in loudness, given back — the **power** sum, kept.
+ *
+ * Reconsidered when the twin was fixed, and put back. A pair fourteen cents
+ * apart is coherent at its beat peaks, so compensating for the *peak* rather
+ * than the power is arguable: it was tried, and it lands `labouring` back at
+ * 0.472 — almost exactly the 0.48 this level was originally set to. But it costs
+ * a quarter of the bed's loudness (RMS 0.078 → 0.060), and that is a milder form
+ * of the version this file already rejected once: *peaks matched the old note
+ * and every RMS halved*.
+ *
+ * So the trade stands as it was written. What changed is only that it is now
+ * being made about a real pair: the peak rise from 0.477 to 0.560 at unchanged
+ * RMS **is** the beating, arriving for the first time. The bed is no louder than
+ * it was; it is crestier, which is what two detuned oscillators are for.
+ */
 const UNISON = 1 / Math.hypot(1, TWIN);
 
 /**
@@ -371,6 +387,7 @@ function createSide(
 
   const held = {
     hz: 56,
+    twinHz: 56,
     gain: 0,
     cutoff: 340,
     grind: 0,
@@ -426,7 +443,15 @@ function createSide(
         held.wave = voice.wave;
       }
       held.hz = chase(drive.frequency, voice.hz, at, held.hz);
-      chase(twin.frequency, voice.hz, at, held.hz);
+      // **Its own slot, and that is the whole of a bug that shipped from the
+      // day the note got its twin.** This used to pass `held.hz` as the twin's
+      // last value — one line *after* assigning it — so `chase`'s own dead band
+      // was always satisfied and `twin.frequency` was never written at all. It
+      // sat at its constructor's 56 Hz for the life of the context, at half the
+      // note's level: not a detune, a separate bass drone under a moving note.
+      // Measured: silencing the twin moved `idle`'s peak 0.122 → 0.081, so a
+      // third of an idling machine's peak was a note nobody had chosen.
+      held.twinHz = chase(twin.frequency, voice.hz, at, held.twinHz);
       held.detune = chase(twin.detune, voice.detune, at, held.detune);
       held.gain = chase(driveGain.gain, voice.gain * UNISON, at, held.gain);
       held.pulse = chase(pulseDepth.gain, voice.pulse * UNISON, at, held.pulse);
@@ -862,12 +887,27 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
       // and nothing about the old rack is compared against the new one.
       const { events, rewound } = reader.take(snapshot);
 
+      /**
+       * How much *sim* time this frame covers, and it has to be finite.
+       *
+       * `Number.isFinite` rather than a comparison, because NaN loses every
+       * comparison it is in: `seconds < lastSeconds` is false for NaN, so a
+       * single NaN `simSeconds` used to fall through to `Math.min(NaN, 0.25)`
+       * and set `lastSeconds = NaN` **permanently**. From there `linkPhase +=
+       * rate * NaN` is NaN, `NaN >= 1` is false so no plate ever clanks again,
+       * and `NaN > MAX_LINKS_PER_FRAME` is false so the guard that would reset
+       * it never fires either. Both chains, silent for the rest of the session,
+       * from one bad frame. Never observed; one line to make unobservable.
+       */
       const seconds = snapshot?.simSeconds;
       const dt =
-        seconds === undefined || lastSeconds === undefined || seconds < lastSeconds
+        seconds === undefined ||
+        lastSeconds === undefined ||
+        !Number.isFinite(seconds) ||
+        seconds < lastSeconds
           ? 0
           : Math.min(seconds - lastSeconds, 0.25);
-      lastSeconds = seconds;
+      lastSeconds = Number.isFinite(seconds) ? seconds : undefined;
 
       left.update(snapshot?.machine.left, house, now, dt);
       right.update(snapshot?.machine.right, house, now, dt);
@@ -1043,10 +1083,40 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
 export function createLiveAudio(): { audio: Audio; resume(): void; dispose(): void } {
   const context = new AudioContext();
   const audio = createAudio(context);
+  /**
+   * The context telling us it has stopped is a better signal than a finger.
+   *
+   * Every other route back to `running` in this app is somebody happening to
+   * touch the glass. This one is the browser saying so, which is the only thing
+   * that fires when the *cause* was not a touch — an OS interruption, an audio
+   * device restarting under load. A `resume()` on a context that is already
+   * running is free, and one the autoplay policy refuses simply rejects and
+   * leaves the state alone, so this cannot spin: `statechange` only fires on a
+   * change.
+   */
+  context.addEventListener("statechange", () => {
+    if (context.state !== "running") void context.resume();
+  });
   return {
     audio,
+    /**
+     * Wake it if it is **anything but running**, not only if it is suspended.
+     *
+     * `state === "suspended"` was the whole test, and it is the wrong one:
+     * `AudioContext.state` also has `interrupted` (iOS, whenever the OS takes
+     * audio focus) and a browser restarting its audio device under load can
+     * leave a context stopped in ways that are not `suspended` either. Anything
+     * this test missed stayed stopped **until the next stray touch anywhere on
+     * the window**, because a gesture handler was the only thing that ever
+     * called this — and a hand holding a lever produces no new `pointerdown`,
+     * so a context that stopped mid-drive stayed stopped for as long as you
+     * kept driving.
+     *
+     * `resume()` on a running context is a no-op that resolves immediately, so
+     * asking too often is free and asking too rarely is silence.
+     */
     resume() {
-      if (context.state === "suspended") void context.resume();
+      if (context.state !== "running") void context.resume();
     },
     dispose() {
       audio.dispose();

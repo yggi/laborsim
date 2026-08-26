@@ -95,6 +95,9 @@ const nag = createNag(pilot.maker, board.notify);
 // component: the sound's context, the acknowledgement winding back down, and
 // the debrief opening itself when the exercise settles.
 $effect(() => sound.open());
+// The knob, and *only* the knob. Kept apart from the effect above because that
+// one owns an `AudioContext` and this one depends on a rune.
+$effect(() => sound.level());
 $effect(() => alarm.settle());
 $effect(() => session.settle(latest?.goal.outcome));
 

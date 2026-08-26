@@ -248,10 +248,17 @@ export function formatReport(
   say("        with their own spreads in the json below.");
   say("  frame   wall clock between one frame and the next: what is felt, and");
   say("          the only column with a tail worth printing");
-  say("  cpu     the whole frame's CPU span — steps, snapshot and render submit");
+  say("  cpu     the whole frame's CPU span — steps, snapshot, render submit and");
+  say("          the voice. It used to stop before the voice, which is why the");
+  say("          audio path had no number for as long as it did");
   say("  sim     the steps a frame owed plus its snapshot, over the frames that");
   say("          owed at least one. A 120 Hz panel steps a 60 Hz sim by halves");
   say("  render  viewport.render(), CPU side — it returns before the GPU is done");
+  say("  audio   audio.render(), CPU side: building nodes and writing automation.");
+  say("          Scheduling only — whether the browser's audio *thread* keeps up");
+  say("          with what it has been handed is not observable from here");
+  say("  nodes   audio nodes built in a frame. A knock is six of them, and one");
+  say("          prop written off can be 264 in a single frame");
   say("  gpu     what the GPU still owed, timed in a separate second behind a");
   say("          stall the real loop never pays. A size to compare, not to add");
   say("  step    fixed steps per frame. 5 is the clock's cap, and means the sim");
@@ -259,16 +266,17 @@ export function formatReport(
   say();
   say(
     `  ${pad("pass", 12)}${rpad("fps", 6)}  ${pad("frame", 18)}${rpad("cpu", 7)}` +
-      `${rpad("sim", 7)}${rpad("render", 7)}${rpad("gpu", 7)}${rpad("step", 6)}` +
-      `${rpad("calls", 7)}${rpad("tris", 7)}`,
+      `${rpad("sim", 7)}${rpad("render", 7)}${rpad("audio", 7)}${rpad("gpu", 7)}` +
+      `${rpad("step", 6)}${rpad("calls", 7)}${rpad("nodes", 7)}${rpad("tris", 7)}`,
   );
   for (const report of profile.passes) {
     say(
       `  ${pad(report.pass.name, 12)}${rpad(report.fps.toFixed(1), 6)}  ` +
         `${pad(spread(report.frame), 18)}${rpad(ms(report.cpu.p50), 7)}` +
         `${rpad(ms(report.sim.p50), 7)}${rpad(ms(report.render.p50), 7)}` +
-        `${rpad(ms(report.gpu.p50), 7)}${rpad(report.steps.p50.toFixed(0), 6)}` +
-        `${rpad(count(report.calls), 7)}${rpad(count(report.triangles), 7)}`,
+        `${rpad(ms(report.audio.p50), 7)}${rpad(ms(report.gpu.p50), 7)}` +
+        `${rpad(report.steps.p50.toFixed(0), 6)}${rpad(count(report.calls), 7)}` +
+        `${rpad(count(report.nodes), 7)}${rpad(count(report.triangles), 7)}`,
     );
   }
   say();

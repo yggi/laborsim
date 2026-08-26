@@ -115,6 +115,31 @@ the one everything downstream of *attribution* waits on.
 - **done-when:** the cage frame and the levers are recognisably the same
   manufacturer's as the panel they sit behind.
 
+### [L-082] The cab is the part of the frame nobody has read
+- **what:** `profile.html` reads the world, the machine, and now the voice; the
+  cab is still asserted rather than measured. The cage, dash, pods and levers are
+  DOM, and by design cost one custom property on `:root` plus a 10 Hz reactive
+  pass per frame. Was a thread while the readout was undecided; it is not any
+  more — the profile page *is* the readout, and the loop is a plain module with a
+  snapshot hook, so timing the reactive pass is a `probe/` shadow like
+  `ear.ts` and `gl.ts` rather than an eleventh concern in the shell.
+- **done-when:** a `profile.html` pass reports what a frame spends on the cab,
+  and the budget page says whether the assumption held.
+
+### [L-081] The audio thread is the half nobody can see
+- **what:** `profile.ts` now times `audio.render()` and counts the nodes it
+  builds, but that is what the *frame* pays for scheduling. Whether the browser's
+  own audio thread keeps up — the only place a dropout can actually happen — is
+  not observable from `src/probe/ear.ts` and was not observable from the
+  container either: a bare oscillator drifts 0.272 s in 30 s here, so drift
+  measured in this environment measures the environment. Candidates that survive
+  that: `context.baseLatency`/`outputLatency`, `AudioContext.state` transitions
+  logged with their timestamps, and the count of scheduled sources still alive.
+  Wants a real device, which is `profile.html`'s whole idiom.
+- **done-when:** a `profile.html` pass on a phone reports something that would
+  differ during a dropout, and the report says what it read.
+- **needs:** thread in `doc/NOTES.md` (the dropout that did not survive a refresh)
+
 ### [L-075] Nothing drives the app
 - **what:** four benches read the game and none of them *plays* it. `shots` and
   `listen` drive hand-built snapshots, `cab` poses the renderer, `profile` times
@@ -324,6 +349,33 @@ the one everything downstream of *attribution* waits on.
 
 ## history
 
+### [L-080] The graph gets tests, and the note gets its second oscillator — **closed**
+Opened by a dropout report that did not survive a refresh, and the hunt for it
+found the real gap: **`audio/engine.ts` had no tests at all.** Every assertion in
+`tests/audio.test.ts` is about `voices.ts` arithmetic; nothing constructed
+`createAudio`, so the half that owns node lifetimes, automation and every path to
+silence had been checked by ear. Four defects came out of one sitting. The twin
+oscillator **had never been written to** — `chase()` skips a write when the target
+already equals the last value, and the twin was handed `held.hz` one line after
+`held.hz` was set to that target — so the detuned pair `sound.md` calls *most of
+what separates a machine from a synthesiser* was a fixed 56 Hz drone under a
+moving note. Muting **destroyed the AudioContext**: `open()` read the mute knob
+inside an `$effect`, which is L-072's own lesson in a file that never got its
+test. Only `state === "suspended"` was ever resumed, missing every other way a
+browser stops a context. And `dt` had no finiteness guard, so one NaN clock
+silenced both chains permanently.
+
+`tests/graph.test.ts` is the layer all four came through — a `BaseAudioContext`
+that synthesises nothing and writes down what was asked of it. **Two of its
+assertions proved nothing on their first draft and planting the fault caught
+both.** A fifth suspect, a click storm from TILT-GUARD's hysteresis-free
+condition, was *measured and rejected*: the condition rises once in thirty
+seconds at full speed on a ramp at its own threshold, and that is a test now
+rather than a fix. The bench also stopped disagreeing with the game about the
+frame — `profile.ts` never called `audio.render()`, so its `cpu` was not the
+frame's; `audio` reads 0.3 ms p50 and `nodes` 12 a frame, counted by
+`src/probe/ear.ts`. 335 tests, worst case 0.922 against a 0.999 gate.
+
 ### [L-039] Breakables worth breaking — **closed**
 Six kinds and a scooter became **fourteen kinds over nine materials**, and the
 reason it had not happened before was structural rather than lazy: every fact
@@ -475,26 +527,3 @@ across docs, source comments and tests were rewritten to the new paths.
 longer resolves, a page in no cluster, and a content page creeping back into the
 index. Closed [L-064] on the way — it wanted MEMORY spilled for room, and the
 band plus the shorter index gave it five lines back instead.
-
-### [L-068] One kit for a hand-built snapshot — **closed**
-Three places built `Snapshot` values by hand and each grew its own kit; adding
-`suspension` and then `goal` cost three separate lessons, and the one invariant
-that had been fixed ("no contact, no traction reading") had been fixed in one of
-them. `core/fixture.ts` is the one way now, the two invariants live in it, and
-the listening bench stopped running a track through the air at the parked 45%
-spring compression. All twenty audio scenes measure identically to before, which
-is the claim a refactor has to make. Found on the way: the kits disagreed about a
-parked track's traction, and taking the loose answer made `idle` louder — a
-duplicate is two answers to a question nobody noticed was asked twice.
-`tests/architecture.test.ts` fails on a fourth copy.
-
-### [L-050] Pods on arms, and the view that recentres — **closed**
-The whole cab sweeps, 1:1 with the look: pods, cage, levers and dash are one
-rigid object and the head is the only hinge. Placement moved into cage space and
-the bound became the arm — not through a pillar, not behind the beam or the
-dash, not further out than 200 px of reach, which puts the middle of the
-windscreen out of reach of a full-size instrument and leaves it reachable by a
-small one. The arm is drawn, so a refusal is visible. One `--look-x`/`--look-y`
-write per frame on `:root`, read as `translate` (never `transform`, which
-carries transitions). `voice.tips` got its consumer. Found by looking: the
-recentring ease was per *frame*, so the neck was twice as slow at 30 fps.

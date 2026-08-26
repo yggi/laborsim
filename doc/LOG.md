@@ -20,6 +20,114 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the graph gets tests, and the note gets its second oscillator
+
+Cards: [L-080] — closed. Opened from a bug report that did not survive a refresh.
+
+**Reported:** the sound cuts to complete silence for seconds, then returns,
+during ordinary driving with no impacts. Android/Firefox, mute button untouched.
+**It did not recur after a full page refresh** and has not since, so it is most
+likely a long dev session's stale state — recorded as a thread rather than
+chased. What the hunt for it turned up is the entry.
+
+**The instrument was wrong before the code was.** Driving the real app in a
+headless browser with a live context, the audio clock fell **0.27 s behind wall
+time in 30 s** — which is exactly what starvation looks like, and I nearly wrote
+it down. The control pass: a bare oscillator, no app at all, **0.272 s over the
+same 30 s**. The container's headless audio device does not run in real time and
+drift here measures the container. *Ask what clamps a quantity before comparing
+on it*, again.
+
+**`engine.ts` had no tests.** Every one of `tests/audio.test.ts`'s assertions is
+about `voices.ts` — the arithmetic — and nothing anywhere constructed
+`createAudio`. So the half that owns node lifetimes, automation and every path
+to silence had been checked by ear only. Four defects, all found in one sitting,
+all surviving for that one reason.
+
+**The twin oscillator had never moved.** `chase()` skips a write when the target
+already equals the last value it was handed, and the twin was handed `held.hz`
+*one line after* `held.hz` was set to that target — so its guard passed on every
+frame of every session and `twin.frequency` was never written at all. It sat at
+its constructor's 56 Hz, at half the note's level, for the life of the context:
+not a detune, a fixed bass drone under a moving note. The "two oscillators
+`detune` cents apart" that `doc/design/cab/sound.md` calls *most of what
+separates a machine from a synthesiser* has never existed until today.
+
+Three things hid it. **At idle it was accidentally correct** — the note's idle
+frequency *is* 56 Hz, so the bug only existed once you drove, and `idle`
+measures identically either way. **`listen` renders the real graph**, so the
+drone was in the first measurement and every one after it, with nothing to
+compare against. And **`voices.ts` was right throughout**, which is the file with
+the tests. Measured by silencing the twin: `idle` peak 0.122 → 0.081, so a third
+of an idling machine's peak was a note nobody chose.
+
+Fixing it raised every driving scene's peak at unchanged RMS — `labouring` 0.477
+→ 0.560 — which is precisely what that file predicts a real pair does.
+**Left alone.** Compensating the pair as coherent rather than incoherent was
+tried and reverted: it lands `labouring` on 0.472, almost exactly the number the
+level was set to, and costs a quarter of the bed's loudness, which is a milder
+form of a version this file rejected once already. Worst case tightened to
+**0.922** from 0.895; still inside the limiter, with less room.
+
+**Muting destroyed the whole AudioContext.** `$effect(() => sound.open())`, and
+`open()` read the mute knob to carry a volume set before the context existed
+(L-072's own fix). A read is a subscription — the lesson this repo wrote down for
+the run effect and gave a test to. The sound effect never got one, so SND closed
+the context, rebuilt eighty nodes and a two-second noise buffer, and attached the
+listeners that wake a suspended context *after* the gesture that caused it.
+Applying the volume is a different job from owning a context: it is `sound.level()`
+now, with an effect of its own. Both have tests, and the architecture one asserts
+the context's effect stays a **one-liner** — a stronger claim than listing its
+dependencies, because it cannot acquire one.
+
+**Only one kind of stopped context was ever resumed.** `state === "suspended"`
+was the whole test, and it misses iOS's `interrupted` and a browser restarting
+its audio device under load — after which the only thing that ever tried again
+was a `pointerdown` on the window, and a hand holding a lever produces none. Any
+non-`running` state now, plus a `statechange` listener on the context itself
+(the only signal that fires when the cause was not a touch) and
+`visibilitychange`.
+
+**`dt` had no finiteness guard.** NaN loses every comparison it is in, so one NaN
+`simSeconds` set `lastSeconds = NaN` permanently, after which `linkPhase` could
+neither advance nor reset and both chains went silent for the rest of the
+session. Never seen; one line.
+
+**A hypothesis measured and rejected.** The panel's edge detector fires a knock
+on every rising condition with no rate limit, and TILT-GUARD's condition has no
+hysteresis — so on paper, rocking across its ease angle produces sixty broadband
+transients a second and parks the limiter. Measured before believing it: driving
+at full speed for thirty seconds, on the open site **and** on a ramp at the
+guard's own threshold, the condition rises **once**. It is damped by its own
+doing — the guard winds the machine down, which reduces the tilt — and by the
+sprung running gear (L-062). No hysteresis added; the claim is a test in
+`tests/tiltguard.test.ts` instead, because the audio's guard is safe by the
+sim's good behaviour rather than by construction.
+
+**`tests/graph.test.ts`** is the layer all four came through. `createAudio`
+already takes a `BaseAudioContext`, so it needed no new seam — only a context
+that writes down what was asked of it. The fake synthesises nothing; it is a
+transcript. **Two of its assertions proved nothing on their first draft and both
+were caught by planting the fault**: the twin check counted frequency *writes*,
+which every oscillator makes, so it was satisfied at four when the answer is six
+(each side retunes note, twin and firing pulse); and the leak check filtered to
+sources that *have* a stop time and then checked those, so deleting a `stop()`
+dropped the source out of the sample. Both rewritten, both now fail.
+
+**The voice has a number.** `profile.ts` timed `sim`, `render` and `gpu` and
+called their sum `cpu` — and its copy of the loop never called `audio.render()`,
+so the sum was not the frame. It is now: `audio` 0.3 ms p50, `nodes` 12 a frame
+(the chain, six nodes a plate). `src/probe/ear.ts` counts them the way
+`probe/gl.ts` counts draws — shadowing the instance, never widening
+`createAudio` for a bench — and throws on its first frame if it counted zero.
+The architecture test that pins the two loops together now pins the voice with
+them; **its own first draft passed with the call deleted**, because it matched
+the phrase `audio.render()` inside the bench's doc comment about
+`audio.render()`. Comments blanked.
+
+Numbers: 335 tests (was 323). Nothing clips: worst case 0.922 against a 0.999
+gate. Draw calls unchanged at 289 in the cab.
+
 ## 2026-08-26 — the site is made of materials, and it comes apart
 
 Cards: [L-039], [L-057] — both closed. Four cards opened for the overflow.
@@ -879,285 +987,3 @@ changes that, which is an argument for the board's existing order rather than
 against it.
 
 ---
-
-## 2026-08-26 — the springs and the exercises meet
-
-Cards: none closed. Merged `suspension-springloaded-audio` and
-`missions-waypoint-levels` — two branches taken from the same commit, each green
-on its own.
-
-The code conflicts were all seam-level and none of them was interesting: an
-import line where both had added one, `generateTerrain` gaining a `relief`
-parameter in the same breath as `makeRutTerrain` appearing beside it, and the
-spawn height, where the suspension's *few centimetres over its own ride height*
-had to take the exercise's `relief` as its argument. `heightAt` had already
-grown `relief` on one side and was untouched on the other, so git took it.
-
-**The interesting part is what merged cleanly and was wrong anyway.** Nothing
-either branch could run would have caught either of these:
-
-- `everything-at-once` exists to be the mix's worst case, and the merge gave it
-  a worst case neither branch had ever rendered: a rut under the running gear
-  **and** the rig calling the exercise complete, on top of the horn and a pipe
-  stack. Both sides' edits to that scene landed side by side without a conflict.
-  Re-measured rather than assumed: **0.865**, still inside the ceiling, because
-  the bogies duck under the horn like everything else. `sound.md` said 0.88 and
-  now says what the merged scene measures.
-- `npm run cab` had been broken since a schedule became the app's first screen —
-  it opens `/`, waits for the canvas, and reaches for NAV-1's grip, which is
-  behind the briefing. It fails by timing out after thirty seconds, which is
-  loud, and nobody ran it. Reproduced on the missions branch alone in a worktree
-  to be sure the merge had not caused it. Fixed with an `openCab()` that presses
-  BEGIN EXERCISE, which is also what starts the clock, so the shots are of a
-  drive rather than of a frozen site.
-
-Everything else agrees: 231 tests, typecheck, lint, build, 20 audio scenes and
-19 cab shots. `the-rut` reads 0.048 between channels and `checkpoint` 0.473, the
-numbers each branch reported, so neither change moved the other. The
-end-to-end mission test — E-01 driven to completion by NAV-1 — passes against
-the sprung running gear, whose grip window moved from ~40° to 34–36°; E-01 tops
-out at 18°, so the ladder's first rung still clears the new model with room.
-
-The four doc surfaces were the real merge. Both branches had trimmed `doc/NOTES.md`
-to exactly 100 lines and their union was 105; the equal-share normal-load thread
-was deleted rather than reconciled, because the springs answered it and the
-other branch had only reworded the question. `doc/BOARD.md` history went to eleven
-and L-029 dropped off the bottom — it is in `doc/log/2026-mid.md`. `doc/LOG.md`
-kept both session entries and then this one, which put it at 1024, so the two
-GRIP/SLIP sessions went to `doc/log/2026-panel.md`, whose subject they finish.
-`doc/META.md` gained the lesson this session cost: **green plus green is a third
-state nobody measured.**
-
----
-
-## 2026-08-25 — the running gear is sprung, per contact point
-
-Cards: [L-062] closed. Answers the NOTES thread on equal-share normal load, and
-takes L-021's blocker with it. Opened: the suspension has no instrument and the
-belt does not conform.
-
-**Twelve springs, one per contact point.** Each track's six ray samples became a
-**bogie** — a wheel on its own spring and damper, hanging off the track frame —
-and the track blocks stopped touching the ground at all (a Rapier collision
-group; they still shove cones and climb barriers). Nothing rests on a rigid box
-any more, so a rut is something one corner of the machine finds rather than
-something a 3.4 m block spans.
-
-The spring rate is **derived, not chosen**: a suspension is specified by the ride
-height it settles at, so `spec.ts` carries travel (0.16 m) and static sag
-(0.072 m) and the rate is the weight divided by the sag. That has a property
-worth the trouble — press the springs down by their sag and the wheel is exactly
-at the bottom of the track, where the belt has always been drawn, so the parked
-machine sits *precisely* where it sat before and nothing in `render/` moved.
-`ZETA = 0.45` is the second number in the file that is not a dimension, and it
-is a damping ratio; the coefficient follows as `2ζ√(km)`.
-
-**Three defects surfaced, and all three were in the old model.**
-
-- *The friction model over-corrected by a factor of three.* It spent an equal
-  share of the machine's mass at each contact, which ignores that a push at
-  ground level also *turns* the machine — the centre of mass is 1.3 m up, and
-  `m·h²/I ≈ 2`, so the second term is bigger than the first. Rigid belts lying
-  on the ground hid it; on springs it appeared instantly as a two-step limit
-  cycle, ±0.14 rad/s of roll, for ever, with both tracks reporting **100% grip
-  in use while parked on a level pad**. The fix is the textbook **effective
-  mass** at the contact, divided between the bogies sharing the correction.
-  Physics still caps at `mu · N`; the share only relaxes.
-- *The damper answered to the wrong thing.* Projecting the hull's velocity onto
-  the suspension axis cannot feel the ground coming up to meet a wheel, and it
-  left the damper permanently carrying 6% of the weight at rest — a half-step
-  gravity artefact that surfaced as a **parked machine clocking 3.7 metres a
-  minute onto its own odometer**. Differencing the strut's own travel, which is
-  what a travel sensor measures, fixed both.
-- *The spring had to be a force, not an impulse.* Rapier integrates a force in
-  the same breath as gravity; an impulse lands half a step away from it, which
-  is where that phantom velocity came from.
-
-**The voice, at last.** L-062 was refused when the machine got its voice, on the
-grounds that a knock with no quantity behind it is a sound effect wearing a
-simulation's clothes — the right call, and the way out was to build the springs
-rather than to relent. The quantity is **the watts a side's dampers dissipate**:
-zero parked (a spring is loudest when the machine is heaviest, a damper only
-speaks while a wheel is travelling), 7 W at the ninetieth percentile at a crawl,
-192 W median and 3400 W at the ninety-ninth at working speed, measured over 80 m
-of the default site. Per side, so the ear can hear which track took it — the one
-thing no other voice on the machine can say. Bottoming out moves the pitch
-toward the stop's own ring and **never** the level: how hard you were hit is
-already the watts.
-
-**The bench was blind to it, and the null test said so wrongly.** Silencing the
-new voice changed peak 0.606 → 0.634 and left RMS identical — which reads as
-*this voice does not exist*. It did; the bench had measured channel 0 for its
-whole life, and a scene's loudest instant is loud on both channels. It now
-reports **the widest gap each way between the channels, and when**, over 12 ms
-windows: 0.008 silenced against 0.048 playing, at the exact seconds `the-rut`
-puts a rut under each track. A null test only answers if the instrument can see
-the claim.
-
-**The cab got quiet, and that is the suspension working.** Re-measuring the ride
-afterwards: the ninetieth-percentile hull jerk fell from **416 m/s³ to 23**,
-eighteen times less, with the median unchanged. So the rattle's two constants
-were refitted to the new ride rather than turned up to hide the change, and the
-`rough-ground` fixture was refitted with them — the ground now speaks twice,
-loudly at the running gear and faintly in the cab, filtered by the thing that
-separates them.
-
-Consequences elsewhere, each measured rather than assumed: a 2.4 m landing is
-three hull events (1.57, 2.58, 1.84 m/s) instead of one, because the bogies take
-it over three steps; the out-of-margin-but-still-gripping window moved from
-around 40° to 34–36°, because weight transfers off the front bogies on a climb
-and they saturate first; and two tests that had encoded accidents were rewritten
-to state their claims — the margin/grip one as two thresholds crossing rather
-than a fraction of steps at one grade (it read 0.78 at 34°, 0.04 at 35° and 0.77
-at 36°, a coin toss on `SLIPPING`), and the teleport helpers as the five
-centimetres they always claimed rather than the metre of fall they were.
-
-Also: `makeRutTerrain` — flat ground with one bank under one track, the sibling
-of the ramp, because a claim about sides needs ground with a known shape.
-
----
-
-## 2026-08-25 — the rig asks for something, and can be satisfied
-
-Cards: [L-065] closed. [L-064] made room for this entry but is **not** closed —
-`doc/MEMORY.md` is back to 299 of 300, which is where it started.
-
-Missions, as far as the first two steps of `doc/design/rig/missions.md` go: reach a
-marker, then reach all of them. The interesting decisions were nearly all about
-what *not* to build.
-
-**One objective verb.** An `ObjectiveKind` enum ("reach one" / "reach all") was
-written first and deleted within the hour: those are the same sentence with a
-different pin count. So an `Exercise` carries a `RouteSpec` and the ladder is
-`count: 1` → `3` → `5`, which meant the second level cost nothing at all — it was
-already built by the first. Steps 3–5 (use a tool, collect, move X to Y) each
-genuinely are a new verb and will each cost one. Rejected with it: requiring the
-markers in order. NAV-1 walks a route in order and a pair of levers has no way of
-being told to, so the objective is order-free and the debrief records the order
-you actually took as split times.
-
-**The ladder is the ground, not the task.** `relief` scales every octave of the
-terrain generator, so the first site is the same site turned down rather than a
-different generator — 18° steepest against a 43.5° climb limit, climbable
-everywhere. That is in the test as an angle rather than as an adjective, along
-with the full site being *above* the limit: a trainee who cannot get up a hill
-has to be finding out something about their driving.
-
-**"You can already see the flag" is a cone**, `z > 0 ∧ |x| ≤ 0.34·z`, not a hope
-about a seed. A first exercise you can fail by facing the wrong way teaches the
-wrong thing.
-
-**The rig got a voice, and `sound.md` had said it would never have one.** That
-rule was written when the only things the rig owned were the camera and the
-volume — furniture, and furniture making noises would be the training system
-reaching into the cab. An objective is not furniture: nothing in the world can
-announce a marker, because the machine does not know what a marker is, the marker
-is a stake in the ground, and NAV-1 may not be fitted. So the rule was narrowed
-rather than repealed — **the rig speaks about the exercise and nothing else** —
-and the cues are the only voices made of intervals and the only ones whose tone
-does not bend downward, because they are generated rather than struck. That last
-part is `Knock.bend`, one optional field, and it is the whole graph change: a cue
-is a short tone, which `knock()` already builds.
-
-**The bench earned its keep again, in the way META keeps describing.**
-`exercise-failed` measured **identically** with the cues silenced on its first
-run — peak 0.351 either way. Nothing was wrong with the cue; the scene opened
-with a 180 J scooter and ran the drive note at 0.6 of full, and between them the
-bang and the bed owned the peak. Fixing the *scene* rather than the voice also
-made it truer: a scooter **nudged** at 30 J from a crawl, which is how anybody
-actually clips one, and categorical failure for it. It now reads 0.298 against
-0.212 silenced. `checkpoint` reads 0.473 against 0.367. `everything-at-once` took
-both cues on top of everything else and still peaks 0.884, because they duck
-under the horn like the rest of the bed.
-
-**Where the objective is drawn matters.** The strip is `src/ui/`, does not sweep
-with the cab, and costs no glass — the panel budget prices what a *manufacturer*
-bolted into your cab, and the rig is not a manufacturer. Had it gone on the dash,
-the machine would have had to know what a marker is.
-
-**The debrief can say yes.** It had exactly one verdict and it was always a bill.
-There is an outcome band, an objective block with split times, a stopped clock,
-SCHEDULE, and NEXT — which is the only green thing in the folder and only appears
-after a success. RESUME still comes first on every outcome, including a completed
-one: a finished exercise is still a site, and the rig does not confiscate it.
-
-Two things found by driving it rather than by testing it. The debug telemetry
-column and the new objective strip both owned the top-left corner and overlapped;
-the debug one moved, because one of them is for a player. And **turning NAV-1 on
-by itself does nothing** — it sits below the pilot with verb `CAP`, so parked
-levers cap guidance to zero. That is the dead-man's throttle and the acceptance
-scenario working perfectly, met by a first-timer with nothing to tell them
-whether they are looking at arbitration or at a fault. Carded as L-066 and
-deliberately *not* fixed by changing the rack default, which would repeal the
-best thing in it.
-
----
-
-## 2026-08-25 — the lever gets a gasket, and starts pivoting
-
-Cards: none. [L-051] narrowed again — the levers are hardware now and still
-have no maker.
-
-**A rod that changes length is not a lever.** The stick had a fixed foot and a
-grip that travelled the whole control, so the shaft stretched from 19 px to
-160 px across the throw — at full back the grip arrived at the deck with no
-shaft left under it, which is a telescope, not a lever. Three changes, and the
-third is the one that mattered:
-
-- **The foot moves.** A lever pivots under the deck, so the crossing point at
-  the floor travels too — a fifth as far as the grip, same direction. That
-  parallax is what says pivot. It slides in a **gasket**: a rubber slot cover
-  elongated along the throw, dark inside, with the shaft's cut end visible in it
-  so there is something to watch move.
-- **It leans.** A lever at the edge of the glass moves toward the vanishing
-  point as it goes away, so the left one leans right going forward and the right
-  one leans left. The component takes a `side` now; the rod is drawn as a
-  rotation about its foot, which is why its length is geometry rather than a
-  box's height.
-- **The drawn swing is a third of the drag.** The thumb keeps the full 196 px,
-  because a control wants a comfortable drag. The lever draws 44. Everything
-  above follows from separating those two numbers, and the collapse at full back
-  was entirely the cost of confusing them.
-
-Found by measuring, not by squinting: a foot crop kept looking like the gasket
-floated above the dash. Reading the actual pixel column said otherwise — the
-shaft ends exactly where the maths puts it and the gasket does tuck behind the
-panel; what was wrong was that the hole was barely wider than the shaft, so the
-rim never showed. The bench now shoots both levers at opposite ends of their
-throw in one frame, and crops the feet, because a gasket is 50 px of an 844 px
-screen and a full-frame shot of one is a smudge.
-
-Also fixed: `npm run cab -- app-lever` ran the whole app section and took no
-shots, because the section's gate only knew about the look shots.
-
-## 2026-08-25 — the levers lose their box, and a hand that never let go
-
-Cards: none. [L-051] narrowed again. Merged branches cleaned up — see below.
-
-**A bezel is the last thing left of a widget.** The levers had a housing: a box
-with a border, a background and a slot milled into it. Against a photograph of a
-real cab it is obvious what is wrong — a travel lever stands in the open, in
-front of the glass, bolted to the console it comes out of. So the box is gone.
-The sticks now rise out of the dashboard with their feet behind the panel (the
-deck paints over them, which is the whole trick: a stick that stops cleanly above
-the panel is a stick *resting* on it), the gate went with the housing since there
-is nothing left to cut a slot into, and what remains is shaft, grip, boot and a
-machined mark at neutral so HALT is still a place rather than a number.
-
-The per-lever readout went too. The throw is legible as a position now, the dash
-carries what the tracks are doing, and a label floating on the glass was the last
-piece of UI in a view that is trying to be a cockpit. Longer travel while we were
-here — a housing wants to be compact and a lever wants to be long.
-
-**Found by looking, again, and it was a real defect.** The bench pressed a lever
-and panned the view instead. The cause was not the lever: the *previous* gesture
-had dragged off the left edge of the window, so the canvas never saw its
-`pointerup` and went on believing a hand was on the glass. Before the neck was
-sprung that only meant a look you had to undo. Sprung, it means the cab is parked
-over your shoulder permanently, and a thumb leaving the glass mid-swipe is not an
-edge case on a phone — it is how swipes end. The canvas captures the pointer now,
-and treats a lost capture as a released hand.
-
-Every branch in the repo is merged into `main`; four are dead and this
-environment's git proxy answers 403 to a ref delete, so they need deleting from
-the GitHub UI or a machine with credentials.

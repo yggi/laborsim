@@ -35,12 +35,14 @@
  * and it is written down as one in `doc/NOTES.md`.
  */
 
-import { CHASSIS, type Module } from "../control/bus.ts";
+import { type Audio, createAudio } from "../audio/engine.ts";
+import { CHASSIS, type Module, NOMINAL } from "../control/bus.ts";
 import { makeClock, STEP_SECONDS } from "../core/clock.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import { type CameraMode, createViewport, type Viewport } from "../render/scene.ts";
 import { createWorld, initPhysics } from "../sim/world.ts";
 import { type Exercise, exerciseById } from "../world/exercises.ts";
+import { type EarWatch, watchAudio } from "./ear.ts";
 import { type GlWatch, watchCanvas } from "./gl.ts";
 
 const ticksFor = (seconds: number): number => Math.round(seconds / STEP_SECONDS);
@@ -178,6 +180,10 @@ export interface PassReport {
   readonly calls: number;
   readonly triangles: number;
   readonly programs: number;
+  /** `audio.render()`'s own span — scheduling, on the main thread. */
+  readonly audio: Spread;
+  /** Audio nodes built in a frame. A knock is six; a write-off can be 264. */
+  readonly nodes: number;
 }
 
 /** What it costs to get from nothing to a frame. */
@@ -238,6 +244,22 @@ interface Stand {
   readonly canvas: HTMLCanvasElement;
   readonly viewport: Viewport;
   readonly gl: GlWatch;
+  /**
+   * The machine's voice, on an **offline** context.
+   *
+   * The bench wants what `audio.render()` costs the *frame*, and that is the
+   * scheduling: building nodes and writing automation, on the main thread,
+   * between the render and the end of the tick. An offline context does exactly
+   * that work and needs neither an audio device nor the gesture a live one
+   * waits for, so the bench can measure the cost without making a noise in
+   * somebody's pocket.
+   *
+   * What it therefore cannot see is the audio *thread* — whether the browser
+   * keeps up with the graph it has been handed. That is the other half, and it
+   * is not observable from here.
+   */
+  readonly audio: Audio;
+  readonly ear: EarWatch;
   readonly startup: Startup;
   /** CSS pixels the glass is, which is what `resize` speaks. */
   readonly glass: readonly [number, number];
@@ -295,6 +317,9 @@ async function buildStand(
   lever: Levers,
 ): Promise<Stand> {
   const gl = watchCanvas(canvas);
+  const silent = new OfflineAudioContext(2, 1, 44_100);
+  const ear = watchAudio(silent);
+  const audio = createAudio(silent);
 
   const beforePhysics = performance.now();
   await initPhysics();
@@ -338,11 +363,19 @@ async function buildStand(
   if (gl.read().calls === 0) {
     throw new Error("a frame was rendered and no draw calls were counted");
   }
+  // The same check for the ear, and for the same reason: a counter that
+  // shadowed the wrong methods reports zero nodes for ever, and zero is a
+  // plausible-looking number in a column of numbers.
+  if (ear.read().nodes === 0) {
+    throw new Error("the audio graph was built and no nodes were counted");
+  }
 
   return {
     exercise,
     canvas,
     viewport,
+    audio,
+    ear,
     gl,
     glass,
     startup: {
@@ -404,6 +437,8 @@ async function runPass(
   const cpus: number[] = [];
   const sims: number[] = [];
   const renders: number[] = [];
+  const audios: number[] = [];
+  const nodes: number[] = [];
   const gpus: number[] = [];
   const steps: number[] = [];
   const calls: number[] = [];
@@ -430,8 +465,13 @@ async function runPass(
     const afterSim = performance.now();
 
     stand.gl.reset();
+    stand.ear.reset();
     stand.viewport.render(snapshot);
     const afterRender = performance.now();
+    // Where the game does it, and with what the game gives it. The loop calls
+    // audio last, after the GL submit, so that is where it is timed.
+    stand.audio.render(snapshot, { alarm: NOMINAL, horn: false });
+    const afterAudio = performance.now();
     if (probing) {
       stand.gl.finish();
       gpus.push(performance.now() - afterRender);
@@ -453,8 +493,12 @@ async function runPass(
     // costs approximately nothing. What is wanted is what a step costs; how
     // often one is owed is the `steps` column's job, next to it.
     if (owed > 0) sims.push(afterSim - beforeSim);
-    cpus.push(afterRender - beforeSim);
+    // `cpu` now covers the whole frame, audio included — it did not, and that
+    // omission is why the audio path had no number for as long as it did.
+    cpus.push(afterAudio - beforeSim);
     renders.push(afterRender - afterSim);
+    audios.push(afterAudio - afterRender);
+    nodes.push(stand.ear.read().nodes);
     steps.push(owed);
     calls.push(counted.calls);
     triangles.push(counted.triangles);
@@ -478,6 +522,8 @@ async function runPass(
     cpu: spread(cpus),
     sim: spread(sims),
     render: spread(renders),
+    audio: spread(audios),
+    nodes: median(nodes),
     gpu: spread(gpus),
     steps: spread(steps),
     calls: median(calls),
