@@ -41,7 +41,8 @@ import {
   WARN,
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
-import { NO_EXERCISE, type Snapshot, type TrackState } from "../src/core/snapshot.ts";
+import { snapshot, track } from "../src/core/fixture.ts";
+import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
 import { createAutonav } from "../src/modules/autonav.ts";
 
@@ -86,16 +87,6 @@ const module = (over: Partial<Module> = {}): Module => ({
   intent: () => ({ left: 1, right: 1 }),
   ...over,
 });
-
-/** A track standing on its springs: sagged, nothing travelling, nothing bottomed. */
-const PARKED: TrackState = {
-  commanded: 0,
-  surface: 0,
-  slip: 0,
-  contacts: 6,
-  traction: 0,
-  suspension: { compression: 0.45, damping: 0, bottomed: 0 },
-};
 
 describe("severity crosses the boundary as a number", () => {
   it("reads a module's own condition when it publishes one", () => {
@@ -166,24 +157,8 @@ describe("the masters are derived, never hand-wired", () => {
   it("lets severity beat order — a citizen outranks a module's opinion", () => {
     const { stages } = runRack([module({ label: "GUARD", condition: () => WARN })]);
     const citizen = chassisConditions(
-      {
-        tick: 0,
-        simSeconds: 0,
+      snapshot({
         seed: 1,
-        distance: 0,
-        machine: {
-          pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
-          left: { ...PARKED },
-          right: { ...PARKED },
-          speed: 0,
-          pitch: 0,
-          roll: 0,
-          shake: { surge: 0, heave: 9.81, sway: 0, jerk: 0 },
-        },
-        stages: [],
-        props: [],
-        route: [],
-        goal: NO_EXERCISE,
         damage: [
           {
             tick: 0,
@@ -202,8 +177,7 @@ describe("the masters are derived, never hand-wired", () => {
           },
         ],
         bill: 3000,
-        events: [],
-      },
+      }),
       false,
     );
     expect(masterLine(citizen, stages, "NOMINAL").text).toBe("CITIZEN PROPERTY");
@@ -219,41 +193,8 @@ describe("the masters are derived, never hand-wired", () => {
 
 describe("the tells point at an instrument that can show the thing", () => {
   /** A snapshot with whatever the case under test needs, and nothing else. */
-  const withTracks = (over: Partial<TrackState>): Snapshot => {
-    const contacts = over.contacts ?? 6;
-    const track: TrackState = {
-      commanded: 0,
-      surface: 0,
-      slip: 0,
-      traction: contacts === 0 ? null : 0.2,
-      suspension: PARKED.suspension,
-      ...over,
-      contacts,
-      ...(contacts === 0 ? { traction: null } : {}),
-    };
-    return {
-      tick: 0,
-      simSeconds: 0,
-      seed: 1,
-      distance: 0,
-      machine: {
-        pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
-        left: track,
-        right: track,
-        speed: 0,
-        pitch: 0,
-        roll: 0,
-        shake: { surge: 0, heave: 9.81, sway: 0, jerk: 0 },
-      },
-      stages: [],
-      props: [],
-      route: [],
-      goal: NO_EXERCISE,
-      damage: [],
-      bill: 0,
-      events: [],
-    };
-  };
+  const withTracks = (over: Partial<TrackState>): Snapshot =>
+    snapshot({ seed: 1, tracks: track(over) });
 
   it("sends a track that has lost the ground to TRACTION, where it is visible", () => {
     // It used to point at a GRIP dial that read 0% for a track in the air —

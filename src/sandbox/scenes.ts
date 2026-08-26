@@ -18,7 +18,6 @@
 import {
   ACTIVE,
   ALARM,
-  CHASSIS,
   type Condition,
   NOMINAL,
   type Stage,
@@ -26,27 +25,10 @@ import {
 } from "../control/bus.ts";
 import { STEP_SECONDS } from "../core/clock.ts";
 import type { SimEvent } from "../core/events.ts";
-import {
-  NO_EXERCISE,
-  type Shake,
-  type Snapshot,
-  type Suspension,
-  type TrackState,
-} from "../core/snapshot.ts";
+import { chassis, snapshot, stage, track } from "../core/fixture.ts";
+import type { Shake, Snapshot, Suspension, TrackState } from "../core/snapshot.ts";
 import { G, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { PropKind } from "../world/props.ts";
-
-const REST: TrackState = {
-  commanded: 0,
-  surface: 0,
-  slip: 0,
-  contacts: 6,
-  traction: 0,
-  // Standing on its springs: the static sag, and nothing moving. A damper only
-  // dissipates while the wheel is travelling, so a parked machine is silent
-  // there — and the sim agrees, to the last decimal (`sim/tracked.ts`).
-  suspension: { compression: 0.45, damping: 0, bottomed: 0 },
-};
 
 /** Linear from `a` to `b` between times `from` and `to`, held at both ends. */
 const ramp = (t: number, from: number, to: number, a: number, b: number): number => {
@@ -54,19 +36,6 @@ const ramp = (t: number, from: number, to: number, a: number, b: number): number
   if (t >= to) return b;
   return a + ((t - from) / (to - from)) * (b - a);
 };
-
-/** A track doing one thing. `surface` follows from the other two, as it does. */
-function track(over: Partial<TrackState>): TrackState {
-  const commanded = over.commanded ?? 0;
-  const slip = over.slip ?? 0;
-  return {
-    ...REST,
-    ...over,
-    commanded,
-    slip,
-    surface: over.surface ?? commanded - slip,
-  };
-}
 
 /** A marker reached, on the channel, at a tick. */
 const mark = (
@@ -119,37 +88,20 @@ export interface Scene {
  * chassis yet on the bench, and hear what one would sound like — which is the
  * only way to check that the house arrangement is real rather than promised.
  */
-const chassisStage = (maker: string): Stage => ({
-  id: CHASSIS,
-  label: "PILOT",
-  maker,
-  verb: "SET",
-  enabled: true,
-  idle: false,
-  output: { left: 0, right: 0 },
-  condition: ACTIVE,
-  safety: false,
-});
+const chassisStage = (maker: string): Stage => chassis(maker, { condition: ACTIVE });
 
 /** A fitted component's slot, for scenes about the panel rather than the ride. */
 const fittedStage = (over: Partial<Stage> & { id: string; maker: string }): Stage => ({
-  label: over.id,
-  verb: "CAP",
-  enabled: true,
-  idle: false,
-  output: { left: 0, right: 0 },
-  condition: NOMINAL,
-  safety: false,
+  ...stage({ id: over.id, maker: over.maker, verb: "CAP" }),
   ...over,
 });
 
 /**
- * Everything a scene needs and nothing it does not.
+ * A scene's frame: the kit's snapshot, plus the two things a scene owns.
  *
- * A snapshot is a large record and a voice reads a handful of fields of it.
- * Rather than fake the rest convincingly, this fills them with the emptiest
- * honest value: the bench is a listening surface, and a route or a bill on it
- * would be a detail nobody can hear pretending to matter.
+ * Everything unstated takes the kit's empty default — no route, no bill, no
+ * exercise — because the bench is a listening surface and a route on it would
+ * be a detail nobody can hear pretending to matter.
  */
 function frameOf(
   t: number,
@@ -158,35 +110,22 @@ function frameOf(
   events: readonly SimEvent[] = [],
   maker = "KIBA WORKS",
   /** Standing on the ground unless a scene says otherwise: 1 g up, and still. */
-  shake: Shake = { surge: 0, heave: G, sway: 0, jerk: 0 },
+  shake?: Shake,
   /** Kit fitted below the chassis, for scenes about the panel. */
   fitted: readonly Stage[] = [],
 ): Snapshot {
   const tick = Math.round(t / STEP_SECONDS);
-  return {
+  return snapshot({
     tick,
     simSeconds: t,
-    seed: 0,
-    distance: 0,
-    machine: {
-      pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
-      left,
-      right,
-      speed: Math.max(0, (left.surface + right.surface) / 2),
-      pitch: 0,
-      roll: 0,
-      shake,
-    },
+    left,
+    right,
+    shake,
     stages: [chassisStage(maker), ...fitted],
-    props: [],
-    route: [],
-    goal: NO_EXERCISE,
-    damage: [],
-    bill: 0,
     // The reader takes what it has not seen, so handing it the whole scene's
     // events every frame is correct and each one still fires exactly once.
     events: events.filter((e) => e.tick <= tick),
-  };
+  });
 }
 
 const both = (
@@ -408,9 +347,13 @@ export const SCENES: readonly Scene[] = [
         track({ commanded: MAX_TRACK_SPEED, traction: 0.9, slip: 0.2 }),
         t < 1.5
           ? track({ commanded: MAX_TRACK_SPEED, traction: 0.9 })
-          : track({
+          : // `contacts: 0` is the whole statement now — the kit supplies the
+            // null traction and the fully-drooped spring that follow from it.
+            // Stated by hand, the spring did *not* follow: this scene ran a
+            // track through the air at the parked 45% compression for as long
+            // as it existed, and the bogie voice was reading it.
+            track({
               commanded: MAX_TRACK_SPEED,
-              traction: null,
               contacts: 0,
               slip: MAX_TRACK_SPEED,
             }),

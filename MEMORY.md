@@ -108,10 +108,9 @@ priced line item. Model, numbers and build order: `docs/design/damage.md`.
 and "reach all of them" are one sentence with a different pin count, and the
 ladder is the *ground* rather than the task. `Exercise` is world data
 (`src/world/exercises.ts`); `Goal` is on the snapshot, settles once, and is the
-first thing the loop's third beat can say **yes** with. Failure stays exactly
-one thing: a citizen involved. **No score, no gate, no par time** — every
-exercise is on the schedule from the first session. Steps 3–5 of the progression
-each cost a new verb: `docs/design/missions.md`.
+first thing the third beat can say **yes** with. Failure stays one thing: a
+citizen involved. **No score, no gate, no par time** — every exercise is on the
+schedule from session one. Steps 3–5 each cost a verb: `docs/design/missions.md`.
 
 ## 4. Core loop
 
@@ -236,7 +235,8 @@ hydraulic rams, the cel pipeline: `docs/design/prototype-findings.md`.
 
 ```
 src/
-  core/      kernel: entity/part model, sim clock, event bus, units
+  core/      kernel: entity/part model, sim clock, event bus, units, and
+             `fixture.ts` — the one way to build a Snapshot by hand
   sim/       simulation driver
     layers/  the individual simulation layers
   modules/   rack components: loops that hold one invariant in one frame
@@ -252,6 +252,7 @@ src/
   world/     terrain, job sites, exercises, hazards (radiation, EMF)
   ui/        everything the rig made: the shell, the schedule, the objective
              strip, the debrief, the live voice
+  sandbox/   the benches: every component in every state, every voice
   platform/  input (touch-first), persistence, config
 assets/      models, textures, data
 docs/design/ MEMORY.md spill files

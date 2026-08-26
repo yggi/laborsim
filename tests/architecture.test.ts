@@ -188,3 +188,46 @@ describe("rule 3 — the snapshot boundary is one-directional", () => {
     expect(names.filter((n) => /threlte|svelte-cubed|svelthree/.test(n))).toEqual([]);
   });
 });
+
+/**
+ * Not one of the three rules — a convention (`docs/design/conventions.md`, *one
+ * fact, one place*) that earned a scanner the hard way.
+ *
+ * Three places built snapshots by hand, each with its own idea of what a track
+ * at rest looks like, and only one of them refused to build the machine that
+ * does not exist. Adding `suspension` and then `goal` meant teaching all three
+ * separately. The kit fixes that; this stops a fourth appearing, because the
+ * fourth will not arrive as a decision — it will arrive as somebody needing a
+ * snapshot in a hurry and writing out the fields.
+ *
+ * Scoped to `src` **and** `tests`, because the last time a scanner was written
+ * to watch only the directory whose author already thinks about the rule, the
+ * first violation landed in the one it did not watch (`META.md`).
+ */
+describe("one fact, one place — a hand-built snapshot comes from the kit", () => {
+  /**
+   * `src/sim/world.ts` builds the real one from the real world, which is the
+   * thing the kit exists to imitate; `src/core/fixture.ts` is the kit.
+   */
+  const AUTHORS = ["src/sim/world.ts", "src/core/fixture.ts"];
+
+  it("nothing else writes out a MachineState by hand", () => {
+    const roots = [SRC, new URL("../tests", import.meta.url).pathname];
+    const offenders: string[] = [];
+    for (const root of roots) {
+      for (const file of filesUnder(root)) {
+        const rel = file.slice(file.indexOf("/laborsim/") + "/laborsim/".length);
+        if (AUTHORS.some((a) => rel.endsWith(a))) continue;
+        // `machine:` with a brace is the shape of a snapshot literal and of
+        // nothing else in this codebase — every other mention passes one along
+        // by reference or reads a field off it.
+        if (/\bmachine:\s*\{/.test(stripComments(readFileSync(file, "utf8")))) {
+          offenders.push(rel);
+        }
+      }
+    }
+    expect(offenders, "build it with `snapshot()` from src/core/fixture.ts").toEqual(
+      [],
+    );
+  });
+});

@@ -1,12 +1,74 @@
 # LOG 2026 — the panel
 
 Archived from `LOG.md` when it reached its 1000-line gate, and added to at the
-next one. Newest first, as it was there. Six sessions in which the dash stopped
+next one. Newest first, as it was there. Seven sessions in which the dash stopped
 explaining itself and became a panel: prose replaced by marks, real fuses and a
 bus tap in the rail, the cage, a slot that owns its own power and mode, and
 finally GRIP and SLIP folding into one instrument.
 
 ---
+
+## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
+
+Cards: none closed. Opened: [L-056].
+
+**Three dials became one part.** Speed, ATT-0 and TRACTION now share one bezel,
+one set of four screws, and legends engraved into their own plate. The
+designation is internal and appears nowhere on the panel. The argument is not
+tidiness: three separately bolted gauges claim three suppliers, three fitters and
+three dates, and none of that is true of a cluster the chassis maker ships as a
+unit. The counters stayed out of it — a totaliser has never shared a bezel with
+a live dial, and you do not steer by one.
+
+`Gauge`, `Attitude` and `Traction` each lost their own bezel and four screws and
+gained the rim of the hole they are set into. That deleted three copies of the
+same brushed-metal gradient and, more usefully, **freed the space a frame was
+taking**: the dials grew about a quarter at the same footprint.
+
+**The engraved legends are a deliberate exception to the plate rule**, and the
+line is about who made the words: a plate names a control, was engraved by
+whoever fitted it, unscrews, and can outlive what it names; an engraving names
+part of the instrument it is cut into and cannot be wrong, because it and the
+dial are one object. `Meters` already relied on that for its H and KM without
+anyone writing it down. Now `substrate.css` carries it as `.mfg-engraved` with
+the argument, and `tests/cockpit.test.ts` fails if a cell engraves anything — a
+cell is a faceplate, so every word on one names a control (META: a rule enforced
+by a document is a rule that gets violated anyway).
+
+**The panel packs now, and the fix was structural.** Every part is its own item
+in the wrapping flow; the group boxes are gone except the masters, which keep
+theirs because a mushroom button you hunt for twice is one you find too late.
+Groups were why the panel looked sparse: 300 px of instruments either fitted on
+a row or jumped to the next one *entire*, leaving a hole as wide as everything
+in it. The flow is bottom-aligned too, so every plate and every legend across a
+row lands on one line with the controls ragged above it — which was already the
+rule inside each group, and is a better rule outside them.
+
+Measured, at 390 portrait: **251 px of dash before, 229 after**, with bigger
+dials and one fewer row — and the same 229 whether or not any component is
+fitted, where it used to grow a row for the cells. 22 px of glass back.
+
+**Rejected: `margin-left: auto` for the seam.** It made the gap between the
+machine's kit and the fitted kit *all* the slack in the row — fine at 390, a
+third of the panel in landscape, empty, with the cells marooned at the far edge.
+It is a fixed 12 px extra now, and the leftover steel collects at the end of the
+row where it reads as what it is: room for more kit. That is the panel budget
+(L-025) showing through, so it is worth seeing.
+
+**The bench grew a landscape row**, because none of the above was decidable from
+the portrait shots. The specimens render at 390 and again at 844, and
+`npm run shots` writes both. Two findings from doing it: the shots viewport was
+390 wide, so the first landscape shots came out silently clipped to 390 with a
+green run and no error — the browser window has to hold the widest specimen —
+and nothing in the cab is responsive to the window itself, so widening it is
+free. That is META's *ask the browser what it computed* twice in one afternoon:
+the clipped screenshot looked like a CSS bug and was not.
+
+Not done, and carded as [L-056]: **the cab around the panel.** The dash reflows;
+the glass does not. The deck's travel is in `dvh` and the rack takes 74 of them,
+which is a portrait number, so turned sideways the glass is a letterbox and the
+pods sit where a portrait layout left them. Camera FOV, cage geometry and deck
+travel want deciding together, and not as a CSS pass.
 
 ## 2026-08-25 — GRIP and SLIP become one head
 

@@ -26,9 +26,36 @@ Card format:
 ## ready
 
 Order and reasoning: `docs/design/roadmap.md`. These close the core loop at rung
-1 over the rack as the build surface. The verdict, its voice, the dash and now
-the exercises are built; what remains is more to break, replay, and the path to
-the conflict.
+1 over the rack as the build surface. The verdict, its voice, the dash and the
+exercises are built; what remains is more to break, replay, and the path to the
+conflict.
+
+The two foundation cards come first and are not features. Three feature branches
+in one week bent the same seams, and both were *found* rather than planned —
+which is the argument for spending a session on them before the next feature
+bends them again.
+
+### [L-069] One loop-input seam in `App.svelte`
+- **what:** the render loop runs outside any reactive scope, so three of its
+  inputs are handled three ways: `held` is mirrored from `briefing` in an
+  effect, `hornLevel` is mirrored from `master` in another (whose comment says
+  "same shape, and the same reason, as `held`"), and `honking` is read raw —
+  an untracked rune read from inside `requestAnimationFrame`, which is exactly
+  the shape the other two comments call a bug. One typed object the loop reads,
+  fed by one effect.
+- **done-when:** the loop reads one value, no `$state` is read from inside
+  `requestAnimationFrame`, and adding a fourth input is one field.
+
+### [L-070] `App.svelte` is ten concerns in one file
+- **what:** 1080 lines holding the sim lifecycle, the render loop, the rack
+  build, audio wiring, the annunciator, the E-stop, the horn, the notices, the
+  exercise/briefing state, the camera and the nag. The seams are already
+  visible as comment blocks; they want to be modules. `setViewMode` is the
+  tell — a `let` assigned from inside an async callback, so calling it before
+  the world exists does nothing, silently.
+- **done-when:** the sim lifecycle leaves the component, and nothing crosses
+  the boundary as a reassigned `let`.
+- **needs:** L-069 (the loop's inputs have to be one thing first)
 
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
@@ -53,25 +80,6 @@ the conflict.
 - **done-when:** the schedule shows what has been completed and in what time, and
   it survives a reload.
 - **needs:** L-012 (persistence is where a record of a run belongs)
-
-### [L-049] Themes, authored independently — the agentic round
-- **what:** one author per manufacturer, each given only its own `LORE.md`
-  entry, `components.md`, `theming.md` and the KIBA reference — blind to the
-  other makers' work. Each produces that maker's plate, cell and pod. Then a
-  **non-blind** adversarial comparison pass over all three side by side.
-- **done-when:** three racks read as kit from three suppliers *and* as one game,
-  and the pre-registered failure conditions in `theming.md` are answered either
-  way — including the one where a person cannot pick the maker of an unlabelled
-  plate.
-- **needs:** L-048 (built)
-
-### [L-051] The cage and the levers are KIBA's too
-- **what:** the chassis component brings the cab furniture. It has the geometry
-  now — a roof, door posts, side glass, and levers that are sticks in a gate —
-  but it is all generic steel. It belongs in the chassis maker's packet like the
-  dashboard does.
-- **done-when:** the cage frame and the levers are recognisably the same
-  manufacturer's as the panel they sit behind.
 
 ### [L-039] Breakables worth breaking
 - **what:** the site as an inventory of expensive things. More props, more
@@ -120,6 +128,25 @@ the conflict.
 ---
 
 ## backlog
+
+### [L-049] Themes, authored independently — the agentic round
+- **what:** one author per manufacturer, each given only its own `LORE.md`
+  entry, `components.md`, `theming.md` and the KIBA reference — blind to the
+  other makers' work. Each produces that maker's plate, cell and pod. Then a
+  **non-blind** adversarial comparison pass over all three side by side.
+- **done-when:** three racks read as kit from three suppliers *and* as one game,
+  and the pre-registered failure conditions in `theming.md` are answered either
+  way — including the one where a person cannot pick the maker of an unlabelled
+  plate.
+- **needs:** L-048 (built)
+
+### [L-051] The cage and the levers are KIBA's too
+- **what:** the chassis component brings the cab furniture. It has the geometry
+  now — a roof, door posts, side glass, and levers that are sticks in a gate —
+  but it is all generic steel. It belongs in the chassis maker's packet like the
+  dashboard does.
+- **done-when:** the cage frame and the levers are recognisably the same
+  manufacturer's as the panel they sit behind.
 
 ### [L-057] The site stands up
 - **what:** most of the furniture falls over on its own. Measured on the default
@@ -310,6 +337,18 @@ the conflict.
 
 ## history
 
+### [L-068] One kit for a hand-built snapshot — **closed**
+Three places built `Snapshot` values by hand and each grew its own kit; adding
+`suspension` and then `goal` cost three separate lessons, and the one invariant
+that had been fixed ("no contact, no traction reading") had been fixed in one of
+them. `core/fixture.ts` is the one way now, the two invariants live in it, and
+the listening bench stopped running a track through the air at the parked 45%
+spring compression. All twenty audio scenes measure identically to before, which
+is the claim a refactor has to make. Found on the way: the kits disagreed about a
+parked track's traction, and taking the loose answer made `idle` louder — a
+duplicate is two answers to a question nobody noticed was asked twice.
+`tests/architecture.test.ts` fails on a fourth copy.
+
 ### [L-062] The running gear is sprung, and you can hear the side — **closed**
 Refused as a voice, built as a machine: **one spring and damper per contact
 point**, twelve of them, and the belts no longer touch the ground at all. The
@@ -408,9 +447,3 @@ A live industrial control panel: yellow sheet steel, white-bezel needle gauges
 debrief, an ignition key for identity, a red E-STOP that kills the drive by
 disabling every module. Critical controls pinned right so they never scroll off
 a phone; the instrument strip scrolls. Every gauge reads a real quantity.
-
-### [L-044] The live voice — stacking notifications — **closed**
-Damage lines arrive as toasts that slide in and fade; a citizen latches until
-acknowledged. Same register as the debrief, faster tempo. Survives a reset by
-noticing the damage list shrank. Replaced the always-on ledger list.
-

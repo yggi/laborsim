@@ -24,6 +24,70 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — one kit for a hand-built snapshot
+
+Cards: [L-068] closed. Opened: [L-069] and [L-070], both found rather than
+planned. Convention added to `docs/design/conventions.md`.
+
+A foundation pass, and the seam it picked was the one three feature branches had
+each bent in the same week.
+
+**Three places built `Snapshot` values by hand**, and none of them was the sim:
+the cockpit bench, the listening bench, and `tests/cockpit.test.ts`. Each had
+grown its own `track()`, its own stage builder, and its own literal for
+*standing on the ground* — one of them spelling `heave: 9.81` where `spec.ts`
+exports `G`. No test imported anything from `src/sandbox/`; the three had never
+shared a foundation, and it showed.
+
+The cost was not hypothetical and it is in the history: `suspension` landed in
+one commit and `goal` in another, twenty-three seconds apart on two branches,
+and **each had to teach all three kits separately**. Two features, six lessons.
+
+**Worse than the tax was the drift.** One kit had been fixed so that
+`contacts: 0` with a traction reading was unrepresentable — its comment says it
+"described a machine that does not exist". The other two were not fixed. So the
+listening bench duly grew a scene running a track through the air at the
+**parked 45% spring compression**, which no sim step can produce. Being precise
+about the damage: the bogie voice reads `{ damping, bottomed }` and not
+`compression`, so it was a wrong reading rather than a wrong sound — bad data in
+a bench whose only job is to be right about readings.
+
+`core/fixture.ts` is the one way now. Both invariants live in it — no contact
+means no traction reading *and* no compression — after the spread, so a caller
+naming them cannot reintroduce the state the function exists to refuse.
+
+**The refactor's claim is that nothing changed, so it was measured.** All twenty
+audio scenes read identically to before: `idle` 0.122, `full-ahead` 0.490,
+`the-rut` 0.642 with 0.048 between channels, `everything-at-once` 0.865. Twenty
+cockpit shots, 232 tests, typecheck, lint.
+
+Getting there took one wrong turn worth keeping. The first unified `track()`
+defaulted `traction` to 0.2, because that is what the *cockpit* kit did — and
+`idle` came back 0.122 → 0.140 and `caution` 0.203 → 0.210. The two kits had
+quietly disagreed about what a parked track's traction is, and 0.2 was a dial
+reading somebody wanted to see rather than a state a stationary machine is in.
+A duplicate is not only a sync you have to remember; it is two answers to a
+question nobody noticed was being asked twice, and the wrong one is invisible
+until they meet.
+
+`tests/architecture.test.ts` now fails if a fourth copy appears — scoped to
+`src` **and** `tests`, because the last scanner written to watch only the tree
+whose author already thinks about the rule missed the first violation. Verified
+by breaking it: a planted file is named in the failure with the fix in the
+message. `machine: {` now occurs exactly once in the repo, in `sim/world.ts`.
+
+Net: −252 lines across the three callers, +one kit that is mostly its own
+argument. `MEMORY.md`'s repo map gained `sandbox/`, which it had never listed.
+
+Not taken, and carded instead: `App.svelte` at 1080 lines (L-070), and the three
+different ways its render loop gets a reactive value across the boundary into
+`requestAnimationFrame` — two mirrored through effects, one read raw, with the
+comment on the second saying "same shape, and the same reason, as" the first
+(L-069). That is the same defect as this one, one layer up, and it deserves its
+own session rather than a rider on this.
+
+---
+
 ## 2026-08-26 — a build per branch, and the one that was eating the others
 
 Cards: none. Found while answering "how do I always get a build per branch": the
@@ -888,68 +952,6 @@ exercise begins**, inside the settle window where nobody could see them. Carded
 as L-057; the fix is footing in the site generator, not a number in the sim, and
 the comment in `world.ts` that called this "a small settling twitch" now says
 what it really is.
-
-## 2026-08-25 — the KIBA-NAV-UNIT, and a panel that packs
-
-Cards: none closed. Opened: [L-056].
-
-**Three dials became one part.** Speed, ATT-0 and TRACTION now share one bezel,
-one set of four screws, and legends engraved into their own plate. The
-designation is internal and appears nowhere on the panel. The argument is not
-tidiness: three separately bolted gauges claim three suppliers, three fitters and
-three dates, and none of that is true of a cluster the chassis maker ships as a
-unit. The counters stayed out of it — a totaliser has never shared a bezel with
-a live dial, and you do not steer by one.
-
-`Gauge`, `Attitude` and `Traction` each lost their own bezel and four screws and
-gained the rim of the hole they are set into. That deleted three copies of the
-same brushed-metal gradient and, more usefully, **freed the space a frame was
-taking**: the dials grew about a quarter at the same footprint.
-
-**The engraved legends are a deliberate exception to the plate rule**, and the
-line is about who made the words: a plate names a control, was engraved by
-whoever fitted it, unscrews, and can outlive what it names; an engraving names
-part of the instrument it is cut into and cannot be wrong, because it and the
-dial are one object. `Meters` already relied on that for its H and KM without
-anyone writing it down. Now `substrate.css` carries it as `.mfg-engraved` with
-the argument, and `tests/cockpit.test.ts` fails if a cell engraves anything — a
-cell is a faceplate, so every word on one names a control (META: a rule enforced
-by a document is a rule that gets violated anyway).
-
-**The panel packs now, and the fix was structural.** Every part is its own item
-in the wrapping flow; the group boxes are gone except the masters, which keep
-theirs because a mushroom button you hunt for twice is one you find too late.
-Groups were why the panel looked sparse: 300 px of instruments either fitted on
-a row or jumped to the next one *entire*, leaving a hole as wide as everything
-in it. The flow is bottom-aligned too, so every plate and every legend across a
-row lands on one line with the controls ragged above it — which was already the
-rule inside each group, and is a better rule outside them.
-
-Measured, at 390 portrait: **251 px of dash before, 229 after**, with bigger
-dials and one fewer row — and the same 229 whether or not any component is
-fitted, where it used to grow a row for the cells. 22 px of glass back.
-
-**Rejected: `margin-left: auto` for the seam.** It made the gap between the
-machine's kit and the fitted kit *all* the slack in the row — fine at 390, a
-third of the panel in landscape, empty, with the cells marooned at the far edge.
-It is a fixed 12 px extra now, and the leftover steel collects at the end of the
-row where it reads as what it is: room for more kit. That is the panel budget
-(L-025) showing through, so it is worth seeing.
-
-**The bench grew a landscape row**, because none of the above was decidable from
-the portrait shots. The specimens render at 390 and again at 844, and
-`npm run shots` writes both. Two findings from doing it: the shots viewport was
-390 wide, so the first landscape shots came out silently clipped to 390 with a
-green run and no error — the browser window has to hold the widest specimen —
-and nothing in the cab is responsive to the window itself, so widening it is
-free. That is META's *ask the browser what it computed* twice in one afternoon:
-the clipped screenshot looked like a CSS bug and was not.
-
-Not done, and carded as [L-056]: **the cab around the panel.** The dash reflows;
-the glass does not. The deck's travel is in `dvh` and the rack takes 74 of them,
-which is a portrait number, so turned sideways the glass is a letterbox and the
-pods sit where a portrait layout left them. Camera FOV, cage geometry and deck
-travel want deciding together, and not as a CSS pass.
 
 ## Cards pushed out of `BOARD.md` history
 

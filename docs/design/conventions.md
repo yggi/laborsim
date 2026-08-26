@@ -18,12 +18,30 @@ places — heading in `body.yaw` *and* in `root.rotation.y`; hull height derived
 from the soles *and* from the ground. Delete the duplicate rather than syncing
 it; a sync is a bug with a schedule.
 
-Re-earned twice since:
+Re-earned three times since:
 
 - Machine sides live once as `LEFT_X`/`RIGHT_X`, shared by sim and renderer.
 - NAV-1's target had two setters — a `setTarget` method and a declared param —
   until the method went. A second entry point to one number is the same defect
   wearing a different hat.
+- **A hand-built `Snapshot` comes from `core/fixture.ts`.** Three places built
+  them by hand — the cockpit bench, the listening bench, the tests — and each
+  grew its own `track()`, its own stage builder, its own literal for *standing
+  on the ground*. Adding `suspension` and then `goal` meant teaching all three,
+  separately, in commits that did not know about each other. Then they drifted:
+  one refused to build `contacts: 0` with a traction reading, and the other two
+  did not, so the listening bench ran a track through the air at the parked
+  45% spring compression. The two invariants now live in the kit, where a
+  caller cannot forget them, and `tests/architecture.test.ts` fails if a fourth
+  copy appears — because the fourth will not arrive as a decision, it will
+  arrive as somebody needing a snapshot in a hurry.
+
+  Unifying them found a second thing: the two kits disagreed about what a
+  parked track's `traction` is. One said 0.2, which is a dial reading somebody
+  wanted to see rather than a state a stationary machine is in. Taking the
+  loose one made `idle` measurably louder on the listening bench — so a
+  duplicate is not only a sync you have to remember, it is two answers to a
+  question nobody noticed was being asked twice.
 
 ## Body axes: forward is +Z, up is +Y, so right is −X and left is +X
 

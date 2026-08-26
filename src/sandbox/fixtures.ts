@@ -13,72 +13,17 @@
  *
  * Architecture rule 3 holds trivially: an instrument is a view of a recording,
  * so a made-up recording drives it exactly as a real one does.
+ *
+ * What a fixture *is* — the invariants a hand-built snapshot has to satisfy —
+ * lives in `core/fixture.ts`, shared with the listening bench and the tests.
+ * This file is the cockpit's own vocabulary on top of it: the rack it starts
+ * from, the route the scope plots, and the states worth looking at.
  */
 
-import {
-  ACTIVE,
-  ALARM,
-  type Condition,
-  NOMINAL,
-  type Stage,
-  type Verb,
-  WARN,
-} from "../control/bus.ts";
-import { NO_EXERCISE, type Snapshot, type Waypoint } from "../core/snapshot.ts";
-import { G } from "../core/spec.ts";
-
-/**
- * A track state that cannot be built inconsistent: no contact means no traction
- * reading, because there is no friction cone to report a fraction of. A fixture
- * saying `contacts: 0, traction: 1` used to be expressible, and it described a
- * machine that does not exist.
- */
-const track = (over: Partial<Snapshot["machine"]["left"]> = {}) => {
-  const contacts = over.contacts ?? 6;
-  return {
-    commanded: 0,
-    surface: 0,
-    slip: 0,
-    traction: 0.2,
-    // Sitting on its springs: the static sag, nothing moving. A track in the
-    // air is hanging, which is what zero compression means.
-    suspension:
-      contacts === 0 ? HANGING : { compression: 0.45, damping: 0, bottomed: 0 },
-    ...over,
-    contacts,
-    ...(contacts === 0 ? { traction: null } : {}),
-  };
-};
-
-const HANGING = { compression: 0, damping: 0, bottomed: 0 };
-
-interface StageSpec {
-  readonly id: string;
-  readonly label: string;
-  readonly maker: string;
-  readonly verb?: Verb;
-  readonly enabled?: boolean;
-  readonly idle?: boolean;
-  readonly condition?: Condition;
-  readonly safety?: boolean;
-  readonly readout?: Record<string, number>;
-  readonly output?: { left: number; right: number };
-}
-
-export function stage(spec: StageSpec): Stage {
-  return {
-    id: spec.id,
-    label: spec.label,
-    maker: spec.maker,
-    verb: spec.verb ?? "SET",
-    enabled: spec.enabled ?? true,
-    idle: spec.idle ?? false,
-    output: spec.output ?? { left: 0, right: 0 },
-    readout: spec.readout,
-    condition: spec.condition ?? NOMINAL,
-    safety: spec.safety ?? false,
-  };
-}
+import { ACTIVE, ALARM, type Stage, WARN } from "../control/bus.ts";
+import { snapshot, stage, track } from "../core/fixture.ts";
+import type { Snapshot, Waypoint } from "../core/snapshot.ts";
+import type { DamageEvent } from "../sim/damage.ts";
 
 /**
  * A route to plot. Fixed rather than generated: the scope is being *looked at*,
@@ -144,62 +89,52 @@ export function snapshotOf(
   } = {},
 ): Snapshot {
   const slip = over.slip ?? 0;
-  return {
+  const commanded = over.commanded ?? over.speed ?? 0;
+  const traction = over.traction ?? 0.2;
+  return snapshot({
     tick: 4200,
     simSeconds: over.seconds ?? 1147,
     // The dataplate reads this as the machine's serial.
     seed: 20260823,
     distance: over.seconds !== undefined ? over.seconds * 1.4 : 1600,
-    machine: {
-      pose: { position: [0, 0, 0], rotation: [0, 0, 0, 1] },
-      left: track({
-        slip,
-        traction: over.traction ?? 0.2,
-        contacts: over.contacts ?? 6,
-        commanded: over.commanded ?? over.speed ?? 0,
-      }),
-      right: track({
-        slip: slip * 0.6,
-        traction: over.traction ?? 0.2,
-        contacts: over.rightContacts ?? over.contacts ?? 6,
-        commanded: over.commanded ?? over.speed ?? 0,
-      }),
-      speed: over.speed ?? 0,
-      pitch: over.pitch ?? 0,
-      roll: over.roll ?? 0,
-      // Standing on the ground: an accelerometer reads 1 g up and nothing else.
-      // The panel shows none of this yet; the cab's rattle hears it.
-      shake: { surge: 0, heave: G, sway: 0, jerk: 0 },
-    },
+    left: track({ slip, traction, commanded, contacts: over.contacts ?? 6 }),
+    right: track({
+      slip: slip * 0.6,
+      traction,
+      commanded,
+      contacts: over.rightContacts ?? over.contacts ?? 6,
+    }),
+    // Stated rather than derived from the tracks: a specimen is posed, and the
+    // needle's reading is part of the pose rather than a consequence of it.
+    speed: over.speed ?? 0,
+    pitch: over.pitch ?? 0,
+    roll: over.roll ?? 0,
     stages,
-    props: [],
     route: ROUTE,
-    goal: NO_EXERCISE,
-    damage: over.citizen
-      ? [
-          {
-            tick: 4100,
-            prop: 17,
-            kind: "scooter",
-            category: "citizen asset",
-            label: "scooter",
-            state: "destroyed",
-            yen: 3000,
-            energy: 8200,
-            toughness: 900,
-            at: [12, 0, -4],
-            speed: 2.4,
-            driving: ["PILOT"],
-            bypassed: [],
-          },
-        ]
-      : [],
+    damage: over.citizen ? [SCOOTER] : [],
     bill: over.bill ?? 0,
     // A specimen is a state held still to be looked at. Nothing on the bench
-    // reacts to events, and a frozen moment has no recent past.
-    events: [],
-  };
+    // reacts to events, and a frozen moment has no recent past — so `events`
+    // takes the kit's default, which is empty.
+  });
 }
+
+/** The one line in the ledger that is not a bill. */
+const SCOOTER: DamageEvent = {
+  tick: 4100,
+  prop: 17,
+  kind: "scooter",
+  category: "citizen asset",
+  label: "scooter",
+  state: "destroyed",
+  yen: 3000,
+  energy: 8200,
+  toughness: 900,
+  at: [12, 0, -4],
+  speed: 2.4,
+  driving: ["PILOT"],
+  bypassed: [],
+};
 
 /** One named state worth looking at, and why it is worth looking at. */
 export interface Specimen {
