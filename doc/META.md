@@ -50,6 +50,17 @@ pole flipped over and moved 40 cm in 1/60 s. Impossible, and it was:
 hypotheses and a measured-worse fix went into a launch that never happened.
 **Ask what ran before your first observation.**
 
+**When a stated fact does not match what you see, widen the look — do not
+reinterpret the statement.**
+Told another repo kept its core files in `doc/`, I cloned it `--depth 1` on its
+default branch, found no `doc/`, and started reasoning about what the instruction
+"must" have meant. That is guessing dressed as inference: the structure was on a
+branch I had not fetched, and merged to `main` half an hour later exactly as
+described. A shallow clone of one branch is not a look at a repository. In the
+same comparison a `cd` leaked across a here-doc, so a script printed one repo's
+root under the other's name — caught only because a file appeared that this repo
+never had. **Absolute paths, every branch, and the contradiction is the finding.**
+
 ## Verification
 
 **A test that passes either way is worthless.**

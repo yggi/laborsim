@@ -64,6 +64,10 @@ then printed "laborsim — ROOT .md files", which listed robby's root. It was
 obvious only because the output had `HANDOFF.md` in it, which laborsim has never
 had. Absolute paths in anything that compares two trees.
 
+Both went to `doc/META.md` as one Diagnosis entry — they are the same shape, a
+look that was narrower than it claimed to be, and the contradiction was the
+finding in each.
+
 `CLAUDE.md` gained the section robby has and this repo lacked: **Gates — what
 makes a change finished.** Four conditions, each failed here before — the suites
 green *and run*, with the number printed rather than estimated; the surfaces
