@@ -49,6 +49,21 @@ const count = (n: number): string =>
 interface Basis {
   readonly pinned: boolean;
   readonly label: string;
+  /**
+   * The smallest difference this basis can resolve, in its own units.
+   *
+   * Two quantized values differ by ±1 quantum before anything real has
+   * happened, so a gap of one is indistinguishable from none and two is the
+   * smallest worth printing.
+   *
+   * **What the quantum is depends on the basis, and the two are far apart.**
+   * GPU-owed time is a plain duration, so its step is the clock's. Frame time is
+   * vsync-locked — every interval is a whole number of refresh periods — so its
+   * step is a *period*, which on a 60 Hz panel is 16.7 ms and can be 9 % of the
+   * value being compared. Using the clock's step for both would suppress
+   * nothing on the frame basis and call every one-frame difference a finding.
+   */
+  readonly floor: number;
   of(report: PassReport): number;
 }
 
@@ -56,19 +71,38 @@ function basisFor(base: PassReport | undefined, device: Device): Basis {
   const period = device.refresh > 0 ? 1000 / device.refresh : 0;
   // A tenth of a period of slack: vsync lands a shade late, not a shade early.
   const pinned = !!base && period > 0 && base.frame.p50 <= period * 1.1;
+  const tick = Math.max(device.timer, 0);
   return pinned
-    ? { pinned, label: "gpu-owed p50", of: (r) => r.gpu.p50 }
-    : { pinned, label: "frame p50", of: (r) => r.frame.p50 };
+    ? { pinned, floor: tick * 2, label: "gpu-owed p50", of: (r) => r.gpu.p50 }
+    : {
+        pinned,
+        floor: Math.max(tick, period) * 2,
+        label: "frame p50",
+        of: (r) => r.frame.p50,
+      };
 }
 
-/** How much more a pass cost than the baseline, as a signed percentage. */
+/**
+ * How much more a pass cost than the baseline, as a signed percentage — or
+ * nothing at all, when the difference is smaller than the clock's own step.
+ *
+ * **The suppression is the point.** Read on a 1 ms clock against a 21 ms basis,
+ * one tick of quantization *is* a 5 % delta, and this table printed two of them
+ * as findings — "motion costs 5 %", "the chase view costs 5 %" — which then went
+ * into a design document as prices. Running the same phone twice returned +0 %
+ * for both and −9 % for a row that had read 0 %. A number that changes sign
+ * between two runs of the same device on the same build is not a measurement,
+ * and the honest thing for an instrument to print is that it cannot tell.
+ */
 function delta(
   pass: PassReport | undefined,
   base: PassReport | undefined,
   basis: Basis,
 ): string {
   if (!pass || !base || basis.of(base) <= 0) return "—";
-  const change = (basis.of(pass) / basis.of(base) - 1) * 100;
+  const difference = basis.of(pass) - basis.of(base);
+  if (Math.abs(difference) < basis.floor) return "· · ·";
+  const change = (difference / basis.of(base)) * 100;
   return `${change >= 0 ? "+" : ""}${change.toFixed(0)} %`;
 }
 
@@ -92,6 +126,9 @@ function fillVerdict(
   basis: Basis,
 ): string {
   if (!half || !base || basis.of(base) <= 0) return "";
+  if (Math.abs(basis.of(half) - basis.of(base)) < basis.floor) {
+    return "too close to call on this clock — the pixels are not the story";
+  }
   const share = Math.round((1 - basis.of(half) / basis.of(base)) * 100);
   if (basis.pinned) {
     return share >= 25
@@ -212,6 +249,21 @@ export function formatReport(
     say();
   }
   say(`WHAT MOVED — ${basis.label} against FULL SITE`);
+  // Only worth saying when it is worth knowing. A fine clock against a slow
+  // frame puts the floor below a percent, and "the floor is ±0 %" is a line of
+  // noise in a report whose whole argument is against printing those.
+  const floorPercent =
+    base && basis.floor > 0 && basis.of(base) > 0
+      ? (basis.floor / basis.of(base)) * 100
+      : 0;
+  if (floorPercent >= 1) {
+    say(
+      `  A ${ms(device.timer)} ms clock on a ${ms(basis.of(base as PassReport))} ms ` +
+        `basis puts the floor at ±${floorPercent.toFixed(0)} %.\n  Anything under it ` +
+        `reads \`· · ·\`: the bench cannot tell it from nothing.`,
+    );
+    say();
+  }
   const moved: readonly [string, string, string][] = [
     [
       "half the pixels",

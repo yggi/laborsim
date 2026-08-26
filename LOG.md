@@ -28,6 +28,40 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the second run is the error bar
+
+Cards: [L-034] — the same phone again, on the fixed bench.
+
+The repeat did the job a repeat is for. Two rows of the previous run's table —
+**"motion costs 5 %" and "the chase view costs 5 %"** — came back at +0 %, and a
+row that had read 0 % came back at −9 %. They were never measurements: Firefox
+quantizes `performance.now()` to 1 ms, and one tick against a 21 ms GPU-owed
+basis *is* a 5 % delta. Both had already been written into
+`docs/design/code/mobile-budget.md` as prices. Corrected there, and the bench now
+**withholds any delta smaller than two clock ticks**, prints `· · ·`, and states
+its own floor in the header — with the fill verdict refusing on the same test,
+because a verdict is a delta with an opinion attached. `META.md` gained the
+second half of yesterday's lesson: run it twice before you write the number down.
+
+What survives the floor is sharper than what did not. **170 draw calls cost
+about 1 ms of CPU and no measurable GPU time at all** — chase's GPU-owed figure
+is inside the floor and the only column that moves is `cpu`, 3 → 4 ms. And 170
+is almost exactly the machine's own mesh count doubled by its ink shells (hull,
+cab, frames, four wheels, two belts, 44 grousers, ~27 greebles), which the cab
+view gets free *only because the camera is inside it and they frustum-cull*.
+Rung 2's boom is in front of you and will not.
+
+The measured `cpu` column also corrected yesterday's derived figure: 3 ms of an
+8.34 ms frame, not 4. Summing `sim` and `render` medians overstates, because
+they are taken over different frame sets — which is the reason the column was
+added and, it turns out, the reason it was needed.
+
+Also: `measureRefresh` took the *minimum* interval, reasoning that a throttled
+frame pushes the middle out. Wrong for this loop — the page is idle and has drawn
+nothing, so every frame is a full-rate frame and the middle *is* the period;
+what the minimum caught was jitter, and the same 120 Hz phone read 120 then 121.
+Median now.
+
 ## 2026-08-26 — the frame fits, and the bench was wrong about why
 
 Cards: [L-034] closed.

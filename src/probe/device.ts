@@ -49,11 +49,15 @@ async function measureRefresh(): Promise<number> {
     intervals.push(now - last);
     last = now;
   }
-  // The *shortest* interval, not the median: a browser that throttles or a
-  // first frame that arrives late both push the middle out, and neither is a
-  // statement about the display. The floor is the panel.
-  const floor = Math.min(...intervals);
-  return floor > 0 ? Math.round(1000 / floor) : 0;
+  // The **median**, not the shortest. The floor was the first choice and its
+  // reasoning was that a throttled frame pushes the middle out — true, and not
+  // what this loop is: the page is idle and has drawn nothing, so every frame
+  // is a full-rate frame and the middle *is* the period. What the minimum
+  // actually catches is jitter, one interval landing a hair short, and the same
+  // 120 Hz phone read 120 Hz on one run and 121 on the next because of it.
+  const sorted = [...intervals].sort((a, b) => a - b);
+  const middle = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  return middle > 0 ? Math.round(1000 / middle) : 0;
 }
 
 /** Milliseconds of wall clock spent looking for the clock's own step. */

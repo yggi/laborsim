@@ -128,6 +128,85 @@ describe("a device that is actually dropping frames is read off the frame", () =
   });
 });
 
+describe("a difference the clock cannot resolve is not printed as one", () => {
+  /**
+   * The second run of the same phone on the same build. Two rows had read −5 %
+   * and +5 % — one clock tick against a 21 ms basis — and gone into a design
+   * document as prices. They came back +0 % and −9 %.
+   */
+  const noisy = [
+    pass("full", 8.34, 22),
+    pass("half", 8.34, 12), // 10 ticks: a reading
+    pass("parked", 8.34, 21), // 1 tick: not
+    pass("chase", 8.34, 23), // 1 tick: not
+    pass("graded", 8.34, 17), // 5 ticks: a reading
+    pass("again", 8.34, 22),
+  ];
+
+  const rowFor = (text: string, what: string): string =>
+    text.split("\n").find((l) => l.includes(what)) ?? "";
+
+  it("prints a real difference and withholds a one-tick one", () => {
+    const text = report(noisy, 120);
+    expect(rowFor(text, "half the pixels")).toContain("-45 %");
+    expect(rowFor(text, "22 props, not 130")).toContain("-23 %");
+    expect(rowFor(text, "nothing moving")).toContain("· · ·");
+    expect(rowFor(text, "outside the machine")).toContain("· · ·");
+  });
+
+  it("says where the floor is, in the units of the basis it used", () => {
+    // 1 ms clock, two ticks, 22 ms basis → ±9 %.
+    expect(report(noisy, 120)).toContain("floor at ±9 %");
+  });
+
+  it("refuses the fill verdict too when the pixels are inside the floor", () => {
+    const flatPixels = [pass("full", 8.34, 22), pass("half", 8.34, 21)];
+    expect(report(flatPixels, 120)).toContain("too close to call on this clock");
+  });
+});
+
+describe("the frame basis is quantized by vsync, not by the clock", () => {
+  /**
+   * A device that is genuinely dropping frames, on a fine clock. Frame time is
+   * still vsync-locked, so 183.4 ms and 200 ms are eleven and twelve periods of
+   * a 60 Hz panel — one period apart, which is one quantum, which is nothing.
+   * The same phone read a one-period gap as "+9 %" on one run and "+0 %" on the
+   * next, which is the evidence that one period is not a reading.
+   */
+  const struggling = [
+    pass("full", 183.4, 159), // eleven periods of a 60 Hz panel
+    pass("half", 66.7, 59.7), // four: seven periods below, a reading
+    pass("parked", 183.4, 178),
+    pass("chase", 200.0, 187), // twelve: one period above, and not a reading
+    pass("graded", 133.3, 145), // eight: three periods below, a reading
+    pass("again", 183.4, 158),
+  ];
+
+  const fineClock = (passes: readonly PassReport[]): string =>
+    formatReport(
+      { startup: [], passes, gpu: "a gpu" },
+      payload,
+      { ...device(60), timer: 0.005 },
+      "when",
+      "where",
+    );
+
+  it("withholds a one-frame difference even when the clock is fine", () => {
+    const text = fineClock(struggling);
+    const row = (what: string) => text.split("\n").find((l) => l.includes(what)) ?? "";
+    // A 0.005 ms clock would put the floor at 0.01 ms and call all three of
+    // these findings. The panel's 16.7 ms period is the real step.
+    expect(row("outside the machine")).toContain("· · ·");
+    expect(row("half the pixels")).toContain("-64 %");
+    expect(row("22 props, not 130")).toContain("-27 %");
+  });
+
+  it("states the floor in periods rather than in clock ticks", () => {
+    // 2 × 16.67 ms against a 183 ms basis → ±18 %.
+    expect(fineClock(struggling)).toContain("floor at ±18 %");
+  });
+});
+
 describe("the report carries what its own numbers mean", () => {
   it("warns when the clock is too coarse for the digits it is printing", () => {
     // Firefox quantizes `performance.now()` to 1 ms. A column of integers that

@@ -91,8 +91,12 @@ broken and no null test would have caught it: the instrument could see, it was
 just reading something saturated. **Before comparing on a quantity, ask what
 clamps it** — vsync, a cap, a timeout, a rate limit — and compare on something
 downstream of the clamp instead. The same reflex catches the *sibling* trap it
-was found next to: a duration measured on a clock quantized to 1 ms is an
-integer, and an integer nobody warned you about is read as precision.
+was found next to, and which cost a second correction: a duration measured on a
+clock quantized to 1 ms is an integer, one tick of it against a 21 ms basis *is*
+a 5 % delta, and two such ticks had already been written into a design document
+as prices before the same phone was run twice and returned zero for both.
+**Run it twice before you write the number down** — the second run is the error
+bar, and an instrument that cannot say "I cannot tell" will say something else.
 
 **Breaking a thing on purpose needs an undo that is not `git checkout`.**
 Three probes planted a fault each to prove a new checker could see it — and the
