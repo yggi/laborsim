@@ -13,7 +13,7 @@
  * - **The machine** — its drivetrain, its running gear, its loose fittings, its
  *   horn — is voiced by the house of the manufacturer that built the *chassis*.
  *   The chassis component brings the cab, the glass and the dashboard
- *   (`docs/design/cab/components.md`); it brings the noise too. A KIBA does not
+ *   (`doc/design/cab/components.md`); it brings the noise too. A KIBA does not
  *   sound like a TOWA for the same reason its dashboard does not look like one.
  * - **A component** is voiced by *its own* maker's house, not the chassis's.
  *   Nothing fitted makes a noise yet, and when something does — a guard's relay,

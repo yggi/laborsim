@@ -1,7 +1,7 @@
 /**
  * The architecture rules are only real if they are checked. This suite reads
  * the source tree and fails the build when a rule is broken, so that violating
- * one has to be a deliberate act — editing docs/design/code/architecture-rules.md
+ * one has to be a deliberate act — editing doc/design/code/architecture-rules.md
  * first — rather than an import added on a tired afternoon.
  */
 
@@ -190,7 +190,7 @@ describe("rule 3 — the snapshot boundary is one-directional", () => {
 });
 
 /**
- * Not one of the three rules — a convention (`docs/design/code/conventions.md`, *one
+ * Not one of the three rules — a convention (`doc/design/code/conventions.md`, *one
  * fact, one place*) that earned a scanner the hard way.
  *
  * Three places built snapshots by hand, each with its own idea of what a track
@@ -202,7 +202,7 @@ describe("rule 3 — the snapshot boundary is one-directional", () => {
  *
  * Scoped to `src` **and** `tests`, because the last time a scanner was written
  * to watch only the directory whose author already thinks about the rule, the
- * first violation landed in the one it did not watch (`META.md`).
+ * first violation landed in the one it did not watch (`doc/META.md`).
  */
 describe("one fact, one place — a hand-built snapshot comes from the kit", () => {
   /**

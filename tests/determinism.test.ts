@@ -10,7 +10,7 @@
  *
  * Machine *behaviour* lives in machine.test.ts. This file is about the rules.
  *
- * See docs/design/code/architecture-rules.md.
+ * See doc/design/code/architecture-rules.md.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";

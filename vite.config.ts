@@ -39,7 +39,7 @@ export default defineConfig({
   test: {
     // Rule 1 — the sim runs headless. The default test environment is plain
     // Node with no DOM: a sim test that needs a browser is a rule violation,
-    // not a configuration problem. See docs/design/code/architecture-rules.md.
+    // not a configuration problem. See doc/design/code/architecture-rules.md.
     environment: "node",
     include: ["tests/**/*.test.ts"],
   },

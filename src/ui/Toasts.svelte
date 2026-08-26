@@ -27,7 +27,7 @@ import type { DamageEvent } from "../sim/damage.ts";
  *
  * Two institutions speak in this cockpit and they must not blur: L.A.B.O.R.
  * certifies and bills, a manufacturer sells and warns
- * (`docs/design/rig/training-frame.md`). So a maker notice wears that maker's own
+ * (`doc/design/rig/training-frame.md`). So a maker notice wears that maker's own
  * plate colours and its wordmark, and it never carries a price — only the
  * ledger does that.
  */

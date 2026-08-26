@@ -13,7 +13,7 @@
  * Heights are additionally quantized, so even a future accidental
  * transcendental cannot move a vertex by a visible amount.
  *
- * See docs/design/code/architecture-rules.md, rule 2.
+ * See doc/design/code/architecture-rules.md, rule 2.
  */
 
 /** Metres per terrain cell. */

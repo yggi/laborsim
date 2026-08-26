@@ -198,7 +198,7 @@ export function createRun(options: RunOptions): Run {
       // The cab sweeps with the head. **One DOM write a frame, on one element**,
       // and the compositor moves the cage, the pods, the levers and the dash
       // between them — per-instrument reactivity at 60 Hz is the shape
-      // architecture rule 3 exists to prevent (`docs/design/cab/components.md`).
+      // architecture rule 3 exists to prevent (`doc/design/cab/components.md`).
       const head = viewport.head();
       root.style.setProperty("--cab-look-x", `${head.x}px`);
       root.style.setProperty("--cab-look-y", `${head.y}px`);

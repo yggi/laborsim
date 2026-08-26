@@ -16,7 +16,7 @@
  * Class and custom-property names are **prefixed `mfg-`**, always. A house-style
  * class called `bar` once collided with a meter's `.bar` in the same scoped
  * stylesheet and collapsed a whole faceplate to 7px with lint, types and 71
- * tests green (docs/design/instrument-rendering.md). Independently authored
+ * tests green (doc/design/cab/instrument-rendering.md). Independently authored
  * themes make that failure mode much more likely, not less.
  */
 

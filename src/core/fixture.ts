@@ -17,7 +17,7 @@
  *
  * So: one kit, and the invariants live in it rather than in a comment asking
  * three callers to remember. `tests/architecture.test.ts` fails if a fourth
- * appears — the repo's own answer to a rule nothing enforces (`META.md`).
+ * appears — the repo's own answer to a rule nothing enforces (`doc/META.md`).
  *
  * This is *not* the sim. Nothing here simulates; it states a pose. The sim's
  * snapshots come from `sim/world.ts` and agree with these by construction,
@@ -78,7 +78,7 @@ export const STANDING: Shake = Object.freeze({ surge: 0, heave: G, sway: 0, jerk
  * 1. **No contact, no traction reading.** `traction` is the fraction of the
  *    friction cone in use, and a track in the air has no cone — so it is `null`
  *    rather than `0`, which is the reading a *parked* track gives. Every
- *    consumer has to decide what to show for nothing measured (`MEMORY.md`
+ *    consumer has to decide what to show for nothing measured (`doc/MEMORY.md`
  *    § 4.1), and it cannot decide if the fixture lies to it.
  * 2. **No contact, no compression.** A spring with nothing under it is at full
  *    droop. Inheriting the parked sag put a hanging track at 45% compression on

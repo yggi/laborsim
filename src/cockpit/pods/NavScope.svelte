@@ -2,7 +2,7 @@
 /**
  * NAV-1's instrument, and it is **mandatory**: fit the component, fit its
  * glass. Components ship instruments and the player places them
- * (docs/design/cab/cockpit.md), so this is the first thing on the machine that
+ * (doc/design/cab/cockpit.md), so this is the first thing on the machine that
  * costs you view in exchange for capability.
  *
  * Deliberately **not a map**. No terrain, no contours, no obstacles — a
@@ -119,7 +119,7 @@ function plot(x: number, z: number) {
 
 <style>
   /* Positioned by the instrument column, not by itself — an instrument is
-     fitted into the glass it was given (docs/design/cab/cockpit.md). */
+     fitted into the glass it was given (doc/design/cab/cockpit.md). */
   /* TOWA's pod: injection-moulded, rounded, faintly backlit, and with no
      visible fixings anywhere. It does not want you thinking about how it is
      attached — which is the opposite of everything else in this cab. */

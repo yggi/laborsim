@@ -8,7 +8,7 @@
  *
  * These are **not** test fixtures for behaviour. Nothing here asserts anything
  * about the sim; they exist so the states are *lookable at*. Screenshots catch
- * what CI cannot (`META.md`), and a theme you cannot see is a theme you are
+ * what CI cannot (`doc/META.md`), and a theme you cannot see is a theme you are
  * guessing at.
  *
  * Architecture rule 3 holds trivially: an instrument is a view of a recording,

@@ -39,7 +39,7 @@ const {
  * 5x7 glyphs, one string of five bits per row, top to bottom.
  *
  * Hand-cut rather than imported: a full font is a dependency and a download,
- * and this needs thirty-odd characters. `MEMORY.md` § 9 — no further
+ * and this needs thirty-odd characters. `doc/MEMORY.md` § 9 — no further
  * dependencies without a reason, and "we might want W" is not one.
  */
 const FONT: Record<string, readonly string[]> = {

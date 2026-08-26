@@ -4,7 +4,7 @@
  * **Nothing is sampled.** A clip is a black box triggered by an event; a synth
  * voice is another rendering of a simulated quantity, and every number below is
  * a function of something the sim already publishes and an instrument already
- * shows (`docs/design/rig/damage.md`). If a voice cannot be traced back to a
+ * shows (`doc/design/rig/damage.md`). If a voice cannot be traced back to a
  * quantity, it does not belong here — that is the inspectability pillar applied
  * to the one channel that reaches you when your eyes are on the ground.
  *
@@ -497,7 +497,7 @@ export function squeakVoice(track: TrackState, house: SoundHouse): SqueakVoice {
  * This voice was refused once, on the record, and the refusal is worth keeping
  * because it is the rule working: a suspension knock could not be built while
  * nothing simulated suspension travel, because a voice with no quantity behind
- * it is a sound effect wearing a simulation's clothes (`docs/design/cab/sound.md`).
+ * it is a sound effect wearing a simulation's clothes (`doc/design/cab/sound.md`).
  * The way to get it was never to relent, it was to build the springs.
  *
  * So the quantity is **the watts a side's dampers are dissipating**
@@ -702,7 +702,7 @@ export function panelVoice(event: PanelEvent, house: SoundHouse): Knock {
  * The training system's own cues — and the first noise in this cockpit that the
  * **rig** makes rather than the machine, a manufacturer or the site.
  *
- * `docs/design/cab/sound.md` said the rig voices *nothing, deliberately*, and that
+ * `doc/design/cab/sound.md` said the rig voices *nothing, deliberately*, and that
  * was right for as long as it was true: the only things the rig owned were the
  * camera and the volume, which are furniture, and furniture that made noises
  * would be the training system reaching into the cab. An **objective** is not

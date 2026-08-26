@@ -70,7 +70,7 @@ const hands = restingHands();
  * It is also **the chassis component**: it brings the dashboard, the cage and
  * the glass, and it costs nothing, which is why it has no cell on the dash. You
  * do not need a lamp to tell you the levers are fitted
- * (`docs/design/cab/components.md`).
+ * (`doc/design/cab/components.md`).
  */
 const pilot: Module = {
   id: CHASSIS,
@@ -175,7 +175,7 @@ $effect(() => {
  * A Labor's horn has no cut-out — that is what a horn is for — so this is not a
  * dash control and does not live on the panel. It is the training rig's own
  * knob, and it sits with the camera, which is the other control that belongs to
- * the room rather than to the machine (`docs/design/rig/training-frame.md`).
+ * the room rather than to the machine (`doc/design/rig/training-frame.md`).
  */
 let sound = $state(true);
 let audio: Audio | undefined;
@@ -192,7 +192,7 @@ let audio: Audio | undefined;
  *
  * The camera and the volume are deliberately **silent**: they belong to the
  * training rig rather than to the machine, and the rig does not reach into the
- * cab and make noises (`docs/design/rig/training-frame.md`).
+ * cab and make noises (`doc/design/rig/training-frame.md`).
  */
 const CAB_MAKER = "KIBA WORKS";
 const click = (maker = CAB_MAKER) => audio?.panel("click", maker);
@@ -256,7 +256,7 @@ function toggleRack() {
  * A manufacturer sells and warns, and this is the first channel where one speaks
  * for itself. Keeping them visually distinct matters: a warranty notice is not
  * a verdict, and the player has to be able to tell whose opinion they are
- * reading (`docs/design/rig/training-frame.md`).
+ * reading (`doc/design/rig/training-frame.md`).
  */
 interface Notice {
   readonly id: number;
@@ -391,7 +391,7 @@ function begin(next: Exercise = exerciseById(picked) ?? FIRST_EXERCISE) {
  *
  * The cage is KIBA's structure, so the nag is KIBA's voice — and it is the
  * first thing to consume `voice.tips`, which has been populated for all three
- * makers and read by nothing (`docs/design/cab/components.md`).
+ * makers and read by nothing (`doc/design/cab/components.md`).
  *
  * It fires when a long look comes back to centre, and then not again for a
  * while: a reminder you get every time you glance is one you learn to ignore,
@@ -563,7 +563,7 @@ $effect(() => {
        the cabinet, not on the controls — the same bargain as the chase view,
        made with a different part of the body. The bus keeps carrying whatever
        they were last set to and the machine keeps doing it; you simply cannot
-       reach them while you are reading (docs/design/cab/cockpit.md). -->
+       reach them while you are reading (doc/design/cab/cockpit.md). -->
   {#if mode === "cab" && !rackOpen}
     <div class="levers left">
       <Lever side="left" label="L TRACK" value={leverL} onchange={(v) => (leverL = v)} />
@@ -686,7 +686,7 @@ $effect(() => {
   /* width/height must be explicit: an abs-positioned <canvas> with width:auto
      lays out at its INTRINSIC (drawing-buffer) size, not the inset box. This
      cost the concept-3 probe a debugging round — see
-     docs/design/code/prototype-findings.md. */
+     doc/design/code/prototype-findings.md. */
   .viewport {
     position: fixed;
     inset: 0;

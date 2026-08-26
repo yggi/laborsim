@@ -3,7 +3,7 @@
  *
  * The audio counterpart of `fixtures.ts`, and it exists for the same reason
  * that file does: a thing you cannot cheaply perceive is a thing that ships
- * broken with everything green (`META.md`). A screenshot bench answered that
+ * broken with everything green (`doc/META.md`). A screenshot bench answered that
  * for the panel; a machine's voice needs one too, and it needs one *more*,
  * because nothing about a sound is expressible as an assertion at all.
  *

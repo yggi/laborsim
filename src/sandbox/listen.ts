@@ -1,7 +1,7 @@
 /**
  * The listening bench — `npm run listen`, and a page you can click.
  *
- * `META.md`: *screenshots catch what CI cannot — so make looking cheap first.*
+ * `doc/META.md`: *screenshots catch what CI cannot — so make looking cheap first.*
  * Sound is the same lesson with the volume turned up, because a sound is not
  * merely hard to assert about, it is **impossible**: no test can tell you a
  * machine sounds like a machine. What a test *can* do is measure, and what a
@@ -54,7 +54,7 @@ export interface Rendered {
    * panned to the sides they are on, and *which side* is a real cue on a
    * machine you steer with two independent levers. A mono measurement cannot
    * fail the claim "the knock is on the side that took the rut", and a check
-   * that cannot fail is not a check (`META.md`).
+   * that cannot fail is not a check (`doc/META.md`).
    *
    * It is a **difference** and not each channel's own peak, which was the
    * first attempt and was useless: the loudest instant in a mix is loud on

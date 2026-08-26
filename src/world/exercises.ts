@@ -16,7 +16,7 @@
  * and encoding them as two objectives would have made the second one a feature
  * rather than a consequence.
  *
- * The shape this extends into is in `docs/design/rig/missions.md`: use a tool at a
+ * The shape this extends into is in `doc/design/rig/missions.md`: use a tool at a
  * location, collect something, move X to Y. Each of those is a new verb and will
  * cost one; none of them is this one wearing a hat.
  */
@@ -57,7 +57,7 @@ export interface Exercise {
  *
  * Four entries and the last one is not an exercise at all: the open site has no
  * pins, so it can never be completed, which is exactly what a sandbox is. v0 is
- * sandbox and exploration (`MEMORY.md` § 3) and missions arriving must not
+ * sandbox and exploration (`doc/MEMORY.md` § 3) and missions arriving must not
  * quietly repeal that — so the sandbox is on the menu with the rest, named.
  */
 export const EXERCISES: readonly Exercise[] = [
