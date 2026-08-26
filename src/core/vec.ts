@@ -48,6 +48,22 @@ export interface Quat {
  */
 export const conjugate = (q: Quat): Quat => ({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
+/**
+ * Compose two rotations: `a` after `b`, the usual quaternion product.
+ *
+ * Wanted the moment a thing on the site stopped being one box: a piece of a
+ * written-off prop is drawn and collided in *its own* orientation within the
+ * assembly, and it has to be lifted into the world by whatever the assembly had
+ * turned to before it came apart (`sim/world.ts`, `comeApart`). Arithmetic only,
+ * so a replay puts every fragment exactly where the run did.
+ */
+export const multiply = (a: Quat, b: Quat): Quat => ({
+  x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+  y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+  z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+  w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+});
+
 /** Rotate a vector by a unit quaternion. */
 export function rotate(q: Quat, v: Vec3): Vec3 {
   const u = vec(q.x, q.y, q.z);

@@ -85,7 +85,13 @@ await page.evaluate(async () => {
   canvas.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh";
   document.body.append(canvas);
 
-  const viewport = createViewport(canvas, world.terrain, world.props, world.waypoints);
+  const viewport = createViewport(
+    canvas,
+    world.terrain,
+    world.props,
+    world.waypoints,
+    world.poses(),
+  );
   viewport.resize(innerWidth, innerHeight);
   const snapshot = world.snapshot();
 

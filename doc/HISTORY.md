@@ -23,127 +23,85 @@ converges; if it does not, it is being appended to.
 
 ---
 
-## Before the code — the probe, and one reversal
+## Before the code — the probe, the frame, and the stack
 
 The repo opened as an empty skeleton with the five surfaces and their gates
-already in place, and seven questions deliberately left open rather than
-answered. A feasibility prototype was frozen verbatim at `prototype/concept-3/`
-under a standing rule: **port named mechanisms, never the structure, and never
-patch a probe — write a new one.** It had proved the thing that mattered (this
-can look and feel right in a browser, on a phone) and faked everything else.
-
-The first reversal is the one that shaped the build: **sequence the ladder, not
-the biped.** The probe started at a walker, correctly, because it was buying a
-look. Production starts at rung 1, a tracked platform, and the acceptance test —
-*two components fighting over one actuator, reachable within ten minutes, and
-attributable from a replay* — was specified there rather than at the end.
-
-## The frame, and what it paid for
+already in place, and seven questions deliberately left open. A feasibility
+prototype was frozen verbatim at `prototype/concept-3/` under a standing rule:
+**port named mechanisms, never the structure, and never patch a probe — write a
+new one.** It had proved the thing that mattered (this can look and feel right in
+a browser, on a phone) and faked everything else. The first reversal is the one
+that shaped the build: **sequence the ladder, not the biped.** The probe started
+at a walker, correctly, because it was buying a look; production starts at rung 1
+and the acceptance test was specified there rather than at the end.
 
 The reframing that did the most work: **the whole thing is, in-universe, a Labor
-design, operation and safety training system.** The player is not piloting a
-Labor; they are using the rig that teaches people to.
-
-It is not flavour, which is why it sits in `doc/MEMORY.md` rather than `doc/LORE.md`. It
-licenses inspectability without breaking fiction (an open sim layer is the rig's
-instrumentation, not a debug overlay), makes replay native, failure affordable,
-sandbox the default, procedural sites the point, and it sets the UI register.
-Several problems that looked like they needed machinery turned out to be answered
-by the frame already — hence the standing instruction: check it before inventing
-more.
-
-Two consequences arrived immediately. **No job tickets in v0** — a damage counter
-is the verdict instead, supplying the loop's missing third beat at a fraction of a
-ticket economy's cost. And **the cockpit resolved to the middle ground**:
-components ship instruments, those instruments are mandatory, and the player
-places them — which collapsed the rack and the cockpit into one decision and made
-capability literally cost sight.
-
-Tone crystallized into a sixth guiding principle: **you are an operator, not a
-demigod.** It earned that status because it decides arguments — a change that
-makes the machine feel heroic rather than awkward is working against the game.
-The chase camera resolved in the same shape: available, and it costs something
-real. Not a pause — *hands off the wheel*: the sim keeps stepping and the machine
-keeps doing whatever it was last told.
-
-## The stack, and rules that execute
+design, operation and safety training system.** Not flavour, which is why it sits
+in `doc/MEMORY.md` rather than `doc/LORE.md` — it licenses inspectability without
+breaking fiction, makes replay native, failure affordable, sandbox the default,
+and it sets the UI register. Several problems that looked like they needed
+machinery turned out to be answered by the frame already, hence the standing
+instruction to check it before inventing more. Two consequences arrived at once:
+**no job tickets in v0**, the damage ledger supplying the loop's third beat
+instead; and **the cockpit resolved to the middle ground** — components ship
+instruments, those instruments are mandatory, the player places them — which
+collapsed the rack and the cockpit into one decision and made capability
+literally cost sight. Tone crystallized into a sixth guiding principle, **you are
+an operator, not a demigod**, which earned that status by deciding arguments. The
+chase camera resolved in the same shape: available, and it costs something real —
+not a pause but *hands off the wheel*.
 
 The stack settled — TypeScript · Vite · Svelte 5 · Vitest · Biome · Three.js ·
 Rapier — **with its rejected options recorded and reasoned**, so they are not
-relitigated: Godot's web export cannot run C# at all, Babylon's switching cost
-lands on an already-proven cel pipeline, and Jolt's tracked-vehicle controller is
-an anti-feature here because the friction model *is* the teaching layer.
-
+relitigated: Godot's web export cannot run C#, Babylon's switching cost lands on
+an already-proven cel pipeline, and Jolt's tracked-vehicle controller is an
+anti-feature here because the friction model *is* the teaching layer.
 **Mobile-first was fixed with a mechanical reason rather than a preference:**
-viewport budgeting turned out to be a core mechanism, which couples it deeply to
-touch. A desktop-first cockpit would be a different mechanic wearing the same
-name.
-
-The three architecture rules became **executable rather than aspirational** — a
+viewport budgeting is a core mechanism, which couples it deeply to touch. The
+three architecture rules became **executable rather than aspirational** — a
 scanner that fails the build, so breaking one has to be a deliberate act that
-edits the rules first. That pattern (a rule nothing enforces is a rule that gets
-violated anyway) is now the house style for invariants.
+edits the rules first; that pattern is now the house style for invariants. Its
+one real threat, **JS transcendentals are not bit-portable across engines**, was
+solved by avoiding the problem: terrain is value noise from an integer hash,
+quantized as belt and braces. Two live violations had already shipped, and were
+found only when the rule got its scanner.
 
-Determinism became a standing test rather than a claim. Its one real threat —
-**JS transcendentals are not bit-portable across engines**, and the probe's height
-function was made almost entirely of them — was solved by avoiding the problem:
-terrain is value noise from an integer hash, quantized as belt and braces. The ban
-is on transcendentals that close a loop back into sim state; display-only `asin`
-is a licensed exception. Two live violations had already shipped, and were found
-only when the rule got its scanner.
-
-## Rung 1 drives, and fails predictably
+## Rung 1 drives, and the rack becomes a pipeline
 
 **The track model is ours, and that is the design.** Rapier has no anisotropic
 collider friction and its vehicle controller models wheels — verified, not
-assumed — so neither shortcut applied. A black box producing correct-looking
-motion would be a layer the player cannot open, which principle 5 forbids.
+assumed — and a black box producing correct-looking motion would be a layer the
+player cannot open, which principle 5 forbids. One tuned constant, `MU = 0.95`;
+everything else is a dimension or a mass and the behaviour falls out. The climb
+limit measured at `atan(MU)` ≈ 43.5°, and past it the machine grinds partway up,
+rears, loses contact, **flips over backwards and slides to the bottom** — with no
+tipping logic anywhere in the codebase. Principle 1 arriving for free. Two
+lessons outlived the stretch: a grade probe reported zero climb at every angle
+with ten tests passing, and **the probe was wrong, not the machine**; and
+mirrored steering shipped because the tests asserted that yaw *changed*, never
+which way — fixed by derivation (`forward = up × right`) rather than by trying
+both.
 
-One tuned constant, `MU = 0.95`. Everything else is a dimension or a mass and the
-behaviour falls out: the climb limit measured at `atan(MU)` ≈ 43.5°. Past it the
-machine grinds partway up, rears, loses contact, **flips over backwards and slides
-to the bottom** — with no tipping logic anywhere in the codebase. Principle 1
-arriving for free, and pinned by tests so a model change has to be deliberate.
-
-It shipped to GitHub Pages, gated on the checks, because the cockpit cannot be
-judged honestly on a desktop.
-
-Two lessons outlived the stretch. A grade probe reported zero climb at every angle
-with ten tests passing — **the probe was wrong, not the machine.** And mirrored
-steering shipped because the tests asserted that yaw *changed*, never which way;
-the fix was derivation (`forward = up × right`) rather than trying both, and the
-machine got sprockets and idlers so the bug class can never be silent again.
-
-## The rack becomes a pipeline
-
-The single best reframing in the project: **the rack stopped being a priority
-stack and became a pipeline.** Each module takes the signal from the module
+Then the single best reframing in the project: **the rack stopped being a
+priority stack and became a pipeline.** Each module takes the signal from the one
 above, folds in its own intent by its **verb**, and passes it down to an actuator
-terminal.
+terminal. It dissolved three open questions at once — per-actuator granularity,
+suppress-versus-inhibit, and what to do about `SET` — with no new machinery, and
+became a `doc/META.md` entry in its own right. Four verbs, three letters each,
+which makes a fifth typographically awkward *on purpose*: a complexity budget
+that enforces itself. `CAP` then produced a mechanic nobody designed — a lever at
+rest caps to zero, so parked levers above a `CAP` module stop the machine
+whatever is driving it.
 
-It dissolved three open questions in one move — per-actuator granularity,
-suppress-versus-inhibit, and what to do about `SET` — without new machinery, and
-became a `doc/META.md` entry: a reframing that dissolves several questions at once is
-probably right.
-
-Four verbs, three letters each, which makes a fifth typographically awkward *on
-purpose* — a complexity budget that enforces itself against
-node-graph-by-accretion. `CAP` then produced a mechanic nobody designed: a lever
-at rest caps to zero, so parking the levers above a `CAP` module stops the machine
-whatever is driving it. A dead-man's throttle, out of the verb.
-
-The first *safety* component tested the model and sharpened it. TILT-GUARD takes
-`AMP` rather than `CAP`, because `CAP` clamps a positive intent into the arriving
-signal's magnitude — so a reversing machine would come out going forward, a
-safety module causing the crash it exists to prevent. And ordering alone turns it
-into something else: **a guard above the thing it guards is a warning light**,
-scaling a signal the pilot then overwrites, with its condition still on the dash.
-Guard, bypass or advise, chosen by position, with no new verb or mechanism.
-
-**Attribution had to be rethought and came out better.** Under a pipeline there is
-no owner to name — everyone shaped the signal — so instead of a banner naming a
-winner, the chain is shown stage by stage down to the terminal. Multi-layer
-inspectability landing where it counts, and it reads the same live or in replay.
+The first *safety* component sharpened the model. TILT-GUARD takes `AMP` rather
+than `CAP`, because `CAP` clamps a positive intent into the arriving signal's
+magnitude and a reversing machine would come out going forward — a safety module
+causing the crash it exists to prevent. And ordering alone turns it into
+something else: **a guard above the thing it guards is a warning light.** Guard,
+bypass or advise, chosen by position, with no new verb. **Attribution had to be
+rethought and came out better**: under a pipeline there is no owner to name, so
+instead of a banner naming a winner the chain is shown stage by stage down to the
+terminal, and it reads the same live or in replay.
 
 ## Consequence — the world can be broken
 
@@ -162,6 +120,40 @@ gravity feeds it), and a cone rated at 22 J was indestructible because 6 kg at
 drivetrain can deliver into that mass. And the nastiest: a test that **passed by
 measuring the bug** — it had never hit anything, and what it detected was the
 spawn defect.
+
+## The site becomes a place made of things
+
+The ledger had been pricing a site that could not stand up and could not come
+apart, and both were one problem: **a prop was identified by its kind**, and
+every fact about it was a separate table keyed on that — mass here, a collider
+box there, a voice in the audio, its art as a branch of an if/else chain with a
+boulder in its `else`. Four places, one of them silent, which is why the
+inventory never grew past five kinds and a scooter.
+
+Naming the missing axis fixed all of it. **A prop is a part list over
+materials**: a kind declares its solids and what they are made of, and the
+collider, the art, the voice, the toughness and the wreckage all fall out of that
+one declaration. Toughness stopped being typed in — it is a fraction of
+`½·m·v_max²` — and the sound table stopped having a row per kind, because a big
+body of the same stuff rings lower and longer by arithmetic. Six kinds became
+fourteen at no cost to the ear or the renderer.
+
+The standing-up half was an **ordering** mistake: terrain was generated from
+noise, and then the prop generator invented six work-area centres of its own, so
+the ground and the furniture disagreed about where the work was and the furniture
+lost — 46 of 102 breakables flat before anyone touched them. The site plan comes
+first now and the ground is graded to it, and a candidate is refused where its own
+tipping gradient says it cannot stand. Neither half is sufficient: the pads alone
+leave eight flat, the footing test alone drops twenty props for want of anywhere
+to say yes to.
+
+Then it comes apart — into the solids the part list names, each with a body, so
+pipes roll downhill and tumble into each other; while the ear gets a **grain
+cloud** whose count, span and *regularity* make a screech, a shatter, a splinter,
+a crumble and a ding one function. Measuring the parts against the box that
+stands in for them turned up two shipped defects nobody could have seen: a pipe
+stack drawn end-to-end inside a collider that said side-by-side, and a cable drum
+boxed on the wrong axis.
 
 ## The cab becomes a machine rather than a screen
 

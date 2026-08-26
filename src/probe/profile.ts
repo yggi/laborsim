@@ -306,7 +306,13 @@ async function buildStand(
 
   const glass: readonly [number, number] = [innerWidth, innerHeight];
   const beforeViewport = performance.now();
-  const viewport = createViewport(canvas, world.terrain, world.props, world.waypoints);
+  const viewport = createViewport(
+    canvas,
+    world.terrain,
+    world.props,
+    world.waypoints,
+    world.poses(),
+  );
   viewport.resize(glass[0], glass[1]);
   const viewportMs = performance.now() - beforeViewport;
   fillTheGlass(canvas);

@@ -22,6 +22,7 @@
  */
 
 import type { Stage } from "../control/bus.ts";
+import type { MaterialId } from "../world/materials.ts";
 import {
   PROP_SPEC,
   type Prop,
@@ -62,6 +63,17 @@ export interface DamageEvent {
   readonly kind: PropKind;
   readonly category: PropCategory;
   readonly label: string;
+  /**
+   * What it was made of and how heavy it was — the same pair `ImpactEvent`
+   * carries, and here for the same reason.
+   *
+   * A line is a **value**: the debrief holds it, a toast holds it, and now the
+   * ear and the eye read it to decide what coming apart sounds and looks like.
+   * None of them may go asking the world what a `kind` is made of, so the line
+   * says. `label` is what the rig calls it in writing; these two are what it is.
+   */
+  readonly material: MaterialId;
+  readonly mass: number;
   readonly state: "damaged" | "destroyed";
   /** Yen billed by **this line**. Lines never double-bill an asset. */
   readonly yen: number;
@@ -199,6 +211,8 @@ export function createLedger(props: readonly Prop[]): Ledger {
         kind: prop.kind,
         category: spec.category,
         label: spec.label,
+        material: spec.material,
+        mass: (spec.mass ?? 0) * prop.scale,
         state: reached === 2 ? "destroyed" : "damaged",
         yen,
         energy: carried,

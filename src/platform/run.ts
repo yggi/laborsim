@@ -117,6 +117,7 @@ export function createRun(options: RunOptions): Run {
       world.terrain,
       world.props,
       world.waypoints,
+      world.poses(),
     );
     const clock = makeClock();
     setMode = viewport.setMode;

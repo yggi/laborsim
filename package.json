@@ -15,6 +15,7 @@
     "format": "biome check --write .",
     "shots": "node scripts/shots.mjs",
     "cab": "node scripts/cab.mjs",
+    "yard": "node scripts/yard.mjs",
     "listen": "node scripts/listen.mjs",
     "profile": "node scripts/profile.mjs"
   },

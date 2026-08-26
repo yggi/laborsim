@@ -210,6 +210,11 @@ export function snapshot(spec: SnapshotSpec = {}): Snapshot {
     machine,
     stages: spec.stages ?? [],
     props: spec.props ?? [],
+    // Nothing hand-built has ever been driven into anything, so a fixture has
+    // no wreckage. It is on the type rather than optional because a snapshot
+    // always answers the question, and a `?.` in the renderer's hot loop is a
+    // worse trade than an empty array.
+    debris: [],
     route: spec.route ?? [],
     goal: spec.goal ?? NO_EXERCISE,
     damage: spec.damage ?? [],

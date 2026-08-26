@@ -37,7 +37,8 @@ import { makeRng } from "../core/rng.ts";
 import type { Shake, TrackState } from "../core/snapshot.ts";
 import { GROUSER_PITCH, MAX_TRACK_SPEED } from "../core/spec.ts";
 import type { SoundHouse, Wave } from "../makers/sound.ts";
-import type { PropKind } from "../world/props.ts";
+import { MATERIAL } from "../world/materials.ts";
+import { type Piece, volumeOf } from "../world/props.ts";
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -247,37 +248,35 @@ export interface Knock {
 /** Dull at a touch, sharp at a slam. The contact, not the body. */
 const strikeOf = (level: number): number => 700 + 2600 * level;
 
-interface Material {
-  /** Where it rings, before the energy pulls it down. */
-  readonly hz: number;
-  /** Seconds, at a light touch. */
-  readonly decay: number;
-  /** 0–1 — how much of it is noise rather than tone. Plastic against steel. */
-  readonly grit: number;
-}
+/**
+ * The mass a material's `ring` numbers are quoted at, kilograms.
+ *
+ * About what one person can shift, which makes the table readable: `tube` at
+ * 240 Hz is a scaffold pole in your hands, and everything else is that note
+ * moved by how big the thing actually is.
+ */
+const RING_REF_MASS = 40;
 
 /**
- * What each thing on the site is made of, as a voice.
+ * How big the struck thing is, against the reference — and the only number
+ * needed to place its voice.
  *
- * Not a sound designer's table: it is the one place in the whole audio path
- * where a number is *chosen* rather than derived, and it is confined to
- * **timbre** — what a pipe stack is made of. Everything about how hard it was
- * hit comes from the joules, below.
+ * **A bigger body of the same stuff rings lower and longer.** That is one fact
+ * with two consequences, so it is one derivation used twice: `hz` divides by it
+ * and `decay` multiplies by it. The fourth root is what fits the two readings
+ * the old hand-written table had at either end of the mass range — a 24 kg
+ * marker pole against a 260 kg pipe stack, which were 300 Hz and 128 Hz chosen
+ * separately and are now 273 and 150 chosen once.
+ *
+ * The 22 Hz the pipe stack gained back is not a loss. A heavy landing was
+ * written at 43 Hz once and was **silence** on the device this game is built
+ * for; weight comes from the grit and the decay, both of which this raises.
+ *
+ * It is also what makes an inventory affordable: a new kind of thing gets a
+ * voice of its own from its mass, and the audio table does not grow a row.
  */
-const MATERIAL: Record<PropKind, Material> = {
-  // Thin plastic. A tick, not a note.
-  cone: { hz: 430, decay: 0.1, grit: 0.85 },
-  // A hollow steel tube, and it rings for it.
-  pole: { hz: 300, decay: 0.55, grit: 0.3 },
-  // Quarter of a tonne of steel pipe. The lowest, longest voice on the site.
-  pipes: { hz: 128, decay: 0.9, grit: 0.28 },
-  barrier: { hz: 220, decay: 0.18, grit: 0.7 },
-  // Sheet, plastic and a fuel tank. Mixed, and the one nobody wants to hear.
-  scooter: { hz: 190, decay: 0.4, grit: 0.5 },
-  // Landscape is never billed and never emits, but the table is total so that
-  // adding a kind cannot silently fall through to a default.
-  rock: { hz: 88, decay: 0.14, grit: 0.95 },
-};
+const sizeOf = (mass: number): number =>
+  Math.sqrt(Math.sqrt(Math.max(mass, 0.5) / RING_REF_MASS));
 
 /**
  * Joules at which an impact is as loud as it gets.
@@ -313,16 +312,17 @@ export const loudness = (joules: number, reference: number): number =>
 const IMPACT_SPREAD = 0.2;
 
 export function impactVoice(event: ImpactEvent): Knock {
-  const material = MATERIAL[event.what];
+  const { ring } = MATERIAL[event.material];
+  const size = sizeOf(event.mass);
   const level = loudness(event.joules, IMPACT_REF);
   const wobble = makeRng(event.seq).range(-1, 1) * IMPACT_SPREAD;
   return {
     // A harder hit excites lower modes: the same cone struck harder rings
     // deeper, which is why a bang and a tap are not the same sound louder.
-    hz: material.hz * (1 - 0.28 * level) * (1 + wobble),
+    hz: (ring.hz / size) * (1 - 0.28 * level) * (1 + wobble),
     gain: level,
-    decay: material.decay * (0.5 + 0.9 * level) * (1 + wobble * 0.5),
-    grit: material.grit,
+    decay: ring.decay * size * (0.5 + 0.9 * level) * (1 + wobble * 0.5),
+    grit: ring.grit,
     strikeHz: strikeOf(level),
   };
 }
@@ -641,6 +641,159 @@ export function rattleVoice(shake: Shake, house: SoundHouse): RattleVoice {
     hz: house.rattle.hz,
     q: house.rattle.q,
   };
+}
+
+/* -- things coming apart --------------------------------------------------- */
+
+/**
+ * One transient of a failure, and when it happens.
+ *
+ * A grain, and a failure is a cloud of them. Nothing here is a new kind of
+ * sound: each grain is an ordinary `Knock` through the same transient an impact
+ * and a track plate use, so the whole vocabulary of breaking — bending metal
+ * screeching, wood splintering, glass shattering, concrete crumbling, a pipe
+ * ringing — is one mechanism with its dials turned.
+ */
+export interface Grain extends Knock {
+  /** Seconds after the failure begins. */
+  readonly at: number;
+}
+
+/**
+ * How loud a failure is, per grain, against the energy that caused it.
+ *
+ * **Set by measuring, and it took three goes.** At 0.62 the whole thing was
+ * inaudible: `what-it-is-made-of` measured *identically* with the failures
+ * silenced, peak, RMS and brightness alike, which reads as "this voice does not
+ * exist". Two separate faults were hiding behind that one number and each
+ * needed its own experiment.
+ *
+ * The first was the scene. It ran the drive at 0.9 and the bed owned every
+ * number the bench printed — a 0.9-gain probe dropped into the same branch
+ * moved the peak 0.288 → 0.489, which proved the branch was firing and the
+ * *scene* was blind. The bed is barely idling now, exactly as `exercise-failed`
+ * had to become a nudged scooter at a crawl before it could see its own cue.
+ *
+ * The second was the level itself, and it is the fourth time this file has been
+ * caught by the same thing: **a filtered voice's level is not what you hear.**
+ * A grain is mostly grit, and grit is white noise through a lowpass, so almost
+ * all of what it is written at is thrown away by the filter that shapes it.
+ *
+ * Measured at this number, each against the same scene with the failures
+ * silenced: `what-it-is-made-of` peaks **0.533 against 0.148** at 25% against
+ * 14% brightness, `the-yard` **0.578 against 0.541**, and `everything-at-once`
+ * — the worst case the mix has, with the write-off moved clear of the horn's
+ * duck so that it is actually tested — **0.895 against 0.863**, which clears
+ * the limiter with a tenth to spare.
+ *
+ * It is above 1 because a grain is not a bang: it is one chip of one, and there
+ * are up to forty of them.
+ */
+const RUBBLE_GAIN = 1.1;
+
+/** Grains a single failure may spend, whatever the table asks for. */
+const MAX_GRAINS = 44;
+
+/**
+ * The sound of something being written off.
+ *
+ * **Five named noises, one mechanism.** The material's `rubble` says how many
+ * grains, over how long, how far apart in pitch, and how *regular* — and the
+ * words fall out of the dials rather than the other way round:
+ *
+ * - a **screech** is stick–slip, so it is many grains, narrow in pitch, and
+ *   nearly metronomic. That is why bending metal belongs in the same function
+ *   as breaking glass rather than beside it: they differ by `regular`, not by
+ *   kind.
+ * - a **shatter** is the opposite corner — very many grains, high, wide and
+ *   completely irregular.
+ * - a **splinter** and a **crumble** are the sparse middle, one mid and one low.
+ * - a **ding** is the degenerate case: `grains: 1`, so a steel tube dropped on
+ *   its end rings once and does not come apart at all.
+ *
+ * Every grain's ring is the body's own ring, so a big thing breaks lower than a
+ * small one of the same stuff for free — the same `sizeOf` that places an
+ * impact places these.
+ *
+ * **Loudness falls as `1/√n`.** Grains are independent, so their powers add
+ * rather than their amplitudes, and without this a forty-grain shatter would be
+ * six times the level of a five-grain crack instead of the same level spread
+ * thinner. It is the one line that keeps the table's `grains` a *character*
+ * number rather than a volume knob a material could turn up.
+ */
+export function rubbleVoice(
+  pieces: readonly Piece[],
+  mass: number,
+  joules: number,
+  seq: number,
+): readonly Grain[] {
+  const level = loudness(joules, IMPACT_REF);
+  const rng = makeRng(seq * 7717 + 13);
+  let bulk = 0;
+  for (const piece of pieces) bulk += volumeOf(piece);
+  if (bulk <= 0) return [];
+
+  const grains: Grain[] = [];
+  for (const piece of pieces) {
+    const { ring, rubble } = MATERIAL[piece.material];
+    const share = volumeOf(piece) / bulk;
+    // **Every piece speaks, and the big ones speak most.** A floodlight is
+    // mostly steel and it screeches; the glass head is a twentieth of it and it
+    // still shatters, because the count is a share and never rounds to nothing.
+    // That is the whole reason this takes a part list rather than the one
+    // material the ledger line names — a mixed thing made one noise before, and
+    // a scooter is sheet steel, rubber and one small piece of glass.
+    const count = Math.max(1, Math.round(rubble.grains * share));
+    // The piece's own mass places its voice: a small piece of a big thing rings
+    // high, which is exactly what a headlamp on a scooter does.
+    const size = sizeOf(mass * share);
+    const base = ring.hz / size;
+    // Grains overlap only as far as their decay reaches across the window, so
+    // that — not the raw count — is what sums. Dividing by the count outright
+    // made a forty-grain shatter a sixth of the level of a five-grain crack and
+    // the bench duly measured both as nothing at all.
+    const spread = ring.decay * size * 0.5;
+    const overlap = Math.max(1, (count * spread) / Math.max(rubble.window, spread));
+    const each = (RUBBLE_GAIN * level * (0.45 + 0.55 * share)) / Math.sqrt(overlap);
+    if (each <= 0.001) continue;
+
+    // How far a grain may stray from its slot in the train.
+    //
+    // **Measured against the *spacing*, not against the window**, and that is
+    // the whole of what makes a screech a screech. Blending the slot with a
+    // uniform draw over the window sounds right and is not: twenty-six grains
+    // across half a second are twenty milliseconds apart, so even a tenth of
+    // the window is two and a half slots of jitter and the rasp is gone. The
+    // bench duly measured a `regular: 0.9` steel screech as no more regular
+    // than a shatter.
+    //
+    // So the stray is a fraction of the spacing, and that fraction itself opens
+    // out toward the whole window as regularity falls. Exact at both ends:
+    // nothing at 1, anywhere at 0.
+    const step = rubble.window / Math.max(1, count - 1);
+    const loose = 1 - rubble.regular;
+    const wander = loose * (step + (rubble.window - step) * loose);
+
+    for (let i = 0; i < count && grains.length < MAX_GRAINS; i++) {
+      const even = count === 1 ? 0 : i / (count - 1);
+      const strayed = rubble.window * even + rng.range(-wander, wander);
+      const at = strayed < 0 ? 0 : strayed > rubble.window ? rubble.window : strayed;
+      // The pitch drifts *down* across a screech, which is what a sheet giving
+      // way does, and is scattered for everything else.
+      const drift = 1 - 0.3 * even * rubble.regular;
+      const scatter = 1 + rng.range(-1, 1) * rubble.spread;
+      grains.push({
+        at,
+        hz: base * rubble.pitch * drift * scatter,
+        // The cloud thins out as it goes: the first pieces are the loud ones.
+        gain: each * (1 - 0.45 * even),
+        decay: spread * (0.5 + rng.next()),
+        grit: rubble.grit,
+        strikeHz: strikeOf(0.4 + 0.5 * level),
+      });
+    }
+  }
+  return grains;
 }
 
 /* -- the panel ------------------------------------------------------------- */

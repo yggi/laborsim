@@ -20,7 +20,8 @@ import {
 } from "../src/core/events.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createWorld, initPhysics } from "../src/sim/world.ts";
-import { isBreakable } from "../src/world/props.ts";
+import { EXERCISES } from "../src/world/exercises.ts";
+import { isBreakable, PROP_SPEC } from "../src/world/props.ts";
 import { makeRampTerrain } from "../src/world/terrain.ts";
 
 beforeAll(async () => {
@@ -170,19 +171,28 @@ describe("the reader", () => {
 });
 
 describe("the sim publishes on it", () => {
-  it("stays silent on a site nobody has touched", () => {
-    // The other side of every threshold in here: a channel that chatters on an
-    // untouched site is one a consumer learns to ignore.
-    //
-    // Flat ground, deliberately. The **generated** site emits one impact at
-    // tick 109 — a marker pole falling over on its own, unbilled and until now
-    // invisible, because the ledger's pricing threshold hid it. That is L-057,
-    // not a fault in the channel, and it is the first thing the channel found.
-    const world = createWorld({ terrain: makeRampTerrain(0) });
-    for (let i = 0; i < 1800; i++) world.step();
-    expect(world.snapshot().events).toHaveLength(0);
-    world.free();
-  }, 30_000);
+  it.each(EXERCISES.slice(0, 3))(
+    "stays silent on $id, which nobody has touched",
+    (exercise) => {
+      // The other side of every threshold in here: a channel that chatters on
+      // an untouched site is one a consumer learns to ignore.
+      //
+      // **This used to be flat ground, deliberately**, and said so: the
+      // generated site emitted one impact at tick 109 — a marker pole falling
+      // over on its own, unbilled and, until the channel existed, invisible.
+      // That was L-057, and it was the first thing the channel ever found. The
+      // site plan and the footing test closed it, so the test can now run on
+      // the ground the game is actually played on, which is what it was always
+      // supposed to assert.
+      const world = createWorld({ exercise });
+      for (let i = 0; i < 900; i++) {
+        world.step();
+        expect(world.snapshot().events).toHaveLength(0);
+      }
+      world.free();
+    },
+    60_000,
+  );
 
   it("announces an impact nobody is billed for", () => {
     // The claim the type exists to make. `assessDamage` has always measured the
@@ -191,8 +201,17 @@ describe("the sim publishes on it", () => {
     // a hit on something already written off, reached no consumer at all.
     //
     // Creeping into a pipe stack is the case with the widest margin: its
-    // settling floor is 16 J and its first ledger line is at 102 J, so 0.4 m/s
-    // lands squarely between them. Measured: one impact of 15.8 J, no line.
+    // settling floor is 15.9 J and its first ledger line is at 104 J, so a
+    // 0.6 m/s nudge lands squarely between them. Measured: one impact of
+    // 32.5 J, no line.
+    //
+    // Re-measured when the site plan moved the furniture (L-057). It used to be
+    // 0.4 m/s, and at 0.4 the machine now arrives *leaning* rather than
+    // shoving: energy goes into the stack a little at a time, no single step
+    // clears the floor, and nothing is announced at all. That is the at-rest
+    // guard working, not a defect — but it is a reminder that this scenario is
+    // measured rather than reasoned, and the number is re-read when the ground
+    // under it changes.
     const control = lever();
     const world = createWorld({
       terrain: makeRampTerrain(0),
@@ -201,20 +220,19 @@ describe("the sim publishes on it", () => {
     const index = aimAt(world, "pipes", 4.6);
     expect(index).toBeGreaterThanOrEqual(0);
 
-    control.set(0.4);
+    control.set(0.6);
     for (let i = 0; i < 700; i++) world.step();
 
     const snap = world.snapshot();
     const impacts = snap.events.filter((e) => e.kind === "impact");
     // At least one, rather than exactly one: the machine keeps creeping into
     // the stack, so how many separate nudges that becomes is an accident of
-    // how the pipes rock and settle — it was one before the running gear had
-    // springs and it is three now, at 22 J, 19 J and 26 J. What the test is
-    // about is that they are announced and none of them is billed.
+    // how the pipes rock and settle. What the test is about is that they are
+    // announced and none of them is billed.
     expect(impacts.length).toBeGreaterThan(0);
     for (const hit of impacts) {
       expect(hit.kind === "impact" && hit.prop).toBe(index);
-      expect(hit.kind === "impact" && hit.what).toBe("pipes");
+      expect(hit.kind === "impact" && hit.material).toBe(PROP_SPEC.pipes.material);
       expect(hit.kind === "impact" && hit.joules).toBeGreaterThan(0);
     }
     // And the whole point of the test: nothing was billed for it.

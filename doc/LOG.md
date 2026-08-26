@@ -20,6 +20,115 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the site is made of materials, and it comes apart
+
+Cards: [L-039], [L-057] — both closed. Four cards opened for the overflow.
+
+**Both cards were the same defect wearing two hats: a prop was identified by its
+`kind`.** Mass and price were a table keyed on it, the collider box a second, the
+voice a third, and the art an if/else chain in `render/scene.ts` **with a boulder
+in its `else`** — so a kind that forgot the renderer drew a rock and nothing
+type-checked it. Four places, one silent. That is why the inventory had sat at
+five kinds and a scooter since it was written.
+
+**A prop is a part list over materials.** `world/materials.ts` is the axis: nine
+entries, each holding how the stuff rings, how it comes apart, and what colour it
+is. `KIND` in `world/props.ts` declares a kind's solids — shape, size, offset,
+turn, material, and whether it is solid at all — and five consumers read that one
+declaration. Toughness is **derived** (`tough × ½·m·v_max²`) and can no longer be
+typed in; the ring's pitch and decay are derived from **mass** by one law
+(`size = ⁴√(m/40)`, `hz` divides, `decay` multiplies), which reproduces the old
+hand-picked pole and pipe-stack voices to within ten per cent and means a new kind
+needs **no audio work at all**. That last part is what had been stopping the
+inventory, so six kinds became fourteen over nine materials: drum, pallet, crate,
+concrete block, precast panel, floodlight, cable drum, ballast bags. Prices spread
+¥300–14,000, so a careless run itemises.
+
+Rejected: deriving **mass** from density × volume. A traffic cone is 6 kg because
+of a rubber base, not because it is a solid plastic cone, and the estimate would
+be wrong for exactly the objects that matter. Mass and price are facts about the
+object; the material owns the rest.
+
+**L-057 was an ordering mistake, not a number.** Terrain was made from noise and
+*then* `generateProps` rolled six work-area centres of its own, so the ground and
+the furniture disagreed about where the work was and the furniture lost: **46 of
+102 breakables flat** before anyone touched the site, seventeen of eighteen marker
+poles among them. `world/site.ts` chooses the plan first — pads in the route's own
+annulus, held 13–42 m off the markers so driving between two pins takes you past
+one — the ground is graded to each, and `standsOn` refuses a candidate whose own
+tipping gradient (`halfBase / comHeight`, division only, no `atan`) says it cannot
+stand there. **1 of 117 now.** The starting pad became the first entry of an
+ordinary list with itself as the datum, which is why the site is unchanged at the
+centre.
+
+**The census passed with the footing test removed**, which is the whole reason it
+got A/B'd. Pads alone leave 8 of 114 flat; the footing test alone leaves 13 **and
+drops twenty props**, because without graded ground there is nowhere left to say
+yes to; together, 1 of 117 with everything placed. So the assertion is pooled
+across all three exercises — a per-exercise bound loose enough for E-01's 22 props
+cannot tell those two apart — and it asserts the *prop count* as well, which is
+what catches losing the pads. Both faults planted and watched to fail.
+
+**Then it comes apart.** A written-off prop's body is replaced by one body per
+declared piece, carrying the parent's velocity plus a shove seeded off the ledger
+line's `seq`; cylinders get cylinder colliders, so a pipe stack pushed over is
+four pipes that roll and tumble into each other. `snapshot.debris` addresses them
+by prop and piece, so the renderer **re-parents the prop's own meshes** and coming
+apart costs no new geometry and no new draw calls. Debris is landscape: never
+billed, never broken twice. Budgeted at 140 pieces, past which a prop stays whole
+and takes the wrecked paint, exactly as every write-off did before.
+
+**The ear got the ledger event it had ignored since the channel existed.** A
+failure is a **grain cloud** — ordinary `Knock`s through the same transient an
+impact uses — and a screech, a shatter, a splinter, a crumble and a ding are one
+function with four dials turned. A screech is stick–slip, so it is the *regular*
+end of the same mechanism rather than a special case. It takes the **part list**,
+not the line's one material: a floodlight is mostly steel and screeches, and its
+glass head is a twentieth of it and still shatters.
+
+Three measurement defects on the way there, all the same family and all in
+`doc/design/cab/sound.md` now. The voice measured **identically to silence** —
+peak, RMS and brightness — and a 0.9-gain probe in the same branch moved the peak
+0.288 → 0.489, which proved the branch fired and the *scene* was blind: it ran the
+drive at 0.9 and the bed owned every number. The third scene to fall into that.
+The level itself was the old bandwidth trap, for the fourth time. And the worst
+case had its write-off placed **under the horn's duck**, where it measured as
+nothing at all — the duck working and the scene testing nothing.
+`what-it-is-made-of` peaks 0.533 against 0.148 silenced; `everything-at-once`
+0.895 against 0.863, clearing the limiter with a tenth to spare.
+
+One dial was wrong rather than one level: **jitter has to be measured against the
+spacing, not the window.** Twenty-six grains across half a second are twenty
+milliseconds apart, so a tenth of the window is two and a half slots of stray and
+the rasp is gone — the bench measured a `regular: 0.9` screech as no more regular
+than a shatter, which is the one distinction that voice exists to make.
+
+**Found by measuring, not by looking.** A test holding each declared collider box
+against its own pieces caught two things that had shipped: a **pipe stack drawn
+end-to-end** inside a box that said side-by-side — so you could hit one from half
+a metre away on a side with no pipe — and a **cable drum boxed on the wrong
+axis**. And driving into every kind in turn caught a **concrete block that
+absorbed zero joules from a full-speed hit**: the machine climbs anything shorter
+than its own tracks, so a thing it drives over is pushed downward rather than
+struck and no step ever clears the floor. Lightening it changed nothing; making it
+taller fixed it at once. That sweep is a test now — it says ten of thirteen kinds
+are written off at full speed and a 900 kg panel, a cable drum and the ballast only
+crack, which is the at-rest guard working rather than failing.
+
+Two smaller things fell out. `world.poses()` exists because **76 of the default
+seed's 130 props are asleep at tick 0**, so a scene built from the spawn list drew
+sleeping furniture where it had been *asked* to go rather than where it came to
+rest. And `npm run yard` is a fifth bench, because none of the other four can see
+a site: `shots` has no 3D in it, `cab` is inside the machine, `listen` is the ear,
+`profile` is the clock. It photographs each graded pad and then drives into
+something and watches it break — and it **asks the sim when that happened** rather
+than counting steps, because the first version shot the moment at step 252 and
+photographed a machine that had not arrived.
+
+Numbers: 323 tests (was 293). Draw calls **224 → 289 in the cab** against a
+ceiling of 500, and 394 → 529 in chase; a prop is ~1.3 calls now rather than 0.75,
+which retires the old "390 props lands the cab around 420". Nothing clips.
+
 ## 2026-08-26 — the shell lets go of six concerns, and two bugs off the side
 
 Cards: [L-072] — closed. Plus two defects the session was asked to squash.

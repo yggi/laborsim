@@ -5,8 +5,9 @@ Spilled from `doc/MEMORY.md` § 3.1. The voice the ledger speaks in is in
 
 The model is **built** (L-031): furniture is dynamic, impacts are measured in
 joules, and lines are priced and attributed. So is the end-of-run report (L-029),
-the live voice (L-044) and the sound (L-040). More things worth breaking (L-039)
-and machine damage (L-038) are still ahead.
+the live voice (L-044) and the sound (L-040). More things worth breaking is built
+too (L-039), and with it the second beat of the order of experience below — the
+thing **comes apart**. Machine damage (L-038) is still ahead.
 
 ---
 
@@ -63,18 +64,109 @@ Two guards, both paid for:
 
 And the site settles at construction before anyone is accountable for it.
 
+## A prop is a part list over materials
+
+**The axis that was missing.** Everything about a piece of furniture used to be
+a lookup keyed on its *kind*: mass and price in one table, a collider box in a
+second, a voice in a third, and its art as a branch of an if/else chain in the
+renderer — a chain with no exhaustiveness check, so a kind that forgot the
+renderer silently drew a boulder. Four places, one of them silent, and that cost
+is the whole reason the inventory sat at five kinds and a scooter.
+
+A kind now declares **what it is made of and what shape those parts are**
+(`src/world/props.ts`), and five consumers read that one declaration: the
+collider, the art, the voice, the toughness, and what it comes apart into.
+Adding a kind is a part list. Adding a material is one row in
+`src/world/materials.ts`.
+
+The material owns the three things a kind should never state for itself:
+
+- **how it rings when struck** — and a *big* body of the same stuff rings lower
+  and longer, so a marker pole and a pipe stack are one row and two voices. That
+  is one derivation used twice (`hz` divides by size, `decay` multiplies), which
+  is what makes a fourteen-kind inventory cost the ear nothing.
+- **how it comes apart** — see below.
+- **what colour it is.** The site is nobody's house, so the stuff owns its look
+  for the same reason it owns its voice.
+
+Mass and price stay declared: they are facts about the *object*, not about the
+stuff. Deriving mass from density × volume was tried and rejected — a traffic
+cone is 6 kg because of a rubber base, not because it is a solid plastic cone,
+and the estimate would be wrong for exactly the objects that matter.
+
 ## Toughness is a fraction of what the machine can actually deliver
 
 The numbers are not free, and getting them wrong is not a balance nit. A heavy
 machine hitting a light object cannot put more than about **½·m·v²** into it —
-the object simply leaves at roughly the machine's speed. A 6 kg cone can absorb
-at most 15 J from a 6.2 t machine at its 2.2 m/s top speed, so rating the cone
-at 22 J made it **indestructible by any means the game has**.
+the object simply leaves at roughly the machine's speed — so a 6 kg cone can
+absorb at most 15 J from a 6.2 t machine at its 2.2 m/s top speed, and rating
+that cone at 22 J made it **indestructible by any means the game has**.
 
-So every toughness is set as a fraction of `½·m·v_max²` for that mass. A
-full-speed hit writes the thing off; a crawl scuffs it. The choice the player
-has is not how hard to hit something — the machine only has one speed worth
-using — it is whether to be anywhere near it.
+So toughness is **derived and can no longer be typed in**: it is
+`MaterialSpec.tough × ½·m·v_max²`, a fraction of exactly that ceiling. The
+mistake is not expressible any more. A full-speed hit writes the thing off; a
+crawl scuffs it. The choice the player has is not how hard to hit something —
+the machine only has one speed worth using — it is whether to be anywhere near
+it.
+
+A fraction above 1 therefore means *this does not break*, deliberately and
+visibly. Ballast is the one, so that "everything here breaks" is a claim the
+site can be seen to falsify.
+
+### Deriving the rating does not stop the shape being wrong
+
+The other half, and it cost a second measurement to find. Every kind is now
+driven into at full speed and the ledger read (`tests/site.test.ts`), because a
+rating can be perfectly derived and still unreachable. A concrete block absorbed
+**zero joules** from a full-speed hit: **the machine climbs anything shorter
+than its own tracks**, and a thing it drives over is pushed downward rather than
+struck, so no step's energy gain ever clears the floor. Lightening it changed
+nothing; making it taller than 1 m fixed it at once.
+
+The same sweep showed a real and correct pattern: the heavier a thing is, the
+smaller the fraction of the theoretical ceiling that actually reaches it,
+because **a heavy body gets pushed rather than struck** and the at-rest guard
+stops counting. Ten of thirteen kinds are written off at full speed; a 900 kg
+precast panel, a 340 kg cable drum and the ballast only crack. That is the model
+working. A block that cannot be touched at all was it failing.
+
+## It comes apart, and the residue has three renderings
+
+The order of experience below says you should **see the thing come apart** before
+you are told what it cost, and that beat is now built. A written-off prop stops
+being one box and becomes the solids its part list says it is made of, each with
+a body of its own — so a pipe stack pushed over is four pipes that roll down the
+slope and tumble into each other, and a pallet lets go of its boards, from the
+same eight lines.
+
+One description, seeded off the ledger line, rendered three ways:
+
+| | where | what it is |
+|---|---|---|
+| **bodies** | the sim | one rigid body per declared piece, carrying the parent's velocity plus a seeded shove. Cylinders roll. |
+| **grains** | the ear | a cloud of transients: `doc/design/cab/sound.md` |
+| **motes** | the eye | flat-shaded chunks that expand and **pop**, in the material's own colour |
+
+Three rules hold it together:
+
+- **Debris is landscape.** It is not in the prop list, so nothing bills it and it
+  cannot be written off twice — the existing rule *hitting the wreck again is
+  free*, arriving where it was always going.
+- **There is a budget** (`DEBRIS_BUDGET`). Past it a prop stays whole and takes
+  the wrecked paint, exactly as every write-off did before pieces existed: the
+  site gives up the spectacle rather than the frame.
+- **The eye costs nothing extra.** The renderer re-parents the prop's own piece
+  meshes rather than making any, because the art was already built out of exactly
+  these pieces in exactly this order. Dust is one instanced mesh per material.
+
+Dust is **render-side only**, and that is not a shortcut. It is not a simulated
+quantity — nothing can be measured off it — so putting it in the sim would be
+inventing state to justify a picture. It is a rendering of a discrete event,
+which is what an impact's *sound* already is, and it sits on the same side of the
+boundary for the same reason.
+
+The *damaged* tier is drawn now too. It has been a number in the ledger for as
+long as the ledger has existed and appeared on no surface at all.
 
 ## Why it goes deep rather than wide
 
@@ -151,7 +243,7 @@ In order, and each one is a `doc/BOARD.md` card:
 | Card | Why it is where it is |
 |---|---|
 | L-031 damage model | **built.** Mass, price, toughness, priced and attributed events; furniture is dynamic and scatters. |
-| L-039 breakables | a site worth breaking: more props, materials, prices. The model is worthless against six crates. |
+| L-039 breakables | **built.** Fourteen kinds over nine materials, on ground graded to hold them, each coming apart into what it is made of. |
 | L-032 record and playback | the ledger's *why* column. Also the only way a line can be argued with. |
 | L-029 the ledger itself | itemised, named, priced, condescending. |
 | L-038 machine damage and reset | the cost lands on you as well as on the site. |

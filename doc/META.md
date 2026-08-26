@@ -75,6 +75,16 @@ is a 5 % delta and two of those reached a design document as prices. **Put the
 control inside the instrument**: an instrument that cannot say "I cannot tell"
 will say something else, and be believed.
 
+**A fix with two halves needs each half taken away separately.**
+The site-standing assertion passed with the footing test *deleted* — the graded
+pads alone were carrying it — so it was green for half a reason and would have
+stayed green while half the work rotted. Removing each half alone is what said
+what each buys: pads alone leave 8 of 114 props flat, footing alone leaves 13
+**and drops twenty props** for want of anywhere to say yes to, together 1 of 117.
+The bound then had to be pooled across three exercises, because a per-exercise
+one loose enough for the smallest could not tell those two apart. **Plant the
+absence of each part, not of the whole.**
+
 **Where a thing lives decides whether it can be checked.**
 Two defects stayed shipped because nothing could reach them, not because nobody
 looked: NAV-1's route scope plotted every pin on the wrong side of the machine

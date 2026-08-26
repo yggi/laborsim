@@ -13,12 +13,15 @@
 import * as THREE from "three";
 import { createEventReader } from "../core/events.ts";
 import { makeRng } from "../core/rng.ts";
-import type { Snapshot } from "../core/snapshot.ts";
+import type { PropPose, Snapshot } from "../core/snapshot.ts";
 import { CAB, CLEARANCE, EYE, HULL, LEFT_X, RIGHT_X, TRACK } from "../core/spec.ts";
-import { PROP_BOX, type Prop } from "../world/props.ts";
+import type { MaterialId, MaterialSpec } from "../world/materials.ts";
+import { MATERIAL } from "../world/materials.ts";
+import { KIND, type Piece, PROP_BOX, type Prop } from "../world/props.ts";
 import { sampleTerrain, type Terrain } from "../world/terrain.ts";
 import type { Pin } from "../world/waypoints.ts";
 import { cabCameraRotation, cabOffset, focalPixels } from "./camera.ts";
+import { createResidue } from "./residue.ts";
 import { ink, inked, terrainMaterial, toon } from "./toon.ts";
 
 /**
@@ -87,6 +90,16 @@ export function createViewport(
   terrain: Terrain,
   props: readonly Prop[],
   waypoints: readonly Pin[],
+  /**
+   * Where the props came to rest, from `world.poses()`.
+   *
+   * Separate from `props` because they answer different questions: that list is
+   * where the generator *asked* for a thing, this is where the site's 120 settle
+   * steps left it. Most of the site is asleep by tick 0 and so never appears in
+   * `snapshot.props`, which meant a scene built from the spawn list alone drew
+   * furniture in positions the sim had already left behind.
+   */
+  poses: readonly PropPose[] = [],
 ): Viewport {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 2));
@@ -133,7 +146,6 @@ export function createViewport(
   const accent = toon(0x93a3ab, { rim: 0xffffff, rimStrength: 1.05 });
   const rubber = toon(0x22282a, { rim: 0x7fbcd0, rimStrength: 0.6 });
   const hazard = toon(0xdca42a, { rim: 0xffe9a8, rimStrength: 0.8 });
-  const stone = toon(0x6f7468, { rim: 0xbcd6e2, rimStrength: 0.7 });
   // Actually transparent: the eye sits behind this pane, so an opaque one is a
   // cyan wall. From outside it still reads as glass.
   const glass = new THREE.MeshLambertMaterial({
@@ -305,10 +317,37 @@ export function createViewport(
 
   scene.add(buildPins(waypoints));
   const propNodes: PropNode[] = [];
-  scene.add(buildProps(props, { hazard, dark, accent, stone, rubber }, propNodes));
-  // Anything written off is repainted once, when the ledger says so.
-  const wrecked = toon(0x4a4640, { rim: 0x8fa0a8, rimStrength: 0.45 });
+  const siteMats = siteMaterials();
+  scene.add(buildProps(props, poses, siteMats, propNodes));
+  /**
+   * The two tiers the ledger has always had, and only one of which was ever
+   * drawn. `scuffed` is *damaged* — 30% of toughness gone, a line already
+   * written — and it existed as a number for as long as the ledger has and was
+   * visible on no surface at all.
+   *
+   * **Both keep the material.** A single grey for every write-off was fine
+   * while there were five kinds; with a material axis it throws away the one
+   * thing the site is now made of, and four steel pipes on their sides came out
+   * looking like felled logs. So a wreck is the stuff's own colour taken down,
+   * which reads as ruined without pretending it has stopped being steel.
+   */
+  const wrecked = siteMaterials(0.58, 0.6);
+  const scuffed = siteMaterials(0.8, 0.8);
   const ledger = createEventReader();
+
+  /**
+   * Loose pieces, driven from `snapshot.debris`.
+   *
+   * They are the prop's **own meshes**, lifted out of its node and hung here, so
+   * coming apart costs no new geometry and no new draw calls — the art was
+   * already built out of exactly these pieces, in exactly this order
+   * (`world/props.ts`). Keyed `prop * 32 + piece`, which is comfortably above
+   * the longest part list and saves a string key per piece per frame.
+   */
+  const debrisGroup = new THREE.Group();
+  scene.add(debrisGroup);
+  const shards = new Map<number, THREE.Object3D>();
+  const residue = createResidue(scene, siteMats);
 
   greeble(machine, { accent, dark, hazard, lamp: lampMat });
 
@@ -341,16 +380,61 @@ export function createViewport(
         node.node.position.set(x, y, z);
         node.node.quaternion.set(rx, ry, rz, rw);
       }
-      // New ledger lines since last frame. A write-off gets repainted; the
-      // physics already threw it wherever it went. This was the third place in
-      // the codebase keeping its own high-water mark into `snapshot.damage`,
-      // which is what earned the event channel.
-      for (const event of ledger.take(snapshot).events) {
-        if (event.kind !== "ledger" || event.line.state !== "destroyed") continue;
+      // Wreckage that is still moving. Same rule as the props: only what is
+      // awake, so a site whose pieces have come to rest costs nothing.
+      for (const moved of snapshot.debris) {
+        const shard = shards.get(moved.prop * 32 + moved.piece);
+        if (!shard) continue;
+        const [x, y, z] = moved.position;
+        const [rx, ry, rz, rw] = moved.rotation;
+        shard.position.set(x, y, z);
+        shard.quaternion.set(rx, ry, rz, rw);
+      }
+      // New ledger lines since last frame. This was the third place in the
+      // codebase keeping its own high-water mark into `snapshot.damage`, which
+      // is what earned the event channel.
+      const read = ledger.take(snapshot);
+      if (read.rewound) {
+        residue.clear();
+      }
+      for (const event of read.events) {
+        if (event.kind !== "ledger") continue;
         const node = propNodes[event.line.prop];
         if (!node) continue;
-        for (const part of node.parts) part.material = wrecked;
+        const pieces = KIND[event.line.kind].pieces;
+        const paint = (into: ReadonlyMap<MaterialId, THREE.Material>) => {
+          for (const [n, part] of node.parts.entries()) {
+            const material = pieces[n]?.material;
+            const swapped = material && into.get(material);
+            if (swapped) part.material = swapped;
+          }
+        };
+        if (event.line.state === "damaged") {
+          paint(scuffed);
+          continue;
+        }
+        paint(wrecked);
+        // **It comes apart.** Every piece is lifted out of the prop's node and
+        // hung on the scene, keeping the prop's own scale, and from here it is
+        // driven by the sim like anything else. If the sim ran out of debris
+        // budget the pieces simply never move again, which is what a repainted
+        // box already looked like.
+        const scale = node.node.scale.x;
+        for (const [n, part] of node.parts.entries()) {
+          const held = new THREE.Vector3();
+          part.getWorldPosition(held);
+          const spun = new THREE.Quaternion();
+          part.getWorldQuaternion(spun);
+          const size = part.scale;
+          debrisGroup.add(part);
+          part.position.copy(held);
+          part.quaternion.copy(spun);
+          part.scale.set(size.x * scale, size.y * scale, size.z * scale);
+          shards.set(event.line.prop * 32 + n, part);
+        }
+        residue.burst(event.line, KIND[event.line.kind].pieces);
       }
+      residue.step(snapshot.simSeconds);
 
       const [px, py, pz] = snapshot.machine.pose.position;
       const [qx, qy, qz, qw] = snapshot.machine.pose.rotation;
@@ -592,52 +676,101 @@ function buildTerrainMesh(terrain: Terrain): THREE.Mesh {
 }
 
 /**
- * A prop's scene node, plus the meshes whose material can be swapped when it
- * is written off. The ink shells are children of those meshes and must keep
- * their own material, which is why this holds the parts rather than traversing.
+ * One toon material per **material**, not per prop kind.
+ *
+ * The site is nobody's house (`doc/design/cab/sound.md`): a pipe stack is steel
+ * whoever stacked it, so the stuff owns its colour for the same reason it owns
+ * its voice. The renderer used to keep five hand-picked paints and guess which
+ * one a kind wanted, which is how a boulder and a scooter ended up sharing a
+ * palette by accident.
+ */
+function siteMaterials(shade = 1, rim = 0.75): Map<MaterialId, THREE.Material> {
+  const made = new Map<MaterialId, THREE.Material>();
+  for (const [id, spec] of Object.entries(MATERIAL) as [MaterialId, MaterialSpec][]) {
+    made.set(
+      id,
+      toon(darken(spec.colour, shade), {
+        rim: spec.rim,
+        rimStrength: (id === "glass" ? 1.2 : 0.75) * rim,
+      }),
+    );
+  }
+  return made;
+}
+
+/** Scale every channel of a hex colour. Arithmetic; no three.js colour space. */
+function darken(colour: number, by: number): number {
+  const r = Math.round(((colour >> 16) & 0xff) * by);
+  const g = Math.round(((colour >> 8) & 0xff) * by);
+  const b = Math.round((colour & 0xff) * by);
+  return (r << 16) | (g << 8) | b;
+}
+
+/**
+ * A prop's scene node, and its pieces.
+ *
+ * `parts` used to exist only so a write-off could repaint every mesh without
+ * traversing into the ink shells, which are children and must keep their own
+ * material. It now also holds the pieces **in declaration order**, which is what
+ * lets a destroyed prop come apart into exactly the solids `world/props.ts` says
+ * it is made of — the art and the debris are the same list.
  */
 interface PropNode {
   readonly node: THREE.Group;
+  /** The base group the art hangs off, one half-height below the body centre. */
+  readonly base: THREE.Group;
   readonly parts: THREE.Mesh[];
 }
 
-type PropMaterials = {
-  hazard: THREE.Material;
-  dark: THREE.Material;
-  accent: THREE.Material;
-  stone: THREE.Material;
-  rubber: THREE.Material;
-};
+/**
+ * Geometry for one declared piece, shared across every instance of that shape
+ * and size. A cache rather than a table: the inventory is data now, so the
+ * renderer cannot hold a list of what exists — it finds out by being handed one.
+ */
+function pieceGeometry(
+  cache: Map<string, THREE.BufferGeometry>,
+  piece: Piece,
+): THREE.BufferGeometry {
+  const [sx, sy, sz] = piece.size;
+  const key = `${piece.shape}:${sx}:${sy}:${sz}`;
+  const found = cache.get(key);
+  if (found) return found;
+  // Radial detail from the radius: a marker pole at 5 cm gets six sides and a
+  // pipe at 30 cm gets ten. One rule, so a new kind never picks its own.
+  const radius = Math.max(sx, sz);
+  const sides = radius < 0.12 ? 6 : radius < 0.35 ? 8 : 10;
+  const made =
+    piece.shape === "box"
+      ? new THREE.BoxGeometry(sx * 2, sy * 2, sz * 2)
+      : piece.shape === "cylinder"
+        ? new THREE.CylinderGeometry(sx, sz, sy * 2, sides)
+        : piece.shape === "cone"
+          ? new THREE.ConeGeometry(sx, sy * 2, sides)
+          : // Faceted on purpose: the toon ramp needs flats to band across, and
+            // it is what made a boulder read as a boulder rather than a ball.
+            new THREE.IcosahedronGeometry(1, 0);
+  cache.set(key, made);
+  return made;
+}
 
 /**
- * Site furniture, drawn from the world's prop list rather than invented here.
- * Positions and sizes come from `src/world/props.ts` so the thing you see is
- * the thing you collide with — a cone you can drive through would be worse
- * than no cone at all.
+ * Site furniture, drawn from the world's part lists rather than invented here.
+ *
+ * This was an if/else chain with one branch per kind and **a boulder in its
+ * `else`**, so a kind the renderer had not been told about drew a rock and said
+ * nothing. Nothing type-checked it, because a fallthrough is not a missing case.
+ * Now the shapes, sizes, offsets and materials come from `world/props.ts` and
+ * this is a loop — the thing you see is the thing you collide with and the thing
+ * the ledger prices, because there is only one description of it.
  */
 function buildProps(
   props: readonly Prop[],
-  mat: PropMaterials,
+  poses: readonly PropPose[],
+  materials: Map<MaterialId, THREE.Material>,
   out: PropNode[],
 ): THREE.Group {
   const group = new THREE.Group();
-
-  // Geometry is shared across every instance of a kind; only transforms differ.
-  const geo = {
-    cone: new THREE.ConeGeometry(0.34, 1, 8),
-    coneBase: new THREE.BoxGeometry(0.8, 0.09, 0.8),
-    pole: new THREE.CylinderGeometry(0.05, 0.05, 3, 6),
-    flag: new THREE.BoxGeometry(0.6, 0.42, 0.04),
-    pipe: new THREE.CylinderGeometry(0.3, 0.3, 2.6, 8),
-    barrierPlank: new THREE.BoxGeometry(2.4, 0.5, 0.16),
-    barrierLeg: new THREE.BoxGeometry(0.14, 1.0, 0.5),
-    rock: new THREE.IcosahedronGeometry(1, 0),
-    scooterBody: new THREE.BoxGeometry(0.34, 0.3, 1.15),
-    scooterSeat: new THREE.BoxGeometry(0.3, 0.14, 0.44),
-    scooterStem: new THREE.BoxGeometry(0.1, 0.62, 0.1),
-    scooterBar: new THREE.BoxGeometry(0.54, 0.07, 0.07),
-    scooterWheel: new THREE.CylinderGeometry(0.26, 0.26, 0.11, 10),
-  };
+  const cache = new Map<string, THREE.BufferGeometry>();
 
   for (const [index, prop] of props.entries()) {
     // The node sits where the *body* sits — the collider's centre — because it
@@ -646,59 +779,43 @@ function buildProps(
     // one half-height below.
     const [, hy] = PROP_BOX[prop.kind];
     const node = new THREE.Group();
-    node.position.set(prop.x, prop.y + hy * prop.scale, prop.z);
-    node.quaternion.set(0, prop.yawY, 0, prop.yawW);
+    // **Where it came to rest, not where it was asked to go.** The site settles
+    // for 120 steps inside `createWorld` and most of it is asleep by the time
+    // anybody looks, so a scene built from the spawn list drew sleeping props in
+    // positions the sim had already moved them out of.
+    const settled = poses[index];
+    if (settled) {
+      const [x, y, z] = settled.position;
+      const [rx, ry, rz, rw] = settled.rotation;
+      node.position.set(x, y, z);
+      node.quaternion.set(rx, ry, rz, rw);
+    } else {
+      node.position.set(prop.x, prop.y + hy * prop.scale, prop.z);
+      node.quaternion.set(0, prop.yawY, 0, prop.yawW);
+    }
     node.scale.setScalar(prop.scale);
     const base = new THREE.Group();
     base.position.y = -hy;
     node.add(base);
+
     const parts: THREE.Mesh[] = [];
-    const add = (mesh: THREE.Mesh) => {
+    for (const piece of KIND[prop.kind].pieces) {
+      const material =
+        materials.get(piece.material) ?? (materials.get("steel") as THREE.Material);
+      // Thin things get a finer line, or a 3.5 cm shell swallows a 4 cm flag.
+      const thinnest = Math.min(piece.size[0], piece.size[1], piece.size[2]);
+      const mesh = inked(
+        pieceGeometry(cache, piece),
+        material,
+        thinnest < 0.06 ? 0.02 : undefined,
+      );
+      if (piece.shape === "sphere") mesh.scale.set(...piece.size);
+      mesh.position.set(...piece.at);
+      if (piece.turn) mesh.quaternion.set(...piece.turn);
       base.add(mesh);
       parts.push(mesh);
-      return mesh;
-    };
-
-    if (prop.kind === "cone") {
-      add(inked(geo.cone, mat.hazard)).position.y = 0.5;
-      add(inked(geo.coneBase, mat.rubber)).position.y = 0.045;
-    } else if (prop.kind === "pole") {
-      add(inked(geo.pole, mat.dark, 0.02)).position.y = 1.5;
-      add(inked(geo.flag, mat.hazard, 0.02)).position.set(0.3, 2.7, 0);
-    } else if (prop.kind === "pipes") {
-      // Three down, one nested on top — a stack that has been there a while.
-      for (const [i, offset] of [-0.68, 0, 0.68].entries()) {
-        const pipe = add(inked(geo.pipe, mat.accent));
-        pipe.rotation.z = Math.PI / 2;
-        pipe.position.set(offset, 0.32, i * 0.001);
-      }
-      const top = add(inked(geo.pipe, mat.accent));
-      top.rotation.z = Math.PI / 2;
-      top.position.set(-0.34, 0.9, 0);
-    } else if (prop.kind === "barrier") {
-      add(inked(geo.barrierPlank, mat.hazard)).position.y = 0.95;
-      for (const side of [-1, 1]) {
-        add(inked(geo.barrierLeg, mat.dark)).position.set(side, 0.5, 0);
-      }
-    } else if (prop.kind === "scooter") {
-      // Somebody rode this to work. It is the one thing on site that belongs
-      // to a person, and the ledger prices it accordingly.
-      add(inked(geo.scooterBody, mat.accent, 0.02)).position.set(0, 0.42, 0.05);
-      add(inked(geo.scooterSeat, mat.rubber, 0.02)).position.set(0, 0.63, -0.2);
-      add(inked(geo.scooterStem, mat.dark, 0.02)).position.set(0, 0.7, 0.52);
-      add(inked(geo.scooterBar, mat.dark, 0.02)).position.set(0, 0.98, 0.52);
-      for (const z of [-0.42, 0.55]) {
-        const wheel = add(inked(geo.scooterWheel, mat.rubber, 0.02));
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(0, 0.26, z);
-      }
-    } else {
-      // Faceted on purpose: the toon ramp needs flats to band across.
-      const rock = add(inked(geo.rock, mat.stone));
-      rock.scale.set(1, 0.62, 1);
-      rock.position.y = 0.7;
     }
-    out[index] = { node, parts };
+    out[index] = { node, base, parts };
     group.add(node);
   }
   return group;

@@ -105,7 +105,8 @@ had thought to apply it to.
 | panel | a control being operated: a **click** for the button and a **clunk** for the contactor behind it, a fraction apart. | whoever built the kit |
 | buzzer | the master condition, at the master lamp's own blink rates. Acknowledging stops the noise and leaves the light on. | chassis |
 | grind | `slip`, and only where `contacts > 0` — the largest slip reading on the machine belongs to a track in mid-air, rubbing against nothing. | chassis |
-| impact | joules, as **amplitude ∝ √energy**. The ring is the material, the strike is the energy, and the wobble is `seq`. | material |
+| impact | joules, as **amplitude ∝ √energy**. The ring is the material, the strike is the energy, the *pitch* is the mass, and the wobble is `seq`. | material |
+| rubble | something being **written off**: a cloud of grains whose count, span, spread and regularity are the material's. A screech, a shatter, a splinter, a crumble and a ding are one function. | material |
 | hull | the machine's own collisions, on a scale of its own — 140 kJ lands from 2.4 m and a real hit on a pipe stack is 15 J. | material |
 | cue | the exercise: two notes **up** for a marker, three up and held for complete, two **down** for failed. Read off the event channel like an impact, so a replay is congratulated too. | the rig |
 
@@ -128,6 +129,52 @@ release. That last one is the *owp*, and it is the half people whistle.
 It **ducks the rest of the machine** by about 7 dB while it is down, which is
 not a mixing trick borrowed from records: three trumpets at arm's length are all
 you can hear. It is also what keeps the mix inside its ceiling — see below.
+
+### Coming apart is one mechanism with its dials turned
+
+Five named noises — bending metal screeching, wood splintering, glass
+shattering, concrete cracking, a pipe ringing — and no branch for any of them.
+A failure is a **grain cloud**: some number of ordinary `Knock`s scattered over
+some window, played through the same transient an impact and a track plate use.
+The words fall out of four dials rather than the other way round:
+
+| reads as | grains | window | spread | regular |
+|---|---|---|---|---|
+| metal screeching | many | long | narrow | **high** |
+| glass shattering | very many | short | wide | none |
+| wood splintering | few | medium | wide | none |
+| concrete crumbling | some | medium | wide | none |
+| a tube dinging | **one** | — | — | — |
+
+A screech is stick–slip, so its grains land on a beat; that is why bending metal
+belongs in the same function as breaking glass rather than beside it, and it is
+the same argument the bogie knock and the chain link already make for reusing one
+transient. A ding is the degenerate case: `grains: 1`.
+
+**It takes the part list, not the material.** A floodlight is mostly steel and it
+screeches; its glass head is a twentieth of it and it still shatters, because the
+count is a share and never rounds to nothing. The ledger line names one material,
+and while `rubbleVoice` took that, a mixed thing made one noise — which is a
+scooter, sheet steel, rubber and a headlamp, sounding like a sheet. Each piece's
+own mass places its own voice, so the headlamp rings an octave and a half above
+the frame by arithmetic rather than by anyone choosing it.
+
+### A big thing rings lower, and that is why the table stopped growing
+
+The material table used to be keyed on the **prop kind**, with a row per kind
+holding an `hz`, a `decay` and a `grit` chosen by ear. It is keyed on the
+*material* now, and the difference between a 24 kg marker pole and a 260 kg pipe
+stack — one row of steel tube — is derived from their masses:
+`size = ⁴√(m / 40 kg)`, `hz` divides by it, `decay` multiplies.
+
+One fact, two consequences, one derivation. The old table said 300 Hz and
+128 Hz, chosen separately; this says 273 and 150, chosen once. The 22 Hz the pipe
+stack gained back is not a loss — a heavy landing was written at 43 Hz once and
+was **silence** on the device this game is built for.
+
+The reason it matters is not tidiness. It is that **a new kind of thing now gets
+a voice of its own for free**, so growing the site from six kinds to fourteen
+cost the ear nothing at all. That is what had been stopping the inventory.
 
 ### The panel is switchgear
 
@@ -209,6 +256,40 @@ strike, the squeak, the rattle and then the panel clicks were each written at a
 panel at all with the switches firing correctly. Set a filtered voice by
 measuring it.
 
+**A fourth time, and the worst.** The failure voices measured *identically* with
+themselves silenced — peak, RMS and brightness alike — which reads as "this voice
+does not exist". Two separate faults were hiding behind that one number, and each
+needed its own experiment:
+
+- **The scene was blind.** `what-it-is-made-of` ran the drive at 0.9 and the bed
+  owned every number printed. A 0.9-gain probe dropped into the same branch moved
+  the peak 0.288 → 0.489, which proved the branch was firing and the scene was
+  not looking at it. The bed is barely idling now; `the-yard` went from full
+  ahead to a crawl for the same reason, which is also how anybody actually pushes
+  a stack over. That is the third scene to fall into this.
+- **The level was the old bandwidth trap.** A grain is mostly grit, and grit is
+  white noise through a lowpass, so almost all of what it is written at is thrown
+  away by the filter that shapes it.
+
+Set by measuring, each against the same scene silenced: `what-it-is-made-of`
+peaks **0.533 against 0.148** at 22% against 14% brightness, `the-yard`
+**0.578 against 0.541**, and `everything-at-once` **0.895 against 0.863**.
+
+That last pair needed a fix of its own. The write-off had been placed *under the
+horn*, where it ducked like everything else and measured identically to no
+failure at all — the duck working and the scene testing nothing. Moved clear of
+it, the worst case the mix has is a 550 J pipe impact, a precast panel shattering
+into forty transients, a barrier, a cone, the master alarming and a rut, all
+inside a third of a second. It clears the limiter with a tenth to spare.
+
+One more, and it is about a *dial* rather than a level: **jitter has to be
+measured against the spacing, not the window.** Blending a grain's slot in the
+train with a uniform draw over the whole window sounds right and is not —
+twenty-six grains across half a second are twenty milliseconds apart, so even a
+tenth of the window is two and a half slots of stray and the rasp is gone. The
+bench duly measured a `regular: 0.9` steel screech as no more regular than a
+shatter, which is the one distinction that whole voice exists to make.
+
 One caveat about the measure itself: **RMS over a fifth of a scene cannot see a
 transient.** Four clicks in a 1.6-second window move it by a thousandth. For a
 scene about transients the honest number is the whole-scene peak — `switchgear`
@@ -240,7 +321,9 @@ Two more, both about *scenes* rather than about the machine:
 
 - **Impacts are centred** (L-060). The event carries a world position and
   hearing which side you clipped something on is a real cue; it wants the hull
-  pose and a decision about what "left" means in the chase camera.
+  pose and a decision about what "left" means in the chase camera. **It is worth
+  more than it was**: a shatter on your left is a bigger cue than a tick on your
+  left, and there are fourteen kinds of thing to clip now rather than five.
 - **The suspension has no instrument** — it is heard and felt, and read only on
   the developer's telemetry line. An instrument costs glass (`doc/design/cab/cockpit.md`),
   so what the running gear should cost the operator's view is a design decision

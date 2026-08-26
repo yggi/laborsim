@@ -97,6 +97,15 @@ ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage i
 shown — and now hear; **harming a citizen is categorical failure**, never a
 priced line item. Model, numbers and build order: `doc/design/rig/damage.md`.
 
+**A prop is a part list over materials.** The site's axis is what a thing is
+*made of*, not what it is called: a kind declares its solids and their stuff, and
+five consumers read that one declaration — the collider, the art, the voice, the
+toughness (derived, never typed) and what it comes apart into when it is written
+off. It is the reason the inventory could grow from six kinds to fourteen without
+touching the renderer or the ear. **Toughness is a fraction of `½·m·v_max²`**, so
+a thing rated beyond what the machine can deliver is not expressible; whether it
+can be *reached* is a separate question and is answered by driving into it.
+
 ### 3.2 An exercise is a site plus an objective, and the verdict can say yes
 
 **One objective verb — reach the markers you were given** — so "reach a marker"
@@ -255,9 +264,12 @@ src/
              the rack's rail, and each component's three parts —
              cells/ faces/ pods/, registered as one packet in `parts.ts`
   makers/    who built the kit: one house per manufacturer, read by both renderers
-  render/    three.js scene, cel pipeline
+  render/    three.js scene, cel pipeline, and the dust a write-off leaves
   audio/     the machine's voice: `voices.ts` is arithmetic, `engine.ts` the graph
-  world/     terrain, job sites, exercises, hazards (radiation, EMF)
+  world/     terrain, job sites, exercises, hazards (radiation, EMF);
+             `materials.ts` is the site's one axis — what a thing is made of,
+             how it rings, how it fails, what colour it is — and `site.ts` is
+             the plan the ground is graded to before anything is put on it
   ui/        everything the rig made: the shell, the schedule, the objective
              strip, the debrief, the live voice
   sandbox/   the benches that read a recording: every component in every

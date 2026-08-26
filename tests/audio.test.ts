@@ -27,6 +27,7 @@ import {
   loudness,
   panelVoice,
   rattleVoice,
+  rubbleVoice,
   squeakVoice,
 } from "../src/audio/voices.ts";
 import { ACTIVE, ALARM, NOMINAL, WARN } from "../src/control/bus.ts";
@@ -34,6 +35,14 @@ import type { HullEvent, ImpactEvent } from "../src/core/events.ts";
 import type { TrackState } from "../src/core/snapshot.ts";
 import { G, GROUSER_PITCH, MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
+import type { MaterialId } from "../src/world/materials.ts";
+import {
+  KIND,
+  type Piece,
+  PROP_KINDS,
+  PROP_SPEC,
+  type PropKind,
+} from "../src/world/props.ts";
 
 /**
  * The chassis OEM's house, which is what every machine in the game is voiced by
@@ -57,12 +66,23 @@ const track = (over: Partial<TrackState> = {}): TrackState => ({
 const bogies = (damping: number, bottomed = 0) =>
   track({ suspension: { compression: 0.45, damping, bottomed } });
 
-const impact = (over: Partial<ImpactEvent> = {}): ImpactEvent => ({
+/**
+ * An impact by the **kind** that was hit, with the stuff and the mass the real
+ * prop would put on the channel. The event itself carries no kind — a consumer
+ * reacts to what a thing is made of and how heavy it is, never to what it is
+ * called — so this is the one place the two are tied together, and it is tied
+ * to the live table rather than to numbers copied out of it.
+ */
+const impact = (
+  what: PropKind = "cone",
+  over: Partial<ImpactEvent> = {},
+): ImpactEvent => ({
   kind: "impact",
   seq: 1,
   tick: 1,
   prop: 0,
-  what: "cone",
+  material: PROP_SPEC[what].material,
+  mass: PROP_SPEC[what].mass ?? 1,
   joules: 10,
   at: [0, 0, 0],
   ...over,
@@ -238,26 +258,40 @@ describe("an impact's voice follows how hard it was", () => {
     // Both measured off the real sim: an untouched site drops a marker pole for
     // 1.6 J, and 6.2 t into a pipe stack at full speed delivers about 550 J.
     // The whole range has to fit between them with no threshold anywhere.
-    const tick = impactVoice(impact({ what: "pole", joules: 1.6 }));
-    const bang = impactVoice(impact({ what: "pipes", joules: 550 }));
+    const tick = impactVoice(impact("pole", { joules: 1.6 }));
+    const bang = impactVoice(impact("pipes", { joules: 550 }));
     expect(tick.gain).toBeLessThan(0.1);
     expect(bang.gain).toBeGreaterThan(0.8);
   });
 
   it("rings lower and longer the harder it is hit", () => {
-    const tap = impactVoice(impact({ what: "pipes", joules: 20 }));
-    const slam = impactVoice(impact({ what: "pipes", joules: 700 }));
+    const tap = impactVoice(impact("pipes", { joules: 20 }));
+    const slam = impactVoice(impact("pipes", { joules: 700 }));
     // A bang is not a tap turned up: it excites lower modes and rings on.
     expect(slam.hz).toBeLessThan(tap.hz);
     expect(slam.decay).toBeGreaterThan(tap.decay);
   });
 
-  it("gives every kind on the site its own voice", () => {
-    // A total table rather than a default, so adding a prop kind is a type
-    // error rather than a cone noise coming out of a boulder.
-    const kinds = ["cone", "pole", "pipes", "barrier", "scooter", "rock"] as const;
-    const pitches = kinds.map((what) => impactVoice(impact({ what, joules: 20 })).hz);
-    expect(new Set(pitches).size).toBe(kinds.length);
+  it("gives every kind on the site its own voice, without a row of its own", () => {
+    // This used to hold because the audio table had one row per prop kind, and
+    // it held *only* as far as somebody remembered to add one. It now holds for
+    // a better reason: pitch is `material / size`, and no two kinds on the site
+    // are the same stuff at the same mass. **Adding a kind needs no audio work
+    // at all**, which is the whole of why an inventory became affordable.
+    const pitches = PROP_KINDS.map(
+      (what) => impactVoice(impact(what, { joules: 20 })).hz,
+    );
+    expect(new Set(pitches).size).toBe(PROP_KINDS.length);
+  });
+
+  it("rings a big thing lower and longer than a small one of the same stuff", () => {
+    // A marker pole and a pipe stack are both steel tube. One number decides
+    // both of these, and it is the mass — which is what makes the table small.
+    const pole = impactVoice(impact("pole", { joules: 20 }));
+    const stack = impactVoice(impact("pipes", { joules: 20 }));
+    expect(stack.hz).toBeLessThan(pole.hz);
+    expect(stack.decay).toBeGreaterThan(pole.decay);
+    expect(stack.grit).toBe(pole.grit);
   });
 
   it("sharpens the strike with energy, independently of what rang", () => {
@@ -265,14 +299,12 @@ describe("an impact's voice follows how hard it was", () => {
     // to the ring made the heaviest impacts the dullest — the heaviest things
     // ring lowest — and the bench measured a 140 kJ landing as quieter than
     // driving. A harder contact is a sharper one, whatever it landed on.
-    const tap = impactVoice(impact({ what: "pipes", joules: 20 }));
-    const slam = impactVoice(impact({ what: "pipes", joules: 700 }));
+    const tap = impactVoice(impact("pipes", { joules: 20 }));
+    const slam = impactVoice(impact("pipes", { joules: 700 }));
     expect(slam.strikeHz).toBeGreaterThan(tap.strikeHz * 2);
     // Same energy, different bodies: the ring differs, the strike does not.
-    expect(impactVoice(impact({ what: "cone", joules: 20 })).strikeHz).toBe(
-      tap.strikeHz,
-    );
-    expect(impactVoice(impact({ what: "cone", joules: 20 })).hz).not.toBe(tap.hz);
+    expect(impactVoice(impact("cone", { joules: 20 })).strikeHz).toBe(tap.strikeHz);
+    expect(impactVoice(impact("cone", { joules: 20 })).hz).not.toBe(tap.hz);
   });
 
   it("keeps the hull on its own scale", () => {
@@ -282,7 +314,125 @@ describe("an impact's voice follows how hard it was", () => {
     const scuff = hullVoice(hullHit(300));
     expect(landing.gain).toBe(1);
     expect(scuff.gain).toBeLessThan(0.1);
-    expect(landing.hz).toBeLessThan(impactVoice(impact({ what: "pipes" })).hz);
+    expect(landing.hz).toBeLessThan(impactVoice(impact("pipes")).hz);
+  });
+});
+
+describe("coming apart is one mechanism with its dials turned", () => {
+  /**
+   * A part list of one solid, so a claim about a *material* is measured on that
+   * material and nothing else.
+   *
+   * The first version of these tests used real props and quietly measured the
+   * wrong thing: a precast panel is concrete with two small steel lugs, so
+   * "the steel screech" was in fact a concrete crumble with a rounding error,
+   * and the regularity assertion failed for a reason that had nothing to do
+   * with the claim.
+   */
+  const only = (material: MaterialId): Piece[] => [
+    { shape: "box", size: [0.5, 0.5, 0.5], at: [0, 0.5, 0], material },
+  ];
+  const rubbleOf = (material: MaterialId, mass = 200, joules = 500, seq = 3) =>
+    rubbleVoice(only(material), mass, joules, seq);
+
+  it("tells five failures apart with no branch for any of them", () => {
+    // The claim the whole table exists to make. Concrete crumbling, timber
+    // splintering, glass shattering, a steel sheet screeching and a tube
+    // dinging are one function over one row each — so if two of these come out
+    // the same, the table has stopped saying anything.
+    const named = {
+      concrete: rubbleOf("concrete"),
+      timber: rubbleOf("timber"),
+      glass: rubbleOf("glass"),
+      steel: rubbleOf("steel"),
+      tube: rubbleOf("tube"),
+    };
+    for (const grains of Object.values(named)) expect(grains.length).toBeGreaterThan(0);
+    // A tube does not come apart, it clatters: fewest grains on the site.
+    // Glass is the other end — it is the most pieces anything turns into.
+    expect(named.tube.length).toBeLessThan(named.concrete.length);
+    expect(named.glass.length).toBeGreaterThan(named.timber.length);
+    // Concrete is the low, gritty one; glass is the high, ringing one.
+    const mid = (g: readonly { hz: number }[]) =>
+      g.reduce((sum, x) => sum + x.hz, 0) / g.length;
+    expect(mid(named.concrete)).toBeLessThan(mid(named.timber));
+    expect(mid(named.timber)).toBeLessThan(mid(named.glass));
+    expect(named.tube[0]?.grit).toBeLessThan(0.3);
+    expect(named.concrete[0]?.grit).toBeGreaterThan(0.8);
+  });
+
+  it("makes a screech regular and a shatter scattered", () => {
+    // The one distinction that is *only* expressible as a dial, and the reason
+    // bending metal lives in the same function as breaking glass rather than
+    // beside it. Bending is stick–slip, so its grains land on a beat; breaking
+    // does not. Measured as the spread of the gaps between them: a rasp has a
+    // rate, and a shatter does not.
+    const gaps = (grains: readonly { at: number }[]) => {
+      const at = [...grains].map((g) => g.at).sort((a, b) => a - b);
+      const steps = at.slice(1).map((v, i) => v - (at[i] as number));
+      const mean = steps.reduce((sum, v) => sum + v, 0) / steps.length;
+      const spread = steps.reduce((sum, v) => sum + (v - mean) ** 2, 0) / steps.length;
+      return Math.sqrt(spread) / mean;
+    };
+    const screech = rubbleOf("steel");
+    const shatter = rubbleOf("glass");
+    expect(screech.length).toBeGreaterThan(8);
+    expect(shatter.length).toBeGreaterThan(8);
+    expect(gaps(screech)).toBeLessThan(gaps(shatter) / 2);
+    // …and a screech slides downward as the sheet gives way, which nothing
+    // scattered can do. Late grains are lower than early ones.
+    const first = screech[0]?.hz ?? 0;
+    const last = screech[screech.length - 1]?.hz ?? 0;
+    expect(last).toBeLessThan(first);
+  });
+
+  it("lets every piece of a mixed thing speak", () => {
+    // A floodlight is mostly steel and it screeches; its glass head is a
+    // twentieth of it and it still shatters. Before this took a part list the
+    // ledger line named one material and a mixed thing made one noise — which
+    // is a scooter, sheet steel, rubber and a headlamp, sounding like a sheet.
+    const grains = rubbleVoice(
+      KIND.floodlight.pieces,
+      PROP_SPEC.floodlight.mass ?? 1,
+      500,
+      3,
+    );
+    // Take the glass away and the top of the cloud goes with it. Asserted
+    // against the steel it is bolted to rather than against a number, because
+    // the register the head rings in is *derived* — it is a five-kilo piece of
+    // a sixty-kilo thing, so it rings an octave and a half above the mast by
+    // arithmetic rather than by anyone choosing it.
+    const mastOnly = rubbleVoice(
+      KIND.floodlight.pieces.filter((p) => p.material !== "glass"),
+      PROP_SPEC.floodlight.mass ?? 1,
+      500,
+      3,
+    );
+    const top = (g: readonly { hz: number }[]) => Math.max(...g.map((x) => x.hz));
+    expect(top(grains)).toBeGreaterThan(top(mastOnly) * 4);
+    expect(grains.length).toBeGreaterThan(mastOnly.length);
+  });
+
+  it("gets louder with the energy that broke it, and stays under the bang", () => {
+    const gentle = rubbleOf("concrete", 200, 120);
+    const violent = rubbleOf("concrete", 200, 900);
+    const loudest = (g: readonly { gain: number }[]) =>
+      Math.max(...g.map((x) => x.gain));
+    expect(loudest(violent)).toBeGreaterThan(loudest(gentle));
+    // A grain is a chip of the bang, never the bang.
+    const bang = impactVoice(impact("block", { joules: 900 })).gain;
+    expect(loudest(violent)).toBeLessThan(bang);
+  });
+
+  it("throws the same cloud twice from the same sequence number", () => {
+    // Rule 2. `seq` is on the recording, so a replay breaks everything the same
+    // way — and two different write-offs do not sound like one another.
+    expect(rubbleOf("concrete", 200, 500, 9)).toEqual(
+      rubbleOf("concrete", 200, 500, 9),
+    );
+    expect(rubbleOf("concrete", 200, 500, 9)).not.toEqual(
+      rubbleOf("concrete", 200, 500, 10),
+    );
   });
 });
 
@@ -465,8 +615,8 @@ describe("the bogies are the ground, one track at a time", () => {
 
 describe("nothing is struck twice in the same place", () => {
   it("gives two hits on one material two voices", () => {
-    const first = impactVoice(impact({ seq: 1 }));
-    const second = impactVoice(impact({ seq: 2 }));
+    const first = impactVoice(impact("cone", { seq: 1 }));
+    const second = impactVoice(impact("cone", { seq: 2 }));
     expect(first.hz).not.toBeCloseTo(second.hz, 3);
     // Same material, same energy: the difference is where it was caught, and it
     // must not be a difference in how *hard* it was hit.
@@ -476,7 +626,9 @@ describe("nothing is struck twice in the same place", () => {
   it("hits the same way twice on a replay", () => {
     // Drawn from `seq`, which is on the recording. A wobble from `Math.random`
     // would make two playbacks of one run into two different runs.
-    expect(impactVoice(impact({ seq: 7 }))).toEqual(impactVoice(impact({ seq: 7 })));
+    expect(impactVoice(impact("cone", { seq: 7 }))).toEqual(
+      impactVoice(impact("cone", { seq: 7 })),
+    );
   });
 });
 
@@ -564,7 +716,7 @@ describe("the panel is switchgear, not a website", () => {
   it("stays under the machine it is bolted to", () => {
     // These happen under your hand rather than out on the site. A panel louder
     // than an impact would be a cockpit made of noise.
-    const bang = impactVoice(impact({ what: "pipes", joules: 550 }));
+    const bang = impactVoice(impact("pipes", { joules: 550 }));
     expect(panelVoice("clunk", KIBA).gain).toBeLessThan(bang.gain);
   });
 });

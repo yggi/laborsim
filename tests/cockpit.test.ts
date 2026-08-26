@@ -167,6 +167,8 @@ describe("the masters are derived, never hand-wired", () => {
             kind: "scooter",
             category: "citizen asset",
             label: "scooter",
+            material: "steel",
+            mass: 95,
             state: "destroyed",
             yen: 3000,
             energy: 1,
