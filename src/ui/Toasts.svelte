@@ -17,26 +17,17 @@
  * Architecture rule 3: snapshot in, nothing out but a dismiss.
  */
 
+/**
+ * A notice from a **manufacturer**, not from the rig, and declared where the
+ * maker is — the rig only carries the words (`cockpit/notices.svelte.ts`). It
+ * wears that maker's own plate colours and its wordmark, and it never carries a
+ * price: only the ledger does that.
+ */
+import type { Notice } from "../cockpit/notices.svelte.ts";
 import { createEventReader } from "../core/events.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { styleOf } from "../makers/houses.ts";
 import type { DamageEvent } from "../sim/damage.ts";
-
-/**
- * A notice from a **manufacturer**, not from the rig.
- *
- * Two institutions speak in this cockpit and they must not blur: L.A.B.O.R.
- * certifies and bills, a manufacturer sells and warns
- * (`doc/design/rig/training-frame.md`). So a maker notice wears that maker's own
- * plate colours and its wordmark, and it never carries a price — only the
- * ledger does that.
- */
-interface Notice {
-  readonly id: number;
-  readonly maker: string;
-  readonly head: string;
-  readonly body: string;
-}
 
 const {
   snapshot,

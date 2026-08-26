@@ -32,6 +32,7 @@ import {
 } from "../src/cockpit/annunciator.ts";
 import { damp } from "../src/cockpit/damping.ts";
 import { cellFor, podFor, REGISTERED } from "../src/cockpit/parts.ts";
+import { plot, R } from "../src/cockpit/scope.ts";
 import {
   ACTIVE,
   ALARM,
@@ -42,7 +43,7 @@ import {
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
 import { snapshot, track } from "../src/core/fixture.ts";
-import type { Snapshot, TrackState } from "../src/core/snapshot.ts";
+import type { BodyPose, Snapshot, TrackState } from "../src/core/snapshot.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
 import { createAutonav } from "../src/modules/autonav.ts";
 
@@ -223,6 +224,87 @@ describe("the tells point at an instrument that can show the thing", () => {
     const lamps = chassisConditions(withTracks({}), true);
     expect(worst(lamps.map((l) => l.condition))).toBe(ALARM);
     expect(conditionAt(lamps, "TRACTION")).toBe(NOMINAL);
+  });
+});
+
+/**
+ * The route scope, which shipped **mirrored** and stayed that way.
+ *
+ * It had written the machine's right-hand axis out by hand — the second place
+ * to do so — and got it backwards, so every pin was plotted on the wrong side
+ * of own ship: a route curving right read as curving left, and the pin NAV-1
+ * was steering toward sat opposite the way the machine turned. Nothing could
+ * have caught it, because the geometry lived inside a component no test mounts
+ * and no bench asserts on. It is `src/cockpit/scope.ts` now, and these are the
+ * assertions that were impossible before.
+ */
+describe("the route scope draws the world the operator is sitting in", () => {
+  /** At the origin, facing +Z — the machine's rest pose (`core/spec.ts`). */
+  const rest: BodyPose = { position: [0, 0, 0], rotation: [0, 0, 0, 1] };
+  /** Yawed 90° about +Y, which points the machine's nose down world +X. */
+  const turned: BodyPose = {
+    position: [0, 0, 0],
+    rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
+  };
+
+  it("puts a pin on the machine's right on the right of the scope", () => {
+    // The machine's right is −X. This is the bug, in one line: flip the sign
+    // in `bearing` and both of these fail.
+    expect(plot(rest, -50, 0).px).toBeGreaterThan(R);
+    expect(plot(rest, 50, 0).px).toBeLessThan(R);
+  });
+
+  it("puts a pin ahead at the top, and one behind at the bottom", () => {
+    expect(plot(rest, 0, 50).py).toBeLessThan(R);
+    expect(plot(rest, 0, -50).py).toBeGreaterThan(R);
+  });
+
+  it("keeps the face nose-up when the machine turns", () => {
+    // Nose down +X: the pin at world +Z is now off the machine's right, and
+    // the one at +X is straight ahead. A scope that plotted world north-up
+    // would put both in the same places as `rest` does.
+    expect(plot(turned, 0, 50).px).toBeGreaterThan(R);
+    expect(plot(turned, 50, 0).py).toBeLessThan(R);
+  });
+
+  it("plots relative to the machine, not to the origin", () => {
+    const moved: BodyPose = { position: [10, 0, 20], rotation: [0, 0, 0, 1] };
+    const here = plot(moved, 10, 20);
+    expect(here.px).toBeCloseTo(R, 6);
+    expect(here.py).toBeCloseTo(R, 6);
+    expect(here.range).toBeCloseTo(0, 6);
+  });
+
+  it("reports range in metres, whatever the face is scaled to", () => {
+    expect(plot(rest, 30, 40).range).toBeCloseTo(50, 6);
+  });
+
+  /**
+   * The check that makes it *one* fact rather than two that happen to agree
+   * today. NAV-1 turns right by outrunning the right track with the left one
+   * (`tests/autonav.test.ts`); the scope draws right on the right. Both read
+   * `bearing`, so this fails the moment either grows its own copy again.
+   */
+  it("agrees with NAV-1 about which side of the machine a pin is on", () => {
+    for (const pin of [
+      { x: -40, z: 25 },
+      { x: 40, z: 25 },
+      { x: -5, z: -60 },
+      { x: 60, z: -5 },
+    ]) {
+      const nav = createAutonav(
+        [pin],
+        // The same rest pose, in the shape a module reads it in.
+        () => ({ x: 0, z: 0, rotation: { x: 0, y: 0, z: 0, w: 1 } }),
+        { enabled: true },
+      );
+      const out = nav.intent();
+      const steeringRight = (out?.left ?? 0) > (out?.right ?? 0);
+      expect(
+        plot(rest, pin.x, pin.z).px > R,
+        `pin ${pin.x},${pin.z}: the scope and the module disagree`,
+      ).toBe(steeringRight);
+    }
   });
 });
 

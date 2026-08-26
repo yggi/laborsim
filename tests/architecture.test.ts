@@ -295,20 +295,69 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
     throw new Error(`unbalanced: ${opener}`);
   }
 
-  it("the pilot module reads no rune", () => {
+  it("the pilot is a plain module, so a rune cannot get into it", () => {
     // `runRack` calls its `intent` and `condition` from inside `world.step()`,
-    // inside the frame loop. It is declared in the component, so unlike the loop
-    // it *could* reach a rune, and it did — both levers, on the hottest path.
-    const body = bodyAfter(CODE, "const pilot: Module = {");
+    // inside the frame loop. It used to be declared in the component, where it
+    // *could* reach a rune — and did, both levers, on the hottest path, for as
+    // long as it took anyone to look inside a module callback. It is
+    // `src/modules/pilot.ts` now and is handed `hands`, which is the same fix
+    // the loop got: not a rule about what to read, but nothing else in reach.
+    const pilot = stripComments(readFileSync(join(SRC, "modules/pilot.ts"), "utf8"));
+    expect(pilot).not.toMatch(/\$(?:state|derived|effect)\b/);
+    expect(valueImports(pilot).filter((s) => s.startsWith("svelte"))).toEqual([]);
+    expect(CODE, "the shell builds the pilot, it does not write one").toContain(
+      "createPilot(hands)",
+    );
+  });
+
+  /**
+   * The other direction, and the one that cost a run.
+   *
+   * The effect that builds a run *is* the statement of what a run is made of:
+   * every rune it reads is a thing that, when it changes, throws the world away
+   * and builds a new one. `run.setView(mode)` read the camera plainly, so
+   * pressing CHASE tore down the site you were driving and handed you an
+   * identical untouched copy — while `setView` had already pointed the camera
+   * correctly, which is why it looked like a reset rather than a broken button.
+   *
+   * The camera is "hands off the wheel", not pause and certainly not RESET
+   * (`doc/MEMORY.md` § 6). So the dependencies are listed, and adding one has to
+   * be a deliberate act.
+   */
+  it("a run is made of the exercise and the reset, and nothing else", () => {
+    // The effect *containing* `createRun`, which is the last one opened before
+    // it — and with every `untrack(() => …)` blanked out, because that is
+    // precisely the spelling of "read this, do not depend on it".
+    const built = CODE.indexOf("const run = createRun");
+    expect(
+      built,
+      "the shell no longer builds a run where this expects",
+    ).toBeGreaterThan(0);
+    const body = bodyAfter(
+      CODE.slice(CODE.lastIndexOf("$effect", built)),
+      "$effect",
+    ).replace(/untrack\s*\(\s*\(\s*\)\s*=>[^)]*\)/g, "");
     const read = runes.filter((name) => {
-      // The lookbehind is load-bearing: `hands.leverL` contains `leverL`, and
-      // reading it off the seam is the whole point. A property access is not a
-      // rune read, and without this the check fails on its own fix.
       const anywhere = new RegExp(`(?<![.\\w$])${name}\\b`, "g");
       const written = new RegExp(`(?<![.\\w$])${name}\\b\\s*=(?!=)`, "g");
       return (body.match(anywhere)?.length ?? 0) > (body.match(written)?.length ?? 0);
     });
-    expect(read, "read it off `hands` instead (src/control/hands.ts)").toEqual([]);
+    // `rack` is the exception and not a dependency: it is a `$state` array
+    // passed by reference, and handing a proxy on subscribes to nothing.
+    // Anything else in this list rebuilds the world when it changes.
+    expect(read.sort(), "wrap it in `untrack` unless it really is a new run").toEqual([
+      "rack",
+    ]);
+    // And what it takes off the rig's session, which *are* dependencies, because
+    // each one is a getter over a rune: the exercise on the rig and the re-rack
+    // counter. Not the folder, not the schedule, and above all not the camera.
+    const fromSession = [
+      ...new Set([...body.matchAll(/session\.(\w+)/g)].map((m) => m[1])),
+    ];
+    expect(fromSession.sort(), "a run is the exercise and the re-rack").toEqual([
+      "exercise",
+      "runId",
+    ]);
   });
 
   it("the component owns no frame loop", () => {

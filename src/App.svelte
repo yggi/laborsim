@@ -4,92 +4,62 @@
  * renderer and the loop (architecture rule 3). The only thing crossing from
  * sim to UI is a snapshot, and it crosses at SNAPSHOT_HZ, not 60.
  *
- * That second clause was aspirational for a long time — the loop was a 155-line
- * effect in the middle of this file. It is `platform/run.ts` now, and what is
- * left here is the cab: what is fitted, what the operator is doing, what the
- * panel says about it, and one effect that says what a run is made of. Two
- * objects cross the seam and nothing else does — `hands` going down
- * (`control/hands.ts`) and a snapshot coming back.
+ * What is left in here is **the wiring and nothing else**: what is fitted, what
+ * the operator is doing, and one effect that says what a run is made of. Every
+ * concern that had state of its own is now a module beside this one — the alarm
+ * and its acknowledgement, the stop, the maker's notices, the nag, the sound —
+ * each a handful of lines that can be driven from a test without mounting a
+ * component. It was 991 lines with six of them in the middle of it.
  *
- * Note how little the chase camera costs to implement: hiding the levers
- * *is* "hands off the wheel". The bus keeps carrying whatever the levers were
- * last set to, the machine keeps doing it, and the player simply cannot
- * reach the controls. No pause, no auto-stop, no special case in the sim.
+ * Two objects cross the seam to the loop and nothing else does: `hands` going
+ * down (`control/hands.ts`) and a snapshot coming back.
  */
 
-import { type Audio, createLiveAudio } from "./audio/engine.ts";
-import { type Annunciation, chassisConditions, worst } from "./cockpit/annunciator.ts";
+import { untrack } from "svelte";
+import { fitRungOne } from "./build/rung-one.ts";
+import { createAlarm } from "./cockpit/alarm.svelte.ts";
 import { BEAM, PILLAR } from "./cockpit/cage.ts";
 import DashPanel from "./cockpit/DashPanel.svelte";
+import { createEstop } from "./cockpit/estop.svelte.ts";
 import Glass from "./cockpit/Glass.svelte";
 import Lever from "./cockpit/Lever.svelte";
+import { createNag } from "./cockpit/nag.ts";
+import { createNotices } from "./cockpit/notices.svelte.ts";
 import Rack from "./cockpit/Rack.svelte";
-import {
-  ACTIVE,
-  CHASSIS,
-  type Condition,
-  type Module,
-  NOMINAL,
-} from "./control/bus.ts";
+import { type Module, NOMINAL } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
 import { restingHands } from "./control/hands.ts";
 import type { Snapshot } from "./core/snapshot.ts";
-import { MAX_TRACK_SPEED } from "./core/spec.ts";
 import { styleOf } from "./makers/houses.ts";
-import { createAutonav } from "./modules/autonav.ts";
-import { createTiltGuard } from "./modules/tiltguard.ts";
+import { createPilot } from "./modules/pilot.ts";
 import { createRun, type Run } from "./platform/run.ts";
+import { createSound } from "./platform/sound.svelte.ts";
 import type { CameraMode } from "./render/scene.ts";
 import Briefing from "./ui/Briefing.svelte";
 import Objective from "./ui/Objective.svelte";
 import RunReport from "./ui/RunReport.svelte";
+import { createSession } from "./ui/session.svelte.ts";
 import Telemetry from "./ui/Telemetry.svelte";
 import Toasts from "./ui/Toasts.svelte";
-import { type Exercise, exerciseById, FIRST_EXERCISE } from "./world/exercises.ts";
+import { type Exercise, exerciseById } from "./world/exercises.ts";
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
 let mode = $state<CameraMode>("cab");
 let leverL = $state(0);
 let leverR = $state(0);
+/** The horn is down. A cab state, not sim state — nothing can hear it yet. */
+let honking = $state(false);
 
 /**
- * The one place the reactive cab and the render loop touch.
- *
- * The loop, the rack it steps and the pointer handlers all run outside any
- * reactive scope, and everything they need from up here crosses through this
- * object — written by exactly one effect, below, and read as plain fields by
- * everything downstream. Why one channel rather than five private routes, and
- * why these five values are the same kind of thing: `control/hands.ts`.
+ * The one place the reactive cab and the render loop touch — written by exactly
+ * one effect, below, and read as plain fields by everything downstream. Why one
+ * channel rather than five private routes: `control/hands.ts`.
  */
 const hands = restingHands();
 
-/**
- * The pilot is a rack entry like any other, and can be reordered like one.
- *
- * It is also **the chassis component**: it brings the dashboard, the cage and
- * the glass, and it costs nothing, which is why it has no cell on the dash. You
- * do not need a lamp to tell you the levers are fitted
- * (`doc/design/cab/components.md`).
- */
-const pilot: Module = {
-  id: CHASSIS,
-  label: "PILOT",
-  maker: "KIBA WORKS",
-  considers: "your two thumbs",
-  verb: "SET",
-  enabled: true,
-  // Off `hands`, not off the runes: `runRack` calls this from inside
-  // `world.step()`, inside the render loop, which is not a reactive scope.
-  intent: () => ({
-    left: hands.leverL * MAX_TRACK_SPEED,
-    right: hands.leverR * MAX_TRACK_SPEED,
-  }),
-  // Hands on the levers is active; hands off is nominal. It never warns —
-  // KIBA does not believe the operator is a fault condition.
-  condition: (): Condition =>
-    hands.leverL !== 0 || hands.leverR !== 0 ? ACTIVE : NOMINAL,
-};
+/** The chassis component: the levers, and everything they arrive bolted to. */
+const pilot = createPilot(hands);
 
 /**
  * The rack, mutated in place. `runRack` walks this array every step, so
@@ -102,197 +72,77 @@ let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
 let showDebug = $state(true);
 
-/** Bumping this re-racks the exercise: the sim effect rebuilds from scratch. */
-let runId = $state(0);
-let report = $state(false);
-let estop = $state(false);
-/** Enabled-state of each module before the E-stop, so release can restore it. */
-let preEstop: Record<string, boolean> = {};
-/** So the report auto-opens once when the exercise settles, not every frame. */
-let outcomeSeen = false;
-
-/**
- * Which exercise is on the rig, and whether anybody has sat down yet.
- *
- * The schedule is the first thing you see, and going back to it is the only way
- * to change what is being asked of you — an exercise is not a setting you flip
- * mid-drive. Reading `exercise` inside the sim effect is what makes choosing one
- * rebuild the world, exactly as RESET does.
- */
-let exercise = $state<Exercise>(FIRST_EXERCISE);
-/** What is selected on the schedule, which is not yet what is on the rig. */
-let picked = $state(FIRST_EXERCISE.id);
-let briefing = $state(true);
-
 /** Measured off the dash, so levers and toasts sit clear of a panel whose
  *  height changes as components are fitted and cells appear. */
 let dashHeight = $state(96);
 
 /**
- * How worried the machine is, and how much of that the pilot has pressed.
- *
- * It lives here rather than on the dash because it now has **three** consumers:
- * the master lamp, the horn, and the beacon behind it (L-046). A machine whose
- * light and noise disagreed about its own condition would be two instruments
- * wired to two facts — so they are wired to one, and the panel is handed the
- * answer rather than working it out again.
+ * The six concerns that have state of their own, each in its own module, and
+ * each stepped by hand from `tests/cab.test.ts`. What is left in this file is
+ * which of them exist and what they are wired to.
  */
-let acked = $state<Condition>(NOMINAL);
-const lamps = $derived<readonly Annunciation[]>(chassisConditions(latest, estop));
-const master = $derived(
-  worst([
-    ...lamps.map((a) => a.condition),
-    ...(latest?.stages ?? []).map((s) => s.condition),
-  ]),
+const session = createSession();
+const board = createNotices();
+const estop = createEstop(rack, () => rackVersion++);
+const alarm = createAlarm(
+  () => latest,
+  () => estop.engaged,
 );
-// A condition clearing winds the acknowledgement back down, which re-arms both
-// the flash and the horn for next time.
-$effect(() => {
-  if (master < acked) acked = master;
-});
+const sound = createSound();
+const nag = createNag(pilot.maker, board.notify);
 
-/** The horn is down. A cab state, not sim state — nothing can hear it yet. */
-let honking = $state(false);
+// Three lifetimes the shell owns, because an `$effect` only exists inside a
+// component: the sound's context, the acknowledgement winding back down, and
+// the debrief opening itself when the exercise settles.
+$effect(() => sound.open());
+$effect(() => alarm.settle());
+$effect(() => session.settle(latest?.goal.outcome));
 
-// Kept current here, where the master and the acknowledgement exist. This is
-// the only writer; `hands` itself is declared at the top, because the pilot
-// module reads it and the rack is built before any of this.
+/** Everything bolted to the cab is voiced by the maker who bolted it there. */
+const CAB_MAKER = "KIBA WORKS";
+const click = (maker = CAB_MAKER) => sound.panel("click", maker);
+const clunk = (maker = CAB_MAKER) => sound.panel("clunk", maker);
+
+// The one writer of the seam. `hands` itself is declared above, because the
+// pilot module reads it and the rack is built before any of this.
 $effect(() => {
   hands.leverL = leverL;
   hands.leverR = leverR;
   hands.horn = honking;
-  hands.seated = !briefing;
+  hands.seated = !session.briefing;
   hands.headDown = rackOpen;
   // Silent while the folder is open. Hitting the stop lights the master at
   // ALARM and opens the debrief in the same press, and a horn blaring under
   // somebody explaining what you just did is the rig talking over itself.
-  hands.alarm = !report && master > acked ? master : NOMINAL;
+  hands.alarm = session.report ? NOMINAL : alarm.unacked;
 });
 
-/**
- * The rig's volume, not the machine's.
- *
- * A Labor's horn has no cut-out — that is what a horn is for — so this is not a
- * dash control and does not live on the panel. It is the training rig's own
- * knob, and it sits with the camera, which is the other control that belongs to
- * the room rather than to the machine (`doc/design/rig/training-frame.md`).
- */
-let sound = $state(true);
-let audio: Audio | undefined;
-
-/**
- * The cab's own switchgear, for the few controls the machine does not record.
- *
- * Almost every switch is already audible without anyone asking: flipping a
- * component off changes its slot on the snapshot and the engine hears that by
- * itself, which is why a replay clicks in all the right places. What is left is
- * furniture — the cabinet latch, the acknowledgement, an instrument clamping
- * home — and it is voiced by the maker whose furniture it is, which is the
- * chassis maker for everything bolted to the cab.
- *
- * The camera and the volume are deliberately **silent**: they belong to the
- * training rig rather than to the machine, and the rig does not reach into the
- * cab and make noises (`doc/design/rig/training-frame.md`).
- */
-const CAB_MAKER = "KIBA WORKS";
-const click = (maker = CAB_MAKER) => audio?.panel("click", maker);
-const clunk = (maker = CAB_MAKER) => audio?.panel("clunk", maker);
-
-function toggleSound() {
-  sound = !sound;
-  audio?.setVolume(sound ? 1 : 0);
-}
-
-/**
- * The machine's voice, built once and kept across a RESET.
- *
- * Deliberately *not* inside the sim effect: an `AudioContext` is an expensive,
- * limited resource and re-racking the exercise is not a reason to throw one
- * away. It costs nothing to keep, because the engine reads the event channel
- * like everything else — a rewind is a new run to it, and nothing from the old
- * one is played.
- *
- * A browser will not let a page make noise before the player has touched it, so
- * the context starts suspended and the first gesture anywhere wakes it. That is
- * not a workaround to be embarrassed about: a rig that started talking before
- * you had touched anything would be the rig being rude.
- */
-$effect(() => {
-  const live = createLiveAudio();
-  audio = live.audio;
-  const wake = () => live.resume();
-  addEventListener("pointerdown", wake);
-  addEventListener("keydown", wake);
-  return () => {
-    removeEventListener("pointerdown", wake);
-    removeEventListener("keydown", wake);
-    audio = undefined;
-    live.dispose();
-  };
-});
-
-/**
- * The run in progress, or nothing while one is being built or torn down.
- *
- * This replaced a `let setViewMode = () => {}` that the sim effect reassigned
- * from inside its `.then()` — so a camera press before the wasm landed reached a
- * function that did nothing and said nothing. A handle that is *absent* until
- * there is a run says the same thing honestly, and `run.setView` remembers a
- * mode given during the boot rather than dropping it.
- */
+/** The run in progress, or nothing while one is being built or torn down. A
+ *  handle that is *absent* during the boot, rather than one that is quietly
+ *  inert — which is what it used to be (`platform/run.ts`). */
 let current: Run | undefined;
+
 function toggleRack() {
   rackOpen = !rackOpen;
   // A cabinet door, not a switch: the latch is the heaviest thing on the panel
-  // and it is the same sound going both ways. The view needs no telling to come
-  // back — nothing is holding the glass, so it is already on its way.
+  // and it is the same sound going both ways.
   clunk();
 }
 
 /**
- * A notice in a **manufacturer's** voice.
+ * The handles every part of every component commands through. The shell owns
+ * them because the shell owns the live rack; nothing downstream of here ever
+ * sees a module (`src/control/controls.ts`).
  *
- * L.A.B.O.R. certifies and bills, and the damage ledger speaks in its register.
- * A manufacturer sells and warns, and this is the first channel where one speaks
- * for itself. Keeping them visually distinct matters: a warranty notice is not
- * a verdict, and the player has to be able to tell whose opinion they are
- * reading (`doc/design/rig/training-frame.md`).
- */
-interface Notice {
-  readonly id: number;
-  readonly maker: string;
-  readonly head: string;
-  readonly body: string;
-}
-let notices = $state<Notice[]>([]);
-let noticeId = 0;
-/** How long a manufacturer gets to lecture you before it fades, ms. */
-const NOTICE_LINGER = 8000;
-
-function notify(maker: string, head: string, body: string) {
-  const id = noticeId++;
-  notices = [...notices, { id, maker, head, body }];
-  setTimeout(() => {
-    notices = notices.filter((n) => n.id !== id);
-  }, NOTICE_LINGER);
-}
-
-/**
- * The handles every part of every component commands through — the cells on the
- * dash, the pods on the glass, and whatever is fitted next. The shell owns them
- * because the shell owns the live rack; nothing downstream of here ever sees a
- * module (`src/control/controls.ts`).
- *
- * Popping the hood: switching off **safety** kit is a deliberate act, so the
- * maker says so and the run report will remember. The `estop` check is why it is
- * a hook rather than a rule in the channel — an E-stop disables every module in
- * the rack, and nobody's warranty is void because you hit the big red button.
+ * Popping the hood is a deliberate act, so the maker says so — and the `estop`
+ * check is why that is a hook rather than a rule in the channel: nobody's
+ * warranty is void because you hit the big red button.
  */
 const controls = createControls(rack, {
   onBypass(mod) {
-    if (estop) return;
+    if (estop.engaged) return;
     const [head, body] = styleOf(mod.maker).voice.warranty;
-    notify(mod.maker, head, body);
+    board.notify(mod.maker, head, body);
   },
   onChange: () => rackVersion++,
 });
@@ -303,191 +153,82 @@ function setView(next: CameraMode) {
 }
 
 /**
- * Emergency stop. Kills the drive by disabling every module — the terminal
- * falls to HALT whatever was driving — and parks the levers. Releasing restores
- * exactly the enable-state you had, because a safety control that quietly
- * rewired your rack would be its own hazard.
- */
-function setEstop(next: boolean) {
-  if (next === estop) return;
-  estop = next;
-  if (estop) {
-    preEstop = {};
-    for (const mod of rack) {
-      preEstop[mod.id] = mod.enabled;
-      mod.enabled = false;
-    }
-    leverL = 0;
-    leverR = 0;
-  } else {
-    for (const mod of rack) mod.enabled = preEstop[mod.id] ?? true;
-  }
-  rackVersion++;
-}
-
-/**
- * The stop is also the way out of the exercise.
- *
- * There is no menu button, because a training rig does not have one: you stop
- * the machine, and *then* somebody comes and talks to you about it. So the
- * mushroom latches the drive dead and opens the folder in the same press, and
- * RESUME is what twists it back out — the same gesture in reverse, and the only
- * way to release it, which is exactly the ceremony a real stop demands.
- *
- * Pressing it again while the folder is open does nothing new: the stop is
- * already in, and a latched stop is not a toggle.
+ * The stop is also the way out of the exercise. There is no menu button, because
+ * a training rig does not have one: you stop the machine, and *then* somebody
+ * comes and talks to you about it. RESUME is the twist that puts it back.
  */
 function hitEstop() {
-  // The mushroom itself. Every module it disables clunks on its own, off the
-  // snapshot, so hitting the stop is one deliberate clack followed by the whole
-  // bank letting go — which is what a stop actually sounds like.
+  // One deliberate clack, then the whole bank letting go: every module the stop
+  // disables clunks on its own, off the snapshot.
   clunk();
-  setEstop(true);
-  report = true;
+  estop.hit();
+  parkLevers();
+  session.openReport();
 }
 
 /** Close the folder and hand the machine back. Twists the stop out if the stop
  *  is what opened it; a folder opened by a citizen leaves the drive as it was. */
 function resumeRun() {
-  report = false;
-  setEstop(false);
+  session.closeReport();
+  estop.release();
 }
 
-/** The rig re-racks the exercise. Fresh world, fresh site, everything at rest. */
-function resetSim() {
-  report = false;
-  estop = false;
+const parkLevers = () => {
   leverL = 0;
   leverR = 0;
+};
+
+/** The cab, back to how you found it — the other half of starting an exercise.
+ *  The rig says it begins again (`ui/session.svelte.ts`); this says what that
+ *  does to the machine you are sitting in. */
+function resetCab() {
+  estop.clear();
+  parkLevers();
   rackOpen = false;
   mode = "cab";
-  outcomeSeen = false;
-  acked = NOMINAL;
-  runId++;
 }
 
-/** Back to the schedule, with the current exercise selected on it. */
-function openSchedule() {
-  picked = exercise.id;
-  briefing = true;
-  report = false;
+/** RESET: the rig re-racks the exercise and hands the cab back at rest. */
+function resetSim() {
+  session.reRack();
+  resetCab();
 }
 
-/**
- * Sit down and start. Always a fresh run, even for the exercise already loaded:
- * BEGIN means begin, and handing somebody a half-driven site because they
- * happened to re-pick the same row would be the rig losing track of what a run
- * is.
- */
-function begin(next: Exercise = exerciseById(picked) ?? FIRST_EXERCISE) {
-  exercise = next;
-  picked = next.id;
-  briefing = false;
-  resetSim();
+/** BEGIN: the same, for an exercise you have just chosen off the schedule. */
+function begin(next?: Exercise) {
+  session.begin(next);
+  resetCab();
 }
-
-/**
- * "Keep your eyes on the road", in the chassis maker's own words.
- *
- * The cage is KIBA's structure, so the nag is KIBA's voice — and it is the
- * first thing to consume `voice.tips`, which has been populated for all three
- * makers and read by nothing (`doc/design/cab/components.md`).
- *
- * It fires when a long look comes back to centre, and then not again for a
- * while: a reminder you get every time you glance is one you learn to ignore,
- * and the point is the opposite of that.
- */
-const NAG_AFTER = 0.6;
-const NAG_COOLDOWN_MS = 45_000;
-let lookedAway = false;
-/** Not `0`: a wall clock a minute into the session is already past any
- *  cooldown measured from zero, and the *first* nag is the one that teaches
- *  you the view comes back on its own. It was silent for 45 s once. */
-let lastNag = Number.NEGATIVE_INFINITY;
-let tipIndex = 0;
-
-function mindTheRoad(offsetX: number) {
-  const away = Math.abs(offsetX) > innerWidth * NAG_AFTER;
-  if (away) {
-    lookedAway = true;
-    return;
-  }
-  if (!lookedAway || Math.abs(offsetX) > 24) return;
-  lookedAway = false;
-  const now = performance.now();
-  if (now - lastNag < NAG_COOLDOWN_MS) return;
-  lastNag = now;
-  const { wordmark, voice } = styleOf(pilot.maker);
-  const tip = voice.tips[tipIndex % voice.tips.length];
-  tipIndex++;
-  if (tip) notify(pilot.maker, wordmark, tip);
-}
-
-/**
- * Auto-open the debrief the moment the exercise settles — either way.
- *
- * It used to watch the damage list for a citizen, which was the only ending
- * there was. Now there are two and they are one fact on the snapshot, so this
- * watches the fact: a citizen still opens the folder, because a failed exercise
- * is exactly what a citizen produces, and finishing opens it too.
- *
- * **Opening the folder is not stopping the machine.** Nothing here touches the
- * drive: the levers keep carrying what they were carrying and the sim keeps
- * stepping behind the scrim, the same bargain the chase camera makes. A rig
- * that yanked control at the finish line would be a rig deciding when you are
- * done with the site (L-038).
- */
-$effect(() => {
-  if (latest && latest.goal.outcome !== "running" && !outcomeSeen) {
-    outcomeSeen = true;
-    report = true;
-  }
-});
 
 $effect(() => {
   // Reading `runId` and `exercise` here is what makes RESET and choosing an
   // exercise rebuild the world: the effect re-runs, disposes the old run and
   // starts a new one. Everything below the seam is `platform/run.ts` — this is
   // now a statement of what a run is made of, and nothing about how it turns.
-  runId;
+  session.runId;
   const run = createRun({
     canvas,
-    exercise,
+    exercise: session.exercise,
     rack,
     pilot,
     hands,
-    // NAV needs the pose of the machine it is driving and TILT-GUARD its
-    // attitude, so both are built once the world exists. Which kit that is stays
-    // the cab's decision; the run only knows when there is something to fit it
-    // to. Nothing keeps a reference to either: their instruments read the
-    // snapshot and command through the same handles as everything else.
-    fit: (world) => [
-      createAutonav(
-        world.waypoints,
-        () => {
-          const t = world.machine.body.translation();
-          return { x: t.x, z: t.z, rotation: world.machine.body.rotation() };
-        },
-        { verb: "CAP", enabled: false },
-      ),
-      // TILT-GUARD sits at the bottom of the rail, below everything: it is the
-      // last thing between the rack and the tracks, which is where a safety
-      // component belongs and also where it is most annoying. Move it up and it
-      // guards only what is above it — that is the ordering lesson, in one slot.
-      // It ships **enabled**, because safety kit does. Finding out that the
-      // thing stopping you halfway up a grade is your own machine being careful
-      // — and then finding its LED — is the best first lesson rung 1 has.
-      createTiltGuard(() => world.machine.body.rotation()),
-    ],
+    // What is bolted on beyond the chassis, and *which* list that is stays the
+    // cab's decision — `createRun` only knows when there is a world to fit it to
+    // (`build/rung-one.ts`).
+    fit: fitRungOne,
     onSnapshot: (snapshot) => {
       latest = snapshot;
     },
-    onLook: mindTheRoad,
-    audio: () => audio,
+    onLook: (offsetX) => nag.look(offsetX, innerWidth),
+    audio: sound.voice,
   });
-  // The camera survives the boot: `setView` before the wasm lands is remembered,
-  // not dropped, so `mode` is the truth from the first frame either way.
-  run.setView(mode);
+  // **Untracked, or the camera rebuilds the world.** Read plainly, `mode` joins
+  // the two above as a thing this effect depends on — so pressing CHASE tore the
+  // run down and handed you an identical, untouched copy of the site you were
+  // driving. The chase camera is "hands off the wheel", not a reset
+  // (`doc/MEMORY.md` § 6): `setView` points it while a run is live, and this line
+  // only tells a *new* run where to start. The mode survives the boot either way.
+  run.setView(untrack(() => mode));
   current = run;
   return () => {
     current = undefined;
@@ -557,7 +298,7 @@ $effect(() => {
        Hidden while you are in the rack, never unmounted: a subscription belongs
        to a consumer's lifetime, and rebuilding this mid-run made it re-voice
        every line still on the channel the moment you closed the cabinet. -->
-  <Toasts snapshot={latest} {notices} hidden={rackOpen} />
+  <Toasts snapshot={latest} notices={board.list} hidden={rackOpen} />
 
   <!-- The levers go with the glass. Looking down at the rack puts your hands in
        the cabinet, not on the controls — the same bargain as the chase view,
@@ -588,8 +329,8 @@ $effect(() => {
         {option === "cab" ? "CAB" : "CHASE"}
       </button>
     {/each}
-    <button class:on={sound} onclick={toggleSound} aria-pressed={sound}>
-      {sound ? "SND" : "MUTE"}
+    <button class:on={sound.on} onclick={() => sound.toggle()} aria-pressed={sound.on}>
+      {sound.on ? "SND" : "MUTE"}
     </button>
   </div>
 
@@ -627,15 +368,15 @@ $effect(() => {
       <DashPanel
         snapshot={latest}
         {rackOpen}
-        estopped={estop}
-        {lamps}
-        {master}
-        {acked}
+        estopped={estop.engaged}
+        lamps={alarm.lamps}
+        master={alarm.master}
+        acked={alarm.acked}
         bind:height={dashHeight}
         onOpenRack={toggleRack}
         onEstop={hitEstop}
         onAck={() => {
-          acked = master;
+          alarm.ack();
           click();
         }}
         onHorn={(down) => (honking = down)}
@@ -654,14 +395,14 @@ $effect(() => {
     </div>
   {/if}
 
-  {#if report}
+  {#if session.report}
     <RunReport
       snapshot={latest}
-      estopped={estop}
+      estopped={estop.engaged}
       onReset={resetSim}
       onResume={resumeRun}
-      onSchedule={openSchedule}
-      onNext={(id) => begin(exerciseById(id) ?? exercise)}
+      onSchedule={() => session.schedule()}
+      onNext={(id) => begin(exerciseById(id) ?? session.exercise)}
     />
   {/if}
 
@@ -669,15 +410,15 @@ $effect(() => {
        the only way to change what is being asked of you; BEGIN is also the
        gesture that wakes the sound, which a browser requires and the fiction
        wanted anyway (`ui/Briefing.svelte`). -->
-  {#if briefing}
+  {#if session.briefing}
     <Briefing
-      selected={picked}
+      selected={session.picked}
       onselect={(next) => {
-        picked = next.id;
+        session.pick(next.id);
         click();
       }}
       onbegin={() => begin()}
-      oncancel={runId > 0 ? () => (briefing = false) : undefined}
+      oncancel={session.runId > 0 ? () => session.dismiss() : undefined}
     />
   {/if}
 </div>

@@ -33,25 +33,10 @@ Order and reasoning: `doc/design/code/roadmap.md`. These close the core loop at 
 exercises are built; what remains is more to break, replay, and the path to the
 conflict.
 
-The foundation pass is done — [L-068], [L-069] and [L-070] closed the three seams
-that three feature branches in one week had each bent. What is left here is
-features again, and `L-032` is the one everything downstream of *attribution*
-waits on.
-
-### [L-072] The shell still holds six cab concerns
-- **what:** `App.svelte` is 991 lines — 497 of script, 494 of template — and the
-  sim lifecycle leaving (L-070) took the biggest piece but not the rest. Still in
-  there: the annunciator (`lamps`, `master`, `acked` and the effect that winds
-  acknowledgement back down), the E-stop and its `preEstop` restore, the horn,
-  the manufacturer notices and their timers, the audio context's lifetime, and
-  the chassis maker's nag with its three pieces of cooldown state. Each is a
-  clump of state plus the two or three functions that own it, already fenced off
-  by its own comment block. Svelte 5 puts runes in `.svelte.ts`, so these can
-  move without becoming plain-object state machines.
-- **done-when:** the script half is under ~200 lines and every remaining `let` in
-  it is either bound to the template or read by one function beside it; each
-  extracted concern is testable without mounting the component.
-- **needs:** nothing — L-069 and L-070 cleared the boundary these sit behind.
+The foundation pass is done — [L-068] through [L-072] closed the seams that three
+feature branches in one week had each bent, and the shell is wiring again rather
+than a sixth home for cab state. What is left here is features, and `L-032` is
+the one everything downstream of *attribution* waits on.
 
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
@@ -156,6 +141,19 @@ waits on.
   and the first line in the ledger came from the machine, and an untouched site
   is silent.
 - **needs:** NOTES thread "the site is hard to crash into on purpose"
+
+### [L-075] Nothing drives the app
+- **what:** four benches read the game and none of them *plays* it. `shots` and
+  `listen` drive hand-built snapshots, `cab` poses the renderer, `profile` times
+  it — all downstream of a recording, by design. So a defect in the shell's own
+  wiring is invisible to every one of them, and both of this session's bugs were:
+  the chase camera rebuilding the world, and a mirrored instrument that no test
+  could reach. A scripted pass over BEGIN, the levers, both cameras, the cabinet,
+  the stop and RESET found the first in one run and would have found it the day
+  it landed. Wants deciding: whether it asserts (a fifth suite) or reports (a
+  fifth bench), and what it does about the fact that it needs a real browser.
+- **done-when:** one command drives the shipped app through its verbs and fails
+  when one of them stops working.
 
 ### [L-060] Impacts you can hear the side of
 - **what:** an impact's voice is centred. It knows where it happened — the event
@@ -318,6 +316,25 @@ waits on.
 ---
 
 ## history
+
+### [L-072] The shell lets go of six concerns — **closed**
+`App.svelte` went 991 → 732 lines, its script half 497 → 237, and the six clumps
+of state the card named are modules: the annunciator's acknowledgement, the stop
+and its restore, the maker's notices, the nag, the sound's lifetime. Three more
+came out that the card had not found, and they are what moved the number — the
+pilot module, the rig's *session* (which exercise, whether you have sat down,
+whether the folder is open), and what a rung-one machine is fitted with, which is
+the first file in the long-empty `src/build/` and in v0 *is* the build. The
+purchase is `tests/cab.test.ts`: 27 assertions over machinery none of which had
+ever been asserted, **with no component mounted**, each verified by planting the
+fault. Writing them found the shape of two things twice — the wind-down is a fold
+over *time*, not a `min` over the current pair, or an operator who silenced an
+ALARM would never hear the next WARN; and the stop's latch is what stops a second
+press overwriting the enable-state RESUME hands back. An `$effect` outside a
+component is an orphan and throws, so every fold is a method the shell drives
+with a one-line effect — a module that kept its own effect would have been as
+unreachable as the code it replaced. The card's "~200" was not reached and 237 is
+the honest number: 27 of them imports, the rest prose that is duplicated nowhere.
 
 ### [L-034] Measure the mobile frame — **closed**
 `profile.html` and `src/probe/`: six passes over the same six seconds of the
