@@ -85,6 +85,13 @@ Concretely:
 - **Do not use Threlte** (or any reactive scene-graph wrapper). It inverts
   control so the scene graph becomes reactive, which fights a fixed-step
   imperative loop and quietly reintroduces per-frame reactivity cost.
+- **What runs outside the reactive graph reads `hands`, never a rune.** The loop
+  is a `requestAnimationFrame` callback, the rack runs inside it, and the pointer
+  handlers are bound to a canvas — none of them is a reactive scope, so reading a
+  rune from one is an untracked read that returns the right value and promises
+  nothing. Everything the cab owes them crosses through one object written by one
+  effect: `src/control/hands.ts`. It is the continuous twin of `Controls`, which
+  is how a discrete command crosses the other way.
 
 Why: Svelte 5's runes are cheap but not free, and a 30-DOF machine with a full
 instrument panel updating reactively at 60 Hz on a phone is exactly the shape of
@@ -94,4 +101,7 @@ same seam a worker would sit on, so rules 1 and 3 reinforce each other.
 **Check:** grep — no `three` import under `src/ui/` or `src/cockpit/`, no Svelte
 import under `src/sim/`. A part of a component takes its slot, its style and (a
 pod) the snapshot, and nothing else — the contract is `src/cockpit/contract.ts`
-and commands leave through `Controls`, never through a live module.
+and commands leave through `Controls`, never through a live module. The rune
+rule is scanned rather than trusted — `tests/architecture.test.ts` reads the
+pilot module, the loop's `tick` and the canvas drag handler, and fails on any
+rune read that is not an assignment.

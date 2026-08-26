@@ -25,6 +25,62 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — one channel for what the loop reads
+
+Cards: [L-069] closed. Rule 3 gained an edge in
+`docs/design/code/architecture-rules.md`.
+
+**Five values crossed into the render loop by three different mechanisms.** Two
+were mirrored into plain variables by their own effects — and the second one's
+comment said, in as many words, that it was "the same shape, and the same reason"
+as the first, which is a duplicate noticed and then left. The horn was read raw
+from inside `requestAnimationFrame`, which is precisely the untracked read those
+two comments existed to avoid. The rack-open posture was read raw from inside a
+pointer handler.
+
+And the fifth, which the card had not found: **both levers, read raw by the pilot
+module's `intent`, which `runRack` calls inside `world.step()`, inside the loop,
+sixty times a second.** The hottest path in the application, and it had gone
+unnoticed for as long as it did for a structural reason worth keeping — it does
+not cross *in the loop body*, where somebody auditing the loop would look. It
+crosses inside a module callback that the loop happens to invoke. Depth hid it.
+
+`control/hands.ts` is the one channel now: one plain object, written by one
+effect, read as fields by everything downstream. It is the continuous twin of
+`Controls`, and deliberately shaped like it — that file's own argument is that
+each command "crossed by its own private route" until there was one channel, and
+this is the same sentence about values instead of commands.
+
+**The five turn out to be one kind of thing**, which is the part that makes it a
+seam rather than a bag. A clock hold, a lamp, a horn, a posture and two levers
+look unrelated; every one of them is *something the operator is currently doing
+or has not yet done* — they have not pressed BEGIN, they have not acknowledged
+the master, they are leaning on the horn, they have the cabinet open, their
+thumbs are where they left them. `audio/engine.ts` had already drawn that line
+for the two fields it takes: the snapshot is what the machine did, this is what
+the hands did.
+
+Scanned rather than trusted. `tests/architecture.test.ts` extracts the three
+blocks that run outside the reactive graph — the pilot module, the loop's `tick`,
+the canvas drag handler — and fails on any rune name that appears in them other
+than as an assignment target, because a *write* is the snapshot boundary working
+(`latest = current`) and only reads have to go through the seam. Each of the
+three was verified by putting the old code back and watching the right one fail.
+
+The scanner failed on its own fix first, which was instructive: `\bleverL\b`
+matches inside `hands.leverL`, so the check reported the seam as a violation of
+itself. A lookbehind for `.` fixes it — a property access is not a rune read.
+
+Verified in the real app rather than only in tests: `npm run cab` puts both
+levers at opposite ends of their throw and the rack reads `PILOT [SET]
++2.20/-2.20` down the whole chain to TERMINAL, with the clock running — which is
+`hands.leverL`, `hands.leverR` and `hands.seated` all doing their job through the
+new channel. 242 tests, lint, typecheck, build, 19 cab shots.
+
+Board bookkeeping: history reached 12, which is the act-at line under the new
+band, so [L-048] and [L-043] went to the archive below and it is back at 10. The
+band's first real trim, and it moved two whole cards rather than shaving a row.
+
 ## 2026-08-26 — a band instead of a line, and four clusters instead of a star
 
 Cards: [L-071] closed, [L-064] closed with it. `CLAUDE.md` changed, which is
@@ -1027,6 +1083,26 @@ what it really is.
 ## Cards pushed out of `BOARD.md` history
 
 The board keeps ten; older closed cards land here, in date order.
+
+### [L-048] The triptych — plate, cell, pod — **closed** (2026-08-25)
+A component is one thing seen from three postures, and only the plate is
+mandatory; its maker decides the rest. Three currencies: a chassis component
+costs nothing and brings the cockpit, a capability component costs glass, a
+safety component costs capability. Severity crosses the boundary as a number so
+MASTER WARNING and MASTER ALARM derive themselves and the dash stopped knowing
+what a TILT-GUARD is. `src/cockpit/` filled in as the registry. The dash became
+the seam and now travels between postures; ATT-0 moved onto it, leaving the bare
+cage with clear glass. A sandbox at `sandbox.html` plus `npm run shots` closes
+the look-at-it loop. Rejected: a budget for the indicator row — three fronts
+competing for space is one too many, so cells just work.
+
+### [L-043] The dash — status panel and closed face of the rack — **closed** (2026-08-25)
+A live industrial control panel: yellow sheet steel, white-bezel needle gauges
+(speed, grip), incline bubble, annunciator lamps, a master alarm that opens the
+debrief, an ignition key for identity, a red E-STOP that kills the drive by
+disabling every module. Critical controls pinned right so they never scroll off
+a phone; the instrument strip scrolls. Every gauge reads a real quantity.
+
 
 ### [L-008] Inline edit — draggable instruments — **closed** (2026-08-25)
 Instruments move by a titlebar, free to place but refused if they leave the

@@ -236,7 +236,8 @@ src/
     layers/  the individual simulation layers
   modules/   rack components: loops that hold one invariant in one frame
   control/   the rack: ordering, arbitration, actuator-bus ownership;
-             and `Controls`, the one channel a command crosses back through
+             `Controls`, the one channel a command crosses back through, and
+             `hands`, the one the loop reads the cab through
   build/     build mode: assembly, load-chart computation
   cockpit/   everything the machine's manufacturers made: the cab, the dash,
              the rack's rail, and each component's three parts —

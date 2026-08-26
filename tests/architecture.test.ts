@@ -231,3 +231,64 @@ describe("one fact, one place — a hand-built snapshot comes from the kit", () 
     );
   });
 });
+
+/**
+ * Rule 3's other edge: **what runs outside the reactive graph reads `hands`.**
+ *
+ * Three things in `App.svelte` run where a rune must not be read — the pilot
+ * module's callbacks, which `runRack` invokes inside `world.step()`; the render
+ * loop's `tick`, which is a `requestAnimationFrame` callback; and the pointer
+ * handlers bound to the canvas. Reading a rune from any of them is an untracked
+ * read: it returns the right value today and nothing anywhere guarantees it.
+ *
+ * All three did it, by three different mechanisms, and the worst one — the two
+ * levers, read sixty times a second through a module callback — went unnoticed
+ * for as long as it did precisely because it was not in the loop body where
+ * somebody would think to look. `control/hands.ts` is the one channel now.
+ *
+ * A write is fine and is how the UI gets its value at all: `latest = current`
+ * is the snapshot boundary working. It is *reads* that have to go through the
+ * seam, so an assignment target is allowed and everything else is not.
+ */
+describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
+  const APP = readFileSync(join(SRC, "App.svelte"), "utf8");
+  const CODE = stripComments(APP);
+
+  /** Every name this component declares with a rune. */
+  const runes = [
+    ...CODE.matchAll(
+      /(?:let|const)\s+([A-Za-z_$][\w$]*)[^=\n]*=\s*\$(?:state|derived)\b/g,
+    ),
+  ].map((m) => m[1] as string);
+
+  /** The balanced block introduced by `opener`, opener included. */
+  function bodyAfter(source: string, opener: string): string {
+    const start = source.indexOf(opener);
+    if (start < 0) throw new Error(`no such block: ${opener}`);
+    let depth = 0;
+    for (let i = source.indexOf("{", start); i < source.length; i++) {
+      if (source[i] === "{") depth++;
+      else if (source[i] === "}" && --depth === 0) return source.slice(start, i + 1);
+    }
+    throw new Error(`unbalanced: ${opener}`);
+  }
+
+  it.each([
+    ["the pilot module", "const pilot: Module = {"],
+    ["the render loop", "const tick = (now: number) => {"],
+    ["the canvas drag handler", "const drag = (e: PointerEvent) => {"],
+  ])("%s reads no rune", (_what, opener) => {
+    const body = bodyAfter(CODE, opener);
+    const read = runes.filter((name) => {
+      // An assignment target is a write, which is allowed. `name ==` and
+      // `name ===` are reads wearing an equals sign.
+      // The lookbehind is load-bearing: `hands.leverL` contains `leverL`, and
+      // reading it off the seam is the whole point. A property access is not a
+      // rune read, and without this the check fails on its own fix.
+      const anywhere = new RegExp(`(?<![.\\w$])${name}\\b`, "g");
+      const written = new RegExp(`(?<![.\\w$])${name}\\b\\s*=(?!=)`, "g");
+      return (body.match(anywhere)?.length ?? 0) > (body.match(written)?.length ?? 0);
+    });
+    expect(read, "read it off `hands` instead (src/control/hands.ts)").toEqual([]);
+  });
+});

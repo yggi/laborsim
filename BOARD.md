@@ -37,27 +37,16 @@ in one week bent the same seams, and both were *found* rather than planned —
 which is the argument for spending a session on them before the next feature
 bends them again.
 
-### [L-069] One loop-input seam in `App.svelte`
-- **what:** the render loop runs outside any reactive scope, so three of its
-  inputs are handled three ways: `held` is mirrored from `briefing` in an
-  effect, `hornLevel` is mirrored from `master` in another (whose comment says
-  "same shape, and the same reason, as `held`"), and `honking` is read raw —
-  an untracked rune read from inside `requestAnimationFrame`, which is exactly
-  the shape the other two comments call a bug. One typed object the loop reads,
-  fed by one effect.
-- **done-when:** the loop reads one value, no `$state` is read from inside
-  `requestAnimationFrame`, and adding a fourth input is one field.
-
 ### [L-070] `App.svelte` is ten concerns in one file
-- **what:** 1080 lines holding the sim lifecycle, the render loop, the rack
+- **what:** ~1080 lines holding the sim lifecycle, the render loop, the rack
   build, audio wiring, the annunciator, the E-stop, the horn, the notices, the
   exercise/briefing state, the camera and the nag. The seams are already
   visible as comment blocks; they want to be modules. `setViewMode` is the
   tell — a `let` assigned from inside an async callback, so calling it before
-  the world exists does nothing, silently.
+  the world exists does nothing, silently. L-069 cleared the way: everything the
+  extracted loop needs from the cab already arrives as one argument (`hands`).
 - **done-when:** the sim lifecycle leaves the component, and nothing crosses
   the boundary as a reassigned `let`.
-- **needs:** L-069 (the loop's inputs have to be one thing first)
 
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
@@ -332,6 +321,20 @@ bends them again.
 
 ## history
 
+### [L-069] `hands` — one channel across the reactive boundary — **closed**
+Five values crossed into the loop by three mechanisms: two mirrored through
+effects (one of whose comments said it was "the same shape, and the same reason"
+as the other), the horn read raw inside `rAF`, the rack posture read raw inside a
+pointer handler, and — the one the card had not found — **both levers read raw by
+the pilot module's `intent`, which `runRack` calls inside `world.step()`, sixty
+times a second**. That instance had gone unnoticed for as long as it did because
+it crossed inside a module callback rather than in the loop body. `control/hands.ts`
+is the one channel now, written by one effect; the five turn out to be one kind of
+thing, *something the operator is doing or has not yet done*. Scanned rather than
+trusted: `tests/architecture.test.ts` reads the pilot module, the loop's `tick`
+and the drag handler and fails on a rune read that is not an assignment — each of
+the three verified by putting the old code back.
+
 ### [L-071] Four clusters instead of a twenty-row index — **closed**
 `MEMORY.md` indexed all twenty spill files, which made `docs/design/` a star: a
 long list at the centre, everything one hop from it, nothing near anything else,
@@ -436,22 +439,3 @@ was — full width on the bottom seam, and the rack's duplicate close went. The
 masters are push-to-acknowledge and the E-STOP latches beside them. Dropped the
 SLIP/GND/¥ legend row, which was the panel explaining itself in words. Found,
 not built: ordering a guard above what it guards makes it advisory.
-
-### [L-048] The triptych — plate, cell, pod — **closed**
-A component is one thing seen from three postures, and only the plate is
-mandatory; its maker decides the rest. Three currencies: a chassis component
-costs nothing and brings the cockpit, a capability component costs glass, a
-safety component costs capability. Severity crosses the boundary as a number so
-MASTER WARNING and MASTER ALARM derive themselves and the dash stopped knowing
-what a TILT-GUARD is. `src/cockpit/` filled in as the registry. The dash became
-the seam and now travels between postures; ATT-0 moved onto it, leaving the bare
-cage with clear glass. A sandbox at `sandbox.html` plus `npm run shots` closes
-the look-at-it loop. Rejected: a budget for the indicator row — three fronts
-competing for space is one too many, so cells just work.
-
-### [L-043] The dash — status panel and closed face of the rack — **closed**
-A live industrial control panel: yellow sheet steel, white-bezel needle gauges
-(speed, grip), incline bubble, annunciator lamps, a master alarm that opens the
-debrief, an ignition key for identity, a red E-STOP that kills the drive by
-disabling every module. Critical controls pinned right so they never scroll off
-a phone; the instrument strip scrolls. Every gauge reads a real quantity.

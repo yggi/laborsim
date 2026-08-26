@@ -25,6 +25,7 @@ import {
   NOMINAL,
 } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
+import { restingHands } from "./control/hands.ts";
 import { makeClock } from "./core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "./core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "./core/spec.ts";
@@ -47,6 +48,17 @@ let leverL = $state(0);
 let leverR = $state(0);
 
 /**
+ * The one place the reactive cab and the render loop touch.
+ *
+ * The loop, the rack it steps and the pointer handlers all run outside any
+ * reactive scope, and everything they need from up here crosses through this
+ * object — written by exactly one effect, below, and read as plain fields by
+ * everything downstream. Why one channel rather than five private routes, and
+ * why these five values are the same kind of thing: `control/hands.ts`.
+ */
+const hands = restingHands();
+
+/**
  * The pilot is a rack entry like any other, and can be reordered like one.
  *
  * It is also **the chassis component**: it brings the dashboard, the cage and
@@ -61,13 +73,16 @@ const pilot: Module = {
   considers: "your two thumbs",
   verb: "SET",
   enabled: true,
+  // Off `hands`, not off the runes: `runRack` calls this from inside
+  // `world.step()`, inside the render loop, which is not a reactive scope.
   intent: () => ({
-    left: leverL * MAX_TRACK_SPEED,
-    right: leverR * MAX_TRACK_SPEED,
+    left: hands.leverL * MAX_TRACK_SPEED,
+    right: hands.leverR * MAX_TRACK_SPEED,
   }),
   // Hands on the levers is active; hands off is nominal. It never warns —
   // KIBA does not believe the operator is a fault condition.
-  condition: (): Condition => (leverL !== 0 || leverR !== 0 ? ACTIVE : NOMINAL),
+  condition: (): Condition =>
+    hands.leverL !== 0 || hands.leverR !== 0 ? ACTIVE : NOMINAL,
 };
 
 /**
@@ -102,18 +117,6 @@ let exercise = $state<Exercise>(FIRST_EXERCISE);
 /** What is selected on the schedule, which is not yet what is on the rig. */
 let picked = $state(FIRST_EXERCISE.id);
 let briefing = $state(true);
-/**
- * The briefing, mirrored for the render loop.
- *
- * The loop runs outside any reactive scope, and the clock must not advance
- * while somebody is reading their orders — a run whose elapsed time started
- * before the operator had touched anything would be a clock measuring reading
- * speed. Same shape, and the same reason, as `hornLevel` below.
- */
-let held = true;
-$effect(() => {
-  held = briefing;
-});
 
 /** Measured off the dash, so levers and toasts sit clear of a panel whose
  *  height changes as components are fitted and cells appear. */
@@ -142,23 +145,22 @@ $effect(() => {
   if (master < acked) acked = master;
 });
 
-/**
- * The horn's input, mirrored into a plain variable.
- *
- * The render loop runs in a `requestAnimationFrame` callback, which is outside
- * any reactive scope — reading a rune from in there would be an untracked read
- * that happens to work. Mirroring it in an effect keeps the loop reading a
- * plain number and keeps the sim effect from re-racking the exercise every time
- * a lamp changes colour.
- */
-let hornLevel = NOMINAL as Condition;
 /** The horn is down. A cab state, not sim state — nothing can hear it yet. */
 let honking = $state(false);
+
+// Kept current here, where the master and the acknowledgement exist. This is
+// the only writer; `hands` itself is declared at the top, because the pilot
+// module reads it and the rack is built before any of this.
 $effect(() => {
+  hands.leverL = leverL;
+  hands.leverR = leverR;
+  hands.horn = honking;
+  hands.seated = !briefing;
+  hands.headDown = rackOpen;
   // Silent while the folder is open. Hitting the stop lights the master at
   // ALARM and opens the debrief in the same press, and a horn blaring under
   // somebody explaining what you just did is the rig talking over itself.
-  hornLevel = !report && master > acked ? master : NOMINAL;
+  hands.alarm = !report && master > acked ? master : NOMINAL;
 });
 
 /**
@@ -506,7 +508,7 @@ $effect(() => {
       // rack is open you cannot look around, the same way you cannot reach the
       // levers. The strip of windscreen shows you what is ahead and nothing
       // else — which is the whole cost of reading while the machine is moving.
-      if (!rackOpen) viewport.look(e.clientX - prev.x, e.clientY - prev.y);
+      if (!hands.headDown) viewport.look(e.clientX - prev.x, e.clientY - prev.y);
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };
     canvas.addEventListener("pointerdown", down);
@@ -536,7 +538,7 @@ $effect(() => {
       // and the exercise has not started. Time is fed to the clock rather than
       // to a flag, so nothing downstream needs to know there is such a thing as
       // a menu — a paused frame is simply a frame that owed no steps.
-      const { steps } = clock.advance(held ? 0 : elapsed);
+      const { steps } = clock.advance(hands.seated ? elapsed : 0);
       for (let i = 0; i < steps; i++) world.step();
 
       current = world.snapshot();
@@ -550,7 +552,7 @@ $effect(() => {
       // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
       // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
       // after you watched it land is heard as a second event.
-      audio?.render(current, { alarm: hornLevel, horn: honking });
+      audio?.render(current, { alarm: hands.alarm, horn: hands.horn });
 
       // The cab sweeps with the head. **One DOM write a frame, on one element**,
       // and the compositor moves the cage, the pods, the levers and the dash
