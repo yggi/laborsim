@@ -214,11 +214,12 @@ stack, layout and control design alike.
 the real renderer on the device in your hand, and the budget is in
 `docs/design/code/mobile-budget.md`. Two findings so far. **The payload is
 Rapier**: 1.32 MB over the wire, 1.26 MB of it one chunk, and everything built
-since the empty scaffold added 0.05 MB. **The frame fits** — a Pixel 9 holds
-120 Hz through every pass — so the ceiling is the **CPU**, at 3 ms of an 8.34 ms
-frame, and draw calls are what spend it. The object to watch is the *machine*:
-it is ~170 of the cab's 225 calls' worth of geometry, free today only because
-the camera sits inside it.
+since the empty scaffold added 0.05 MB. **The frame fits** — a Pixel 9 holds its
+panel's refresh through every pass on two browsers — so the ceiling is the
+**CPU**, at 3–3.4 ms of a frame that may be 8.34 ms, and **draw calls at ~7 µs
+each are what spend it**. The object to watch is the *machine*: ~170 of the
+cab's 224 calls, free today only because the camera sits inside it and they
+cull. A prop is ~0.75 calls, so the site can grow and the machine cannot.
 
 Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
 aspiration. What that costs, and the rejected options with their reasons —

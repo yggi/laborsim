@@ -325,15 +325,16 @@ rung 2's arm the thing to watch rather than L-039's inventory. The ceiling is
 CPU, not GPU: ~4 ms of an 8.34 ms frame is already sim, snapshot and render
 submit. Bytes: 1.32 MB over the wire, 95 % of it Rapier's base64 wasm, and
 everything built since the empty scaffold adds 0.05 MB.
-The device found two defects in the bench, one per run. First: every pass
-returned the refresh period, so every delta read 0 % and the fill verdict said
-*pixels are not what is costing you* about a scene where halving the buffer
-removes 44 % of the GPU's work — deltas now fall back to GPU-owed time when the
-frame is pinned. Second, caught only by running the same phone twice: on a 1 ms
-clock one tick *is* a 5 % delta, and two such ticks had been written down as
-prices — the report now withholds anything under two ticks and states its floor.
-`tests/probe.test.ts` holds every branch.
-Budget, method and the device table: `docs/design/code/mobile-budget.md`.
+Three runs, and each found a defect in the bench. (1) Every pass returned the
+refresh period, so every delta read 0 % and the fill verdict inverted — deltas
+now fall back to GPU-owed time when the frame is pinned. (2) On a 1 ms clock one
+tick *is* a 5 % delta, and two such ticks had been written down as prices. (3) A
+finer clock removed that excuse and the table still said parking the machine and
+removing 108 props each made it slower — so the floor is now the larger of the
+clock's step and the **drift measured by the control pass**, which was in the
+report all along. `tests/probe.test.ts` holds every branch, each verified by
+mutation. Budget, method, the device table and what two browsers disagree about:
+`docs/design/code/mobile-budget.md`.
 
 ### [L-069] `hands` — one channel across the reactive boundary — **closed**
 Five values crossed into the loop by three mechanisms: two mirrored through

@@ -6,11 +6,11 @@ screen the game also runs on, it is the machine the game is for (`MEMORY.md`
 § 9). This page is where that stops being an assertion.
 
 **The headline, 2026-08-26: the frame fits, with room.** A Pixel 9 renders the
-full site at its panel's 120 Hz, in every pass, spending a little over a third
-of each frame on the CPU to do it. The pillar is in no trouble. What the
-measurement bought is not reassurance, though — it is the first honest price
-list for the things the board is about to add, and it took two runs to get one
-that does not include prices for things that are free.
+full site at its panel's refresh in every pass, on two browsers, spending
+3–3.4 ms of CPU to do it. The pillar is in no trouble. What the measurement
+bought is not reassurance, though — it is the first honest price list for the
+things the board is about to add, and it took **three runs** to get one that
+does not include prices for things that are free.
 
 ## How it is measured
 
@@ -52,8 +52,9 @@ Four details that would otherwise quietly lie:
   a fence stops the CPU running ahead into the next frame — exactly the overlap
   the real loop lives on. It is also not a per-frame cost: forcing the pipeline
   to drain measures *latency to a sync*, which is why the Pixel 9 shows 21 ms of
-  GPU-owed time inside an 8.34 ms frame. **Compare it across passes; never add
-  it to anything.**
+  GPU-owed time inside an 8.34 ms frame — and why the same phone reads 4.7 ms on
+  Chrome, whose readback path is cheaper. **Compare it across passes within one
+  run; never add it to anything, and never compare it across browsers.**
 - **Deltas are not taken on frame time when the frame fits.** A device that
   renders every pass inside its refresh period reports the refresh period back
   six times, so every delta is 0 % — which reads as *nothing here costs
@@ -61,11 +62,12 @@ Four details that would otherwise quietly lie:
   scene where halving the buffer removes 43 % of the GPU's work. The report
   switches to GPU-owed time when the frame is pinned, and says which basis it
   used (`tests/probe.test.ts` holds both branches).
-- **The clock's own resolution is reported, and it sets a floor under the
-  deltas.** Firefox quantizes `performance.now()` to 1 ms, which against a 21 ms
-  basis makes one tick a 5 % delta — so the report withholds any difference
-  under two ticks rather than printing a number it cannot stand behind. It had
-  printed two of them as findings before a repeat run caught them.
+- **Deltas carry a floor, and the report names what set it.** Two things put
+  one there: the clock's own step (Firefox quantizes `performance.now()` to
+  1 ms, which against a 21 ms basis makes one tick a 5 % delta) and the device's
+  drift between passes, which is usually larger and is measured by the control
+  pass. Anything under twice the larger reads `· · ·`. See *the floor*, below —
+  every one of those causes was found by a device printing something impossible.
 
 ### What is not measured
 
@@ -119,110 +121,141 @@ a promise.
 One row per device. The bench prints exactly these fields; the JSON block it
 also prints is what a row is transcribed from.
 
-| device | browser | glass · buffer | Hz | `FULL SITE` fps | frame p50/p95 | cpu p50 | gpu-owed | calls |
-|---|---|---|---|---|---|---|---|---|
-| Pixel 9 | Firefox 153 / Android 17 | 486 × 933 · 972 × 1866 | 120 | 110 | 8.34 / 16.7 | 4 ms † | 21 ms | 225 |
-| Pixel 9 (repeat) | Firefox 153 / Android 17 | 486 × 933 · 972 × 1866 | 120 | 115 | 8.34 / 8.36 | 3 ms | 22 ms | 225 |
+| device | browser | glass · buffer | Hz | `FULL SITE` fps | frame p50/p95 | cpu p50 | render p50 | gpu-owed | calls |
+|---|---|---|---|---|---|---|---|---|---|
+| Pixel 9 | Firefox 153 / Android 17 | 486 × 933 · 972 × 1866 | 120 | 110 | 8.34 / 16.7 | 4 ms † | 3 ms | 21 ms | 225 |
+| Pixel 9 (repeat) | Firefox 153 / Android 17 | 486 × 933 · 972 × 1866 | 120 | 115 | 8.34 / 8.36 | 3 ms | 3 ms | 22 ms | 225 |
+| **Pixel 9** | **Chrome 151 / Android** | 485 × 955 · 970 × 1910 | **60** | 60 | 16.7 / 16.8 | **3.4 ms** | **2.4 ms** | **4.7 ms** | 224 |
 
 † derived as `sim` + `render` p50; that run predates the `cpu` column. Summing
-two medians taken over different frame sets overstates it, and the measured span
-in the repeat is 3 ms — which is the figure the budget below uses.
+two medians taken over different frame sets overstates it.
 
-**Two rows of the same phone is not redundancy, it is the error bar**, and it is
-why the second one exists. See *the floor*, below.
+**Three rows of the same phone is not redundancy, it is the error bar.** Two of
+them exist because the first table printed noise as findings, and the third
+because the same hardware answers differently depending on which browser is
+asking. Read the Chrome row first: it has a **0.1 ms clock against Firefox's
+1 ms**, and it is the browser most players are on.
 
-Wanted next, in order of what each would settle: **the same phone on Chrome**
-(a finer clock, an honest GPU string, and the browser most players are on), then
-**the oldest Android in the drawer**, which is the row that actually decides the
-budget below. The headless runner's numbers are deliberately not in this table —
-it renders through SwiftShader on a CPU, and its only job is to fail when the
-bench stops working.
+Wanted next: **the oldest Android in the drawer.** That is the row that decides
+the budget, and a Pixel 9 is the wrong end of the range to set one from. The
+headless runner's numbers are deliberately not in this table — it renders
+through SwiftShader on a CPU, and its only job is to fail when the bench stops
+working.
+
+### The same phone, two browsers, three disagreements
+
+Worth knowing before reading any row, because each is a property of the
+*measurement* rather than of the game:
+
+- **Firefox ran at 120 Hz; Chrome at 60.** Same panel. So the frame budget is
+  the browser's choice, and **8.3 ms is the pessimistic case** — the one the
+  budget below is written against.
+- **GPU-owed came back 21 ms on Firefox and 4.7 ms on Chrome.** Same chip, same
+  scene, and they cannot both be the GPU. The column is timed behind a fence, so
+  it includes *the browser's readback path*, and Firefox's is several times
+  dearer. **The GPU column compares passes within one run and nothing else** —
+  never two browsers, never two devices.
+- **Firefox reports a spoofed renderer** ("Mali-T760, or similar") against
+  Chrome's honest `ANGLE (ARM, Mali-G715, OpenGL ES 3.2)`. Anti-fingerprinting,
+  not a driver.
+
+What agrees across both, and is therefore the real reading: **`cpu` — 3 ms on
+Firefox, 3.4 ms on Chrome.** The budget stands on that column.
 
 ### The floor
 
-Firefox quantizes `performance.now()` to **1 ms**. Against a 21 ms GPU-owed
-basis, one tick of quantization *is* a 5 % delta — so on this device the bench
-cannot resolve anything under about ±9 %, and the first run printed two rows
-that were exactly that:
+Two things put a floor under what a delta can mean, and the bench now withholds
+anything under twice the larger of them, printing `· · ·` and naming which one
+is binding. Both were found by a device, one run at a time:
 
-| moved | run 1 | run 2 | ticks apart |
+**Quantization.** Firefox quantizes `performance.now()` to 1 ms, which against a
+21 ms basis makes one tick a 5 % delta. The first table printed two of those as
+findings and they had already been written onto this page as prices when the
+repeat run returned +0 % for both.
+
+**Drift, which is usually larger.** A phone is not the same machine from one pass
+to the next — clocks boost, cores park, heat builds. On Chrome's 0.1 ms clock
+quantization explains almost nothing, and the table still claimed that parking
+the machine (+9 %) and *removing* 108 props (+4 %) each made the frame slower.
+Neither is a thing that can happen. `FULL SITE 2` is the answer: identical work,
+run a minute later, and it came back **+6 %**. That is the size of "nothing" on
+this device today, so it is the floor, and it is the one row exempt from its own
+rule — suppressing the control would hide the number that licenses the others.
+
+| moved | Firefox run 1 | Firefox run 2 | Chrome |
 |---|---|---|---|
-| half the pixels | −43 % | −45 % | 10 |
-| 130 props → 22 | −14 % | −23 % | 5 |
-| nothing moving | −5 % | **+0 %** | 1 |
-| cab → chase | +5 % | **+0 %** | 1 |
-| a minute later | ±0 % | **−9 %** | 2 |
-
-The bottom three changed sign or magnitude between two runs of the same device
-on the same build, which means they were never measurements. The first two did
-not. **The bench now withholds any delta smaller than two clock ticks** and
-prints `· · ·` instead, with the floor stated in the header — because the two
-noise rows had already been written into this page as prices before the repeat
-run caught them.
+| half the pixels | −43 % | −45 % | **−28 %** |
+| 130 props → 22 | −14 % | −23 % | `· · ·` |
+| nothing moving | `· · ·` | `· · ·` | `· · ·` |
+| cab → chase | `· · ·` | `· · ·` | **+15 %** |
+| a minute later (control) | ±0 % | −9 % | +6 % |
 
 ### What the Pixel 9 rows say
 
-**The frame is pinned to the panel in all six passes**, so nothing in the scene
-as it stands is the limiting factor. Read on GPU-owed time, which is not clamped,
-and taking only what survives the floor:
+**The frame is pinned to the panel in every pass on both browsers**, so nothing
+in the scene as it stands is the limiting factor. Taking only what survives the
+floor, and preferring the columns that agree across browsers:
 
-1. **Fill is the largest single share of the GPU's work** — **44 %** of it
-   (−43 %, −45 %), at a buffer that is already below native: dpr 2.22 clamped to
-   2, so 972 × 1866 against a 1080 × 2424 panel. Headroom rather than a problem,
-   and the first place to look if a row ever comes back badly.
-2. **A prop costs about 0.75 draw calls.** The 108 between E-01 and E-03 are 81
-   calls, about 1 ms of CPU and a fifth of the GPU-owed time. That is the number
-   L-039 ("more to break") and L-023 (designed site features) were waiting on.
+1. **A draw call costs ~7 µs of CPU.** Chrome's clock resolves it directly and
+   twice over: chase is +170 calls for +1.10 ms of `render` (6.5 µs each) and
+   E-01 is −80 calls for −0.60 ms (7.5 µs each). Two independent estimates, one
+   scene apart, agreeing. **This is the number the budget is built on.**
+2. **A prop costs ~0.75 draw calls and ~3.7 µs of sim per step.** The 108
+   between E-01 and E-03 are 81 calls — about 0.55 ms of render — and 0.40 ms of
+   `sim`. That is what L-039 ("more to break") and L-023 (designed site
+   features) were waiting on.
 3. **The machine is ~170 draw calls, and the cab gets them free only because
-   the camera is inside it.** Chase costs +170 over the cab's 225 — and that is
+   the camera is inside it.** Chase costs +170 over the cab's 224, which is
    almost exactly the machine's own mesh count doubled by its ink shells: hull,
    cab, frames, four wheels, two belts, 44 grousers and some 27 greebles, at two
    draws each. In the cab those are behind the eye and frustum-culled. **Rung 2's
    arm will not be** — an excavator's boom is in front of you — so it arrives at
    full price on the object that already dominates the count.
-4. **170 draw calls cost about 1 ms of CPU and no measurable GPU time at all.**
-   That is the sharpest thing in the table: the chase view's GPU-owed figure is
-   inside the floor, and the only column that moves is `cpu`, 3 ms → 4 ms. Draw
-   calls are a CPU price here, at *single-digit microseconds each* — bounded
-   rather than measured, since 1 ms is one tick.
+4. **Fill is real but small.** Chrome's honest reading is −28 % of a 4.7 ms
+   GPU-owed figure, so roughly **1.3 ms of rasterisation** at 970 × 1910 — a
+   buffer already below native, since dpr 2.23 is clamped to 2 against a
+   1080 × 2424 panel. Firefox's −44 % is a share of its own readback path and is
+   not the hardware. Fill is the lever if a slow device ever needs one; it is not
+   what is being spent here.
 5. **Motion is free**, and the sim has never been close to a problem: one step
-   plus a snapshot is ~1 ms of an 8.34 ms frame, and waking 130 dynamic bodies
-   moves nothing above the floor.
-6. **No thermal drift over ninety seconds.** Both repeat passes came back
-   marginally *faster* than their own baseline. A longer soak is a different
-   measurement nobody has asked for yet.
+   plus a snapshot is ~1 ms, and waking 130 dynamic bodies moves nothing above
+   the floor on either browser.
+6. **No thermal drift worth the name over ninety seconds** — ±6 % either way,
+   which is exactly why it is being used as the noise floor rather than reported
+   as a finding. A longer soak is a different measurement nobody has asked for.
 
 ## The budget
 
 Set against the only device measured, and to be re-set the moment a slower one
 is. Every figure is a ceiling for `FULL SITE`:
 
-- **Frame: 8.3 ms at 120 Hz, and the real ceiling is CPU.** 3 ms of an 8.34 ms
-  frame is already spent on the CPU — sim, snapshot and render submit — so
-  **a little over a third of the frame is gone before anything is added**. A
-  device at 60 Hz has twice the room; a device slower per-core has less. The
-  number to defend is the CPU span, not the GPU's, and `cpu` p95 is 5 ms, which
-  is where a 120 Hz frame starts getting tight.
-- **Draw calls: 225 in the cab, 395 in chase. Hold the cab under 500.** Not
-  because 500 is a hardware limit — it is well inside one here — but because
-  draw calls are the CPU price, the machine is already ~170 of them, and rungs
-  2–6 each bolt an articulated assembly onto exactly that object. Chase shows
-  what 170 more costs: about 1 ms, or a third of the CPU budget already spent.
-  If a rung needs more, **the ink shells are the first thing to price** — they
-  double every mesh, and their entire cost is draw calls.
+- **Frame: 8.3 ms, because the browser may choose 120 Hz.** The same phone ran
+  at 120 Hz on Firefox and 60 on Chrome, so the pessimistic budget is the short
+  one. **3–3.4 ms of it is already CPU** — sim, snapshot and render submit —
+  which is 40 % of a 120 Hz frame and 20 % of a 60 Hz one. The number to defend
+  is the CPU span, not the GPU's; `cpu` p95 is 4.5–5 ms, which is where a 120 Hz
+  frame starts getting tight and a 60 Hz one still is not.
+- **Draw calls: 224 in the cab, 394 in chase, at ~7 µs of CPU each. Hold the
+  cab under 500.** Not because 500 is a hardware limit — it is well inside one
+  here — but because 500 calls is ~3.5 ms of CPU on its own, which is the whole
+  120 Hz budget once the sim is paid for. The machine is already ~170 of them
+  and rungs 2–6 each bolt an articulated assembly onto exactly that object. If a
+  rung needs more, **the ink shells are the first thing to price**: they double
+  every mesh and their entire cost is draw calls.
 - **Tripling the site is affordable; doubling the machine is not.** 130 props
-  are ~97 draw calls, so 390 would be ~290 more — landing the cab view around
-  420 calls, which is what chase costs today, for about +2 ms of CPU. That is
-  the L-039 answer. The same 2 ms buys far less on the machine, because its
-  meshes are in frame rather than behind the eye.
+  are ~97 draw calls, so 390 would be ~290 more — landing the cab around 420
+  calls for about +2 ms of CPU, which fits at 60 Hz and is tight at 120. That is
+  the L-039 answer, and it is a real ceiling rather than a shrug. The same 2 ms
+  buys far less on the machine, whose meshes are in frame rather than behind the
+  eye.
 - **First load: 1.3 MB over the wire, and it must not grow with the game.** It
   is Rapier, so it will not — until somebody adds a dependency, at which point
   this figure is how it gets noticed.
-- **Build to first frame: 0.7–1.1 s on the Pixel 9**, the range being a first
-  visit against a repeat one — roughly 0.24–0.39 s of world, 0.29–0.48 s of
-  shader compile on the first render, 0.09–0.11 s of wasm init. A re-rack or a
-  second exercise is 0.4 s. Nothing here is a problem; it is written down so
-  that a change which triples it is visible as one.
+- **Build to first frame: 0.34 s on Chrome, 0.7–1.1 s on Firefox.** Chrome
+  spends 0.13 s on the world, 0.10 s compiling shaders on the first render and
+  0.04 s on wasm init; Firefox is two to four times each. A re-rack or a second
+  exercise is 0.17–0.4 s. Nothing here is a problem; it is written down so that
+  a change which triples it is visible as one.
 
 **A prop is 0.75 draw calls; a site's worth of furniture is 81.** That is the
 one number the rest of the board was waiting on, and it says: build the
@@ -233,9 +266,9 @@ site does.
 
 - A slower device row. That is what the budget is really for, and the Pixel 9 is
   the wrong end of the range to set it from.
-- A device with a finer clock — Chrome resolves ~5 µs where Firefox resolves
-  1 ms. Half the rows on this page are bounded rather than measured, and that is
-  the reason.
+- A third browser disagreeing about GPU-owed time the way these two do. Two
+  points is a difference; three would be a pattern, and might say the column
+  needs a different fence.
 - A rung-2 machine. The arm is the first thing since the greebles to add draw
   calls to the object that already owns most of them.
 - The `HALF RES` pass coming back near parity on some device. Then that device

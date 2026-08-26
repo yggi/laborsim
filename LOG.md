@@ -28,6 +28,49 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the control belongs inside the instrument
+
+Cards: [L-034] — the same phone on Chrome.
+
+Chrome resolves `performance.now()` to 0.1 ms where Firefox gives 1 ms, which
+was supposed to turn the bounded numbers into measured ones. It did:
+**a draw call costs ~7 µs of CPU**, estimated twice and independently — chase is
++170 calls for +1.10 ms of `render` (6.5 µs), E-01 is −80 calls for −0.60 ms
+(7.5 µs). A prop is ~0.75 calls and ~3.7 µs of sim per step. The budget now
+stands on a measured per-call price rather than an order of magnitude.
+
+It also broke the floor again, from the other direction. With quantization no
+longer an excuse, the table still claimed that **parking the machine (+9 %) and
+removing 108 props (+4 %) each made the frame slower**. Neither can happen. The
+answer was already in the report: `FULL SITE 2` is identical work run a minute
+later, and it came back **+6 %** — so that is the size of "nothing" on this
+device today. The floor is now `max(quantum, drift) × 2`, the report names which
+one is binding, and the control row is exempt from its own rule because
+suppressing it would hide the number that licenses the other four. Checked
+against all three runs: it suppresses exactly the impossible rows in each and
+keeps `half` and `chase` where they are real. `META.md`: **put the control
+inside the instrument** — the pass that changes nothing measures what nothing
+looks like.
+
+Three things about the *measurement* that the second browser exposed, none of
+them about the game:
+
+- **Firefox ran the page at 120 Hz, Chrome at 60.** Same panel. The frame budget
+  is the browser's choice, so 8.3 ms is the pessimistic case and the one the
+  budget is written against.
+- **GPU-owed read 21 ms on Firefox and 4.7 ms on Chrome**, same chip, same
+  scene. The column is timed behind a fence, so it includes the browser's
+  readback path — Firefox's is several times dearer. It compares passes within
+  one run and nothing else; the doc now says so in the method section as well as
+  in the findings.
+- **`cpu` agrees across both** (3 vs 3.4 ms), which is why it is the column the
+  budget stands on. Also: Chrome's renderer string is honest
+  (`ANGLE (ARM, Mali-G715, OpenGL ES 3.2)`), confirming Firefox's "Mali-T760, or
+  similar" as anti-fingerprinting rather than a driver.
+
+Chrome's first load is 337 ms cold against Firefox's 725–1118 — wasm init,
+world build and shader compile each two to four times cheaper.
+
 ## 2026-08-26 — the second run is the error bar
 
 Cards: [L-034] — the same phone again, on the fixed bench.

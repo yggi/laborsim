@@ -52,34 +52,57 @@ interface Basis {
   /**
    * The smallest difference this basis can resolve, in its own units.
    *
-   * Two quantized values differ by ±1 quantum before anything real has
-   * happened, so a gap of one is indistinguishable from none and two is the
-   * smallest worth printing.
+   * Two sources put a floor under it, and whichever is larger wins.
    *
-   * **What the quantum is depends on the basis, and the two are far apart.**
-   * GPU-owed time is a plain duration, so its step is the clock's. Frame time is
-   * vsync-locked — every interval is a whole number of refresh periods — so its
-   * step is a *period*, which on a 60 Hz panel is 16.7 ms and can be 9 % of the
-   * value being compared. Using the clock's step for both would suppress
-   * nothing on the frame basis and call every one-frame difference a finding.
+   * **Quantization.** Two quantized values differ by ±1 step before anything
+   * real has happened, so a gap of one is indistinguishable from none and two is
+   * the smallest worth printing. What the step *is* depends on the basis and the
+   * two are far apart: GPU-owed time is a plain duration and steps by the
+   * clock's tick, while frame time is vsync-locked — every interval is a whole
+   * number of refresh periods — so it steps by a *period*, 16.7 ms on a 60 Hz
+   * panel, which can be 9 % of the value being compared.
+   *
+   * **Drift**, which is usually the larger and was found last. A phone is not
+   * the same machine from one pass to the next: clocks boost, cores park, heat
+   * builds. `FULL SITE 2` exists to measure exactly that — it is the first pass
+   * again, identical work, so **whatever it differs by is what "no difference"
+   * looks like on this device today**. On a Chrome run it came back +6 %, which
+   * is larger than anything the clock could explain, and two rows just above it
+   * claimed that parking the machine and *removing* 108 props both made the
+   * frame slower. Neither is a thing that can happen.
    */
   readonly floor: number;
+  /** What set the floor, for the sentence that prints it. */
+  readonly floorFrom: "the clock" | "the panel" | "the repeat pass";
   of(report: PassReport): number;
 }
 
-function basisFor(base: PassReport | undefined, device: Device): Basis {
+/**
+ * The basis, and how small a difference on it is worth believing.
+ *
+ * Takes the whole set rather than the baseline alone, because the control pass
+ * is part of the answer: an instrument that can run the same measurement twice
+ * should use the second one to say how much it can be trusted, rather than
+ * asking a reader to notice.
+ */
+function basisFor(byId: Map<string, PassReport>, device: Device): Basis {
+  const base = byId.get("full");
   const period = device.refresh > 0 ? 1000 / device.refresh : 0;
   // A tenth of a period of slack: vsync lands a shade late, not a shade early.
   const pinned = !!base && period > 0 && base.frame.p50 <= period * 1.1;
-  const tick = Math.max(device.timer, 0);
-  return pinned
-    ? { pinned, floor: tick * 2, label: "gpu-owed p50", of: (r) => r.gpu.p50 }
-    : {
-        pinned,
-        floor: Math.max(tick, period) * 2,
-        label: "frame p50",
-        of: (r) => r.frame.p50,
-      };
+  const of = pinned ? (r: PassReport) => r.gpu.p50 : (r: PassReport) => r.frame.p50;
+
+  const quantum = pinned ? Math.max(device.timer, 0) : Math.max(device.timer, period);
+  const control = byId.get("again");
+  const drift = base && control ? Math.abs(of(control) - of(base)) : 0;
+
+  return {
+    pinned,
+    label: pinned ? "gpu-owed p50" : "frame p50",
+    floor: Math.max(quantum, drift) * 2,
+    floorFrom: drift > quantum ? "the repeat pass" : pinned ? "the clock" : "the panel",
+    of,
+  };
 }
 
 /**
@@ -106,6 +129,17 @@ function delta(
   return `${change >= 0 ? "+" : ""}${change.toFixed(0)} %`;
 }
 
+/** The same figure with the floor lifted, for the row that defines the floor. */
+function unfloored(
+  pass: PassReport | undefined,
+  base: PassReport | undefined,
+  basis: Basis,
+): string {
+  if (!pass || !base || basis.of(base) <= 0) return "—";
+  const change = (basis.of(pass) / basis.of(base) - 1) * 100;
+  return `${change >= 0 ? "+" : ""}${change.toFixed(0)} %`;
+}
+
 /**
  * The one interpretation this file is willing to make.
  *
@@ -127,7 +161,7 @@ function fillVerdict(
 ): string {
   if (!half || !base || basis.of(base) <= 0) return "";
   if (Math.abs(basis.of(half) - basis.of(base)) < basis.floor) {
-    return "too close to call on this clock — the pixels are not the story";
+    return "inside the floor — the pixels are not this device's story";
   }
   const share = Math.round((1 - basis.of(half) / basis.of(base)) * 100);
   if (basis.pinned) {
@@ -239,7 +273,7 @@ export function formatReport(
   }
   say();
 
-  const basis = basisFor(base, device);
+  const basis = basisFor(byId, device);
   if (basis.pinned) {
     say(
       `THE FRAME FITS. Every pass came back at the panel's own ${device.refresh} Hz ` +
@@ -258,9 +292,9 @@ export function formatReport(
       : 0;
   if (floorPercent >= 1) {
     say(
-      `  A ${ms(device.timer)} ms clock on a ${ms(basis.of(base as PassReport))} ms ` +
-        `basis puts the floor at ±${floorPercent.toFixed(0)} %.\n  Anything under it ` +
-        `reads \`· · ·\`: the bench cannot tell it from nothing.`,
+      `  ${basis.floorFrom} puts the floor at ±${floorPercent.toFixed(0)} % of a ` +
+        `${ms(basis.of(base as PassReport))} ms basis.\n  Anything under it reads ` +
+        `\`· · ·\`: the bench cannot tell it from nothing.`,
     );
     say();
   }
@@ -287,8 +321,10 @@ export function formatReport(
     ],
     [
       "a minute later",
-      delta(byId.get("again"), base, basis),
-      "drift: thermal, or the run's own ground",
+      // Never withheld: this row is the control, and suppressing it would hide
+      // the very number that decides what the other four are allowed to say.
+      unfloored(byId.get("again"), base, basis),
+      "the control — identical work, so this is what nothing looks like",
     ],
   ];
   for (const [what, change, note] of moved) {

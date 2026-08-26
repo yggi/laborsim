@@ -161,7 +161,65 @@ describe("a difference the clock cannot resolve is not printed as one", () => {
 
   it("refuses the fill verdict too when the pixels are inside the floor", () => {
     const flatPixels = [pass("full", 8.34, 22), pass("half", 8.34, 21)];
-    expect(report(flatPixels, 120)).toContain("too close to call on this clock");
+    expect(report(flatPixels, 120)).toContain("inside the floor");
+  });
+});
+
+describe("the repeat pass is the control, and it sets the floor", () => {
+  /**
+   * The same phone on Chrome: a 0.1 ms clock, so quantization explains almost
+   * nothing, and a GPU-owed basis of 4.7 ms. On that clock alone the floor is
+   * ±4 %, and the table claimed that parking the machine (+9 %) and *removing*
+   * 108 props (+4 %) both made the frame slower. Neither is a thing that can
+   * happen — but `FULL SITE 2`, which is the identical work run a minute later,
+   * came back +6 %. That is the size of "nothing" on this device today.
+   */
+  const chrome = [
+    pass("full", 16.7, 4.7),
+    pass("half", 16.7, 3.4), // −1.3 ms: four times the drift, a reading
+    pass("parked", 16.7, 5.1), // +0.4 ms: inside it
+    pass("chase", 16.7, 5.4), // +0.7 ms: outside it, and `cpu` agrees
+    pass("graded", 16.7, 4.9), // +0.2 ms: inside it
+    pass("again", 16.7, 5.0), // +0.3 ms of drift — the control
+  ];
+
+  const fine = (passes: readonly PassReport[]): string =>
+    formatReport(
+      { startup: [], passes, gpu: "a gpu" },
+      payload,
+      { ...device(60), timer: 0.1 },
+      "when",
+      "where",
+    );
+
+  const row = (text: string, what: string): string =>
+    text.split("\n").find((l) => l.includes(what)) ?? "";
+
+  it("withholds what is smaller than the drift, and keeps what is not", () => {
+    const text = fine(chrome);
+    expect(row(text, "nothing moving")).toContain("· · ·");
+    expect(row(text, "22 props, not 130")).toContain("· · ·");
+    expect(row(text, "half the pixels")).toContain("-28 %");
+    expect(row(text, "outside the machine")).toContain("+15 %");
+  });
+
+  it("never withholds the control itself — it is the number that decides", () => {
+    // |drift| is by construction below 2 × |drift|, so the floor would suppress
+    // exactly the row a reader needs in order to trust the other four.
+    expect(row(fine(chrome), "a minute later")).toContain("+6 %");
+  });
+
+  it("says the repeat pass set the floor, not the clock", () => {
+    const text = fine(chrome);
+    expect(text).toContain("the repeat pass puts the floor");
+    expect(text).not.toContain("the clock puts the floor");
+  });
+
+  it("falls back to the clock when the device does not drift", () => {
+    const steady = chrome.map((p) =>
+      p.pass.id === "again" ? pass("again", 16.7, 4.7) : p,
+    );
+    expect(fine(steady)).toContain("the clock puts the floor");
   });
 });
 
