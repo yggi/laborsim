@@ -20,6 +20,230 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — merged onto the restructured trunk
+
+Cards: [L-034] — reconciled with `doc/`, `HISTORY.md` and the extracted loop.
+
+Three things landed on `main` while the profiler was being built, and each one
+had an opinion about it.
+
+**`docs/` became `doc/`, and the root surfaces moved into it.** Mechanical, and
+every path the bench writes down moved with them.
+
+**The log's archives became `doc/HISTORY.md`.** This branch had archived its
+three oldest sessions into a fourth verbatim file, `docs/log/2026-voice.md`,
+under the old rule — and `main` had folded *exactly those three sessions* into
+the arc instead. The archive was deleted rather than merged: the fold supersedes
+it, and it is the case L-073 was arguing about. Two board-history cards went the
+same way when the merge pushed history to 12: [L-063] and [L-061] are both told
+in full by the arc already, which is what "a closed card is already a condensed
+session" means in practice.
+
+**The loop left `App.svelte` for `platform/run.ts` (L-070).** The bench copies
+that loop, which was defensible when it lived in a 155-line `$effect` no bench
+could reach, and is a plainer duplication now that it is a module. Checked: the
+clamp, the clock and the step/snapshot/render order are unchanged, so the copy
+is still faithful — but only its *address* was keeping it honest, and its
+comment had already gone stale by naming the component. So
+`tests/architecture.test.ts` now fails if the two disagree about the clamp
+ceiling or the order of the four calls, verified by changing each in `run.ts`
+and watching the right half fail. Calling `createRun` instead was rejected for
+the reason `gl.ts` gives about the renderer: it exposes no seam to time the
+halves of a frame apart or to stop on a tick count, and widening the game's API
+to suit a bench is what this bench does not do.
+
+One thread changed its answer rather than its wording. *The cab is the part of
+the frame nobody has read* was a thread because timing the app meant an eleventh
+concern in `App.svelte`; with the loop extracted that is a small change, and what
+is undecided now is the **readout** — the app has nowhere to print a block of
+text, and a debug overlay that costs a frame to display the frame is its own
+joke. Still a thread, for a different reason.
+
+## 2026-08-26 — the control belongs inside the instrument
+
+Cards: [L-034] — the same phone on Chrome.
+
+Chrome resolves `performance.now()` to 0.1 ms where Firefox gives 1 ms, which
+was supposed to turn the bounded numbers into measured ones. It did:
+**a draw call costs ~7 µs of CPU**, estimated twice and independently — chase is
++170 calls for +1.10 ms of `render` (6.5 µs), E-01 is −80 calls for −0.60 ms
+(7.5 µs). A prop is ~0.75 calls and ~3.7 µs of sim per step. The budget now
+stands on a measured per-call price rather than an order of magnitude.
+
+It also broke the floor again, from the other direction. With quantization no
+longer an excuse, the table still claimed that **parking the machine (+9 %) and
+removing 108 props (+4 %) each made the frame slower**. Neither can happen. The
+answer was already in the report: `FULL SITE 2` is identical work run a minute
+later, and it came back **+6 %** — so that is the size of "nothing" on this
+device today. The floor is now `max(quantum, drift) × 2`, the report names which
+one is binding, and the control row is exempt from its own rule because
+suppressing it would hide the number that licenses the other four. Checked
+against all three runs: it suppresses exactly the impossible rows in each and
+keeps `half` and `chase` where they are real. `META.md`: **put the control
+inside the instrument** — the pass that changes nothing measures what nothing
+looks like.
+
+Three things about the *measurement* that the second browser exposed, none of
+them about the game:
+
+- **Firefox ran the page at 120 Hz, Chrome at 60.** Same panel. The frame budget
+  is the browser's choice, so 8.3 ms is the pessimistic case and the one the
+  budget is written against.
+- **GPU-owed read 21 ms on Firefox and 4.7 ms on Chrome**, same chip, same
+  scene. The column is timed behind a fence, so it includes the browser's
+  readback path — Firefox's is several times dearer. It compares passes within
+  one run and nothing else; the doc now says so in the method section as well as
+  in the findings.
+- **`cpu` agrees across both** (3 vs 3.4 ms), which is why it is the column the
+  budget stands on. Also: Chrome's renderer string is honest
+  (`ANGLE (ARM, Mali-G715, OpenGL ES 3.2)`), confirming Firefox's "Mali-T760, or
+  similar" as anti-fingerprinting rather than a driver.
+
+Chrome's first load is 337 ms cold against Firefox's 725–1118 — wasm init,
+world build and shader compile each two to four times cheaper.
+
+## 2026-08-26 — the second run is the error bar
+
+Cards: [L-034] — the same phone again, on the fixed bench.
+
+The repeat did the job a repeat is for. Two rows of the previous run's table —
+**"motion costs 5 %" and "the chase view costs 5 %"** — came back at +0 %, and a
+row that had read 0 % came back at −9 %. They were never measurements: Firefox
+quantizes `performance.now()` to 1 ms, and one tick against a 21 ms GPU-owed
+basis *is* a 5 % delta. Both had already been written into
+`docs/design/code/mobile-budget.md` as prices. Corrected there, and the bench now
+**withholds any delta smaller than two clock ticks**, prints `· · ·`, and states
+its own floor in the header — with the fill verdict refusing on the same test,
+because a verdict is a delta with an opinion attached. `META.md` gained the
+second half of yesterday's lesson: run it twice before you write the number down.
+
+What survives the floor is sharper than what did not. **170 draw calls cost
+about 1 ms of CPU and no measurable GPU time at all** — chase's GPU-owed figure
+is inside the floor and the only column that moves is `cpu`, 3 → 4 ms. And 170
+is almost exactly the machine's own mesh count doubled by its ink shells (hull,
+cab, frames, four wheels, two belts, 44 grousers, ~27 greebles), which the cab
+view gets free *only because the camera is inside it and they frustum-cull*.
+Rung 2's boom is in front of you and will not.
+
+The measured `cpu` column also corrected yesterday's derived figure: 3 ms of an
+8.34 ms frame, not 4. Summing `sim` and `render` medians overstates, because
+they are taken over different frame sets — which is the reason the column was
+added and, it turns out, the reason it was needed.
+
+Also: `measureRefresh` took the *minimum* interval, reasoning that a throttled
+frame pushes the middle out. Wrong for this loop — the page is idle and has drawn
+nothing, so every frame is a full-rate frame and the middle *is* the period;
+what the minimum caught was jitter, and the same 120 Hz phone read 120 then 121.
+Median now.
+
+## 2026-08-26 — the frame fits, and the bench was wrong about why
+
+Cards: [L-034] closed.
+
+A Pixel 9 (Firefox 153, Android 17) ran the bench. **Every pass came back at
+8.34 ms — the panel's own 120 Hz period — so the frame fits with room, and the
+answer to "is mobile-first in trouble" is no.** What the run was actually worth
+is the price list underneath it, in `docs/design/code/mobile-budget.md`:
+
+- **a prop is 0.75 draw calls and 0.01 ms of render CPU.** 108 of them — the
+  difference between E-01 and E-03 — are 81 calls, 1 ms of CPU, 3 ms of GPU-owed
+  time. The site can roughly triple before the furniture is worth a thought,
+  which is what L-039 and L-023 were waiting to hear.
+- **the machine costs more draw calls than the whole site does.** Chase adds 170
+  over the cab's 225: greebles, grousers, bogies, and the ink shell doubling
+  every one. So the number to watch is rung 2's arm, not the prop count.
+- **the ceiling is CPU, not GPU.** ~4 ms of an 8.34 ms frame is already sim,
+  snapshot and render submit. Half a frame, and half of that spent.
+- motion is free (5 %), and there was no thermal drift over ninety seconds.
+
+**The device found a defect in the bench on contact, and it is the session's
+lesson.** Comparing passes on frame time is worthless when the frame is pinned:
+all six passes reported the refresh period, every delta read 0 %, and the fill
+verdict printed *pixels are not what is costing you* about a scene where halving
+the buffer removes 43 % of the GPU's work. No null test would have caught it —
+the instrument could see fine, it was reading something saturated. The report
+now detects the pin, says so, and falls back to GPU-owed time, which nothing
+clamps; `tests/probe.test.ts` holds both branches and all three pinned
+assertions were watched failing with the bug put back. `META.md` gained the
+general form: **a quantity with a ceiling reports the ceiling, and it looks like
+a result.**
+
+Three smaller things the same run bought. `performance.now()` is quantized to
+1 ms on Firefox, so every duration in that report is an integer — the bench now
+measures and prints the clock's own resolution beside the numbers it governs. A
+`cpu` column was added, timed as one span rather than summed from `sim` and
+`render`, because `sim` is sampled only over frames that owed a step and a sum
+of those medians describes no particular frame. And Firefox reports a spoofed
+`UNMASKED_RENDERER` ("Mali-T760, or similar") — recorded as a caveat, and the
+reason the next row wanted is the same phone on Chrome.
+
+`formatReport` also stopped reading `location`; the href is passed in. That is
+what made it testable at all, and its own header had been claiming it was.
+
+## 2026-08-26 — an instrument for the pillar nobody had measured
+
+Cards: [L-034] — the bench.
+
+`profile.html` and `src/probe/`: a fourth entry point that builds the **real**
+world and the **real** viewport on the device in your hand and times them. One
+button, ninety seconds, and a block of fixed-width text to paste back — because
+the numbers had to come off a phone and a phone is not where anybody reads a
+console.
+
+Six passes over the same six seconds of the same run, each changing exactly one
+thing, because a single frame time says whether to worry and nothing about what
+to cut: the pixel count, the prop count, the motion, the view, and last of all
+nothing at all, so a minute of thermal load shows up as itself. **A pass ends on
+a tick count, not a frame count, and each gets a fresh world** — that is what
+makes two devices comparable at all, and the user has more devices coming.
+
+Three decisions worth the next session's time:
+
+- **Draw calls are counted at the driver**, by shadowing the draw entry points
+  on the canvas's own context. `renderer.info` was the obvious route and would
+  have meant publishing the `WebGLRenderer` out of `render/scene.ts` — a bench
+  is not a reason to widen an interface. It also counts the shadow pass, which
+  three.js's own figure does not present as part of a frame. A `Proxy` was
+  rejected: three.js makes thousands of context calls a frame and a trap on each
+  would be timing the profiler.
+- **The GPU column is measured in a separate second.** `render()` returns when
+  the commands are queued, so seeing what is still owed needs a fence, and a
+  fence kills the CPU/GPU overlap the real loop lives on. Timing the frame with
+  one in it would report a game slower than the one that ships. First cut used
+  `gl.finish()` alone and read a flat **0.00 everywhere** — the instrument could
+  not see the claim (META). A one-pixel `readPixels` after it cannot be faked;
+  the same column then read 167 ms against a 183 ms frame, which is a software
+  rasteriser telling the truth about itself.
+- **`sim` is measured over the frames that owed a step.** A 120 Hz phone steps a
+  60 Hz sim every other frame, so half the samples would be a snapshot and
+  nothing else, and the median would report a physics engine that costs nothing.
+
+`src/probe/` is a new seam and deliberately outside rule 3's scan: the bench
+touches both halves because a profiler that could reach neither would be
+profiling neither. The half that *is* enforced is the other one — nothing
+outside `src/probe/` may import it, checked in `tests/architecture.test.ts`, and
+verified by planting an import in `src/ui/format.ts` and watching it fail.
+
+`npm run profile` drives the same page headlessly. Not a reading — SwiftShader
+is a rasteriser, not a phone — but the thing META keeps asking for: a bench that
+fails silently fails *in somebody's hand*, ninety seconds into their evening.
+`--build` builds first, which is the only way it can report the payload at all.
+
+The bytes half of the budget is answered and crystallized into
+`docs/design/code/mobile-budget.md`: **1.30 MB over the wire, 1.24 MB of it one
+chunk, and that chunk is Rapier.** `NOTES.md` had carried 1.25 MB gzipped for an
+*empty scaffold* — so the scene, the cockpit, the audio graph and the exercises
+have between them added 0.05 MB, and `-compat` inlining wasm as base64 is the
+entire budget. The levers are named in order and none of them is "write less
+game". The frame half stays open until a device runs it, and the budget itself
+is deliberately **unset**: a budget written before a measurement is a guess with
+a table around it, which is the thing the page exists to stop.
+
+What the bench does not measure, and now says so on its own face: the cab. The
+cage, the dash, the pods and the levers are DOM over the glass and none of it is
+on that page. It is a `NOTES.md` thread rather than a card because measuring it
+means either mounting the app in the bench or teaching `App.svelte` to time
+itself, and `App.svelte` is already ten concerns (L-070).
 ## 2026-08-26 — doc/, and the closed cards join the pipeline
 
 Cards: [L-074] closed. `CLAUDE.md` restructured.
@@ -746,237 +970,3 @@ and treats a lost capture as a released hand.
 Every branch in the repo is merged into `main`; four are dead and this
 environment's git proxy answers 403 to a ref delete, so they need deleting from
 the GitHub UI or a machine with credentials.
-
-## 2026-08-25 — a cab that goes round you, and levers you can hold
-
-Cards: none closed. [L-051] narrowed — the cab furniture has geometry now and
-still has no maker. Merged the audio branch in; see the merge commit for what
-had to be reconciled.
-
-**The cage stops being a frame and becomes a cab.** Sweeping the whole cab
-(L-050) made a hole nobody had to look for: the A-pillar leaves the glass at
-about 26° and behind it was sky. So the cab now continues past the windscreen —
-a ribbed roof with the beam's underside showing, a door post out each side with
-side glass and a waist rail between, and beyond the post a **door skin** wide
-enough to outlast the neck. The head pans to 86°, which at 1:1 is thousands of
-pixels, and a wall that ran out first would be a hole at exactly the angle you
-were curious about. The vignette at the very edge stays put on purpose: it is the
-aperture, not a part.
-
-**The vertical look was inverted against itself.** Dragging right looked left —
-grab-the-world — and dragging down looked *down*. One convention, not two: both
-axes drag the world now.
-
-**The neck is sprung.** The 1.2 s hold before the view eased back put a dwell in
-the middle of a glance; it now starts the instant the hand leaves the glass. The
-renderer is told `hold(true/false)` rather than being given a timestamp, because
-the state is *a hand is on the glass*, not *a gesture happened*. `recentre()`
-went with it — opening the rack no longer has to ask for the view back, because
-nothing is holding it.
-
-**The levers are sticks.** A shaft up through a ribbed rubber boot on a bolted
-plate, a moulded grip, a gate with a notch at neutral — same place, same throw,
-same dead zone, and not one line of the pointer maths changed. Pulled back is
-drawn 8% larger, because the seat looks *along* the machine and a fore-and-aft
-lever mostly moves toward you and away from you; with no perspective at all it
-reads as a grip sliding in a groove, which is the slider it stopped being.
-
-**Found by looking, twice.** The bench pulled a lever it did not mean to: the
-levers sweep with the cab, so a drag started while the cab was still out landed
-on one that had slid under the pointer. That is the cab being honest and the
-bench being wrong — it waits for the spring now. And `npm run cab` vanished from
-`package.json` during the merge, because `git checkout --theirs` ran before the
-edit that was supposed to keep both, so the edit matched nothing and said
-nothing (META: a scripted edit that matches nothing fails silently). The bench
-failing to start is what said so.
-
-## 2026-08-25 — the cab is one rigid object
-
-Cards: closed [L-050]. Opened: [L-064]. History trimmed to its gate: [L-037]
-dropped, already narrated below.
-
-The card was ready and half of it was already built — the view has recentred
-itself since L-052, and the card still listed it as work. Two decisions were
-genuinely unmade, and they were the whole design: **what sweeps when the pilot
-looks around, and how fast.** Answered: the *whole cab*, and *1:1*.
-
-**The whole cab.** Pods, cage, levers and dash are one welded object; the neck is
-the only hinge. Anything else is incoherent the moment you look at it — a pod
-clamped to a cage that does not move is a sticker. The rig's own controls (the
-CAB/CHASE switch, the toasts, the debrief) stay put, which turns out to be a
-usable rule: **the machine's furniture moves, the rig's does not.** One
-deliberate exception, the vignette at the edge of the glass: it is the aperture,
-not a part, and a dark band crossing the middle of the view reads as a bug.
-
-**1:1, at `f·tan θ`.** A rigid object rotating past a pinhole projects that way;
-anything less is a cab made of rubber. On a phone it is brutal — 390 px of glass
-is 26° across and the head pans to 86°, so a glance takes the instruments off
-the screen almost at once. That is the price, and it is the chase camera's
-bargain again: a glance costs you the levers and the E-STOP, which you cannot
-find by feel on glass. The recentring view is what pays it back. Carried to
-`doc/NOTES.md` as the one thing only a player can settle.
-
-**One DOM write a frame.** The renderer publishes the sweep in CSS pixels — it
-owns the projection, and `focalPixels` is the seam — and the app writes
-`--look-x`/`--look-y` on `:root`, not on the shell, whose `style` attribute
-belongs to Svelte and would overwrite it. Read as **`translate`**, never as a
-second `transform`: every cab element already has a transform, and the deck's
-carries a 0.28 s transition that a per-frame value must not be fed through.
-
-**The bound became the arm.** Placement moved into cage space (screen space at
-the neutral look), and a drop is refused by structure: not through a pillar, not
-behind the beam or the dash, not further out than 200 px of reach. That puts the
-middle of the windscreen out of reach — the occlusion budget with a *reason*
-instead of a rule. Rejected: hanging every pod from the header beam, which is
-tidier and says nothing about the middle of the glass. The consequence beat the
-intent: a **small** instrument still reaches the centre, because a short pod on a
-long arm does. Cheap in view, free to place. Nobody designed that.
-
-The arm is **drawn**, back to its pillar, so a refusal is visible rather than
-inferred. And an arm **settles** a pod that does not fit — instruments are
-whatever size their maker made them, the dash grows a row as kit is fitted, and
-phones get turned sideways; L-056 no longer inherits pods stranded off-glass.
-
-**Three defects, all found by looking.** The cab bench grew an app half (`npm run
-cab` boots the real thing and drags on the glass) and it paid immediately: the
-KIBA nag never fired, because `lastNag = 0` means "45 s since the epoch", which
-a page a minute old has already passed — the *first* nag is the one that teaches
-you the view comes back. Then the cab kept photographing 25 px off centre at
-2.6 s and again at 5.6 s: the recentring ease was a flat fraction **per frame**,
-so a phone at 30 fps got a neck twice as slow — on the device the mobile-first
-pillar is entirely about. It is a time constant now. Third, the bench itself
-pressed where a pod *used* to be after moving it, which pans the view: a
-placement test quietly became a camera test.
-
-The bench also carries the check a screenshot cannot make: everything bolted to
-the cab moved by the same amount as `--look-x`. Reintroduced the bug to watch it
-fail (META) — it named `.levers` and exited 1.
-
-Not added to `doc/MEMORY.md` again, and now it is a card: the file is at 299 of 300
-and two durable facts are parked in the spill files waiting for room. [L-064].
-
-## 2026-08-25 — the horizon rolls with the machine
-
-Cards: none. A defect in the cab camera, plus the bench that was missing to see
-it with.
-
-**The cab view was spirit-levelled and nobody had asked for that.** Lean the
-machine over and the horizon stayed dead flat; only pitch and yaw followed the
-hull, which is why it survived this long — the view leaned honestly into a climb
-and then stayed level through a side slope. The cause was not a decision. The
-camera was aimed with `camera.lookAt(aim)`, and `lookAt` produces the
-orientation with *no roll about the view axis relative to its up vector*; the up
-vector was world up, so the hull's roll was discarded every frame, silently.
-
-Fixed by composing the orientation instead of aiming it: `hull · yaw(−pan) ·
-pitch(−tilt) · Ry(π)`, the last term being the half turn between a camera that
-looks down −Z and a machine whose nose is +Z. New file `src/render/camera.ts`,
-which exists to be testable — `createViewport` needs a WebGL context and the
-signs do not.
-
-**Signs derived, not tried** (META), and checked against the aim vector they
-replace: the composition reproduces the old direction exactly, so pan and tilt
-could not silently mirror while roll was being added. Then the other half of
-that lesson — the old implementation was pasted back in over the new one to
-watch the tests fail. Four of the five passed under it and only *rolls with the
-hull* failed, which is what makes that test worth having; a fifth run with a
-plain `Object3D` instead of a camera failed four, because `Object3D.lookAt`
-flips its convention for cameras and lights. Probe the API, do not trust the
-prose.
-
-**`npm run cab` — a bench for the view through the glass.** `npm run shots`
-benches the cockpit's DOM and nothing benched the 3D. The obstacle was never the
-renderer, it is that the interesting frames are transient: 25° of roll is a
-thing you drive into and cannot hold. So `scripts/cab.mjs` builds the real world
-and the real viewport and hands the renderer a pose set by hand — the cockpit
-bench's trick, one layer down. Seven poses, gitignored output. It paid for
-itself inside the same hour: the roll direction was confirmed from a screenshot
-rather than argued about.
-
-Recorded in `doc/design/cab/cockpit.md` as its own section, with the two
-consequences: screen-fixed pods now read as wrong rather than unfinished
-(L-050's case just got stronger), and roll is the classic sim-sickness signal —
-if it ever needs mitigation the honest form is a damped *fraction* of hull roll,
-never a level horizon. Deliberately **not** added to `doc/MEMORY.md` § 6: the file
-sits at 299 of its 300 lines, and a cab with no gimbal is principle 7 (*honest
-world, real machine*) applied rather than a new fact — the index entry now
-points at both cameras.
-
-## 2026-08-25 — the event channel, and the machine's voice
-
-Cards: closed [L-040]. Opened: [L-060]. Threads closed: none. Evidence added to
-[L-057] and [L-046].
-
-**The contraction came first, and it was already earned.** Three files were
-keeping their own high-water mark into `snapshot.damage` and diffing it every
-frame — the live voice, the renderer repainting a write-off, and the debrief —
-and two of them carried a private hack to notice a RESET, because the list
-getting *shorter* was the only clue a run had restarted. Audio would have been
-the fourth. `src/core/events.ts` is the discrete half of the boundary: the sim
-stamps every happening with a monotonic `seq` into a bounded ring, a consumer
-keeps one number and one reader, and the rewind rule lives in one place instead
-of being reimplemented per list and per cause.
-
-The channel is the notification and the ledger stays the record. That split is
-why the ring can be bounded: nothing consuming it wants a thump it failed to
-play thirty seconds ago, and anything that needs the whole run still reads
-`snapshot.damage`.
-
-**Two things the ledger could not say now reach it.** `assessDamage` had always
-measured the joules delivered into every prop every step and thrown the number
-away unless it crossed a pricing threshold — so hitting an already-written-off
-cone was, to everything downstream, identical to missing it. And the machine's
-own collisions had no witness at all; they do now, thresholded on a **speed**
-rather than an energy, because the track model caps its impulses at `mu·N·dt` so
-0.16 m/s per step is all the drivetrain can shed however hard you brake.
-Anything past that was the world. L-038 wants that number.
-
-**Found by turning it on:** the untouched generated site emits one impact at
-tick 109 — a marker pole falling over on its own, 1.6 J, unbilled and until now
-invisible. Nothing is wrong; that is L-057, and the channel is the first thing
-in the codebase able to see it.
-
-**Then the voices** (`src/audio/`). Five, none of them sampled: the drive note
-carrying load, the grind carrying slip, impacts scaled by joules, the hull on
-its own scale, and the horn as the audible half of the master lamp. The
-arithmetic is in `voices.ts` with no WebAudio in it, and `engine.ts` is the only
-file that knows an oscillator exists — which is what lets the graph be built on
-an `OfflineAudioContext` exactly as on a live one.
-
-**Rejected: putting the mute on the dash.** A Labor's horn has no cut-out, which
-is the entire point of a horn, so a machine with a "make me quiet" switch would
-be a machine nobody would certify. Volume is the *rig's* control and sits with
-the camera, which is the other thing that belongs to the room rather than to the
-machine. The same reasoning settled where the acknowledgement lives: it moved
-out of `DashPanel` and into the shell, because the lamp and the horn have to be
-one fact and the beacon will be the third to read it.
-
-**The bench found three defects nothing else could have.** `npm run listen`
-renders every scene through the real graph in Chromium and prints peak, loudness
-and brightness at each end of it:
-
-1. Its own first brightness measure was blind. Zero-crossing rate is a standard
-   cheap proxy for spectral centroid and it does **not move** when a filter
-   opens on a periodic waveform — a lowpassed sawtooth crosses zero twice a
-   cycle at 340 Hz and at 2600 Hz alike. It reported the entire `labouring`
-   sweep as six hertz. Replaced with the fraction of energy above 1500 Hz.
-2. The continuous voices were loud enough to sit permanently inside the limiter,
-   so a 140 kJ landing came out no louder than driving along. Halved, and the
-   limiter moved from −10 dB to −4.
-3. The strike's filter was tied to the ring pitch, which made the heaviest
-   impacts the dullest, because the heaviest things ring lowest. The ring is the
-   material and the strike is the energy; they are separate numbers now.
-
-A fourth fell out of (2): opening a sawtooth's filter can only ever move a few
-percent of its energy, so brightness alone was a cue visible in a spectrum and
-inaudible across a room. Load makes the machine **louder** as well now.
-
-**Two more found by reading the diff back adversarially**, both about lifetimes.
-The live voice was unmounted whenever the rack opened, so its reader rejoined the
-run at zero and re-voiced every line still on the channel the moment you closed
-the cabinet — a bug that predates the channel (the old high-water mark restarted
-at zero too) and was simply invisible while the whole damage list was in reach.
-It is hidden now, not destroyed: a subscription belongs to a consumer's lifetime.
-And the E-stop lights the master at ALARM *and* opens the debrief in one press,
-so the horn was blaring under somebody explaining what you had just done. The
-folder silences it. Both verified in the browser rather than in the stylesheet.

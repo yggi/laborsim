@@ -11,7 +11,7 @@ section into the cluster it belongs to and leave the index below untouched.
 **This index names clusters, not pages.** It used to name all twenty spill files,
 which made the docs a star with a long list at the centre: everything one hop
 from here and nothing near anything else. Each cluster page below indexes its own
-five, one line each, and cross-links the siblings — so *where does this belong* is
+pages, one line each, and cross-links the siblings — so *where does this belong* is
 answered one level down, by a page that knows the subject, rather than by a row in
 a table that has to be re-read in full every time it grows.
 
@@ -210,6 +210,17 @@ occlusion by your own hand, no hover, no pixel precision. A desktop-first
 cockpit would be a different mechanic wearing the same name. This is upstream of
 stack, layout and control design alike.
 
+**It is measured, not asserted** — `profile.html` times the real world through
+the real renderer on the device in your hand, and the budget is in
+`doc/design/code/mobile-budget.md`. Two findings so far. **The payload is
+Rapier**: 1.32 MB over the wire, 1.26 MB of it one chunk, and everything built
+since the empty scaffold added 0.05 MB. **The frame fits** — a Pixel 9 holds its
+panel's refresh through every pass on two browsers — so the ceiling is the
+**CPU**, at 3–3.4 ms of a frame that may be 8.34 ms, and **draw calls at ~7 µs
+each are what spend it**. The object to watch is the *machine*: ~170 of the
+cab's 224 calls, free today only because the camera sits inside it and they
+cull. A prop is ~0.75 calls, so the site can grow and the machine cannot.
+
 Use `@dimforge/rapier3d-deterministic`, which makes replay a test rather than an
 aspiration. What that costs, and the rejected options with their reasons —
 **Godot**, **Babylon.js**, **Jolt** — are in `doc/design/code/stack.md`.
@@ -248,7 +259,10 @@ src/
   world/     terrain, job sites, exercises, hazards (radiation, EMF)
   ui/        everything the rig made: the shell, the schedule, the objective
              strip, the debrief, the live voice
-  sandbox/   the benches: every component in every state, every voice
+  sandbox/   the benches that read a recording: every component in every
+             state, every voice — downstream of the sim, like the cab is
+  probe/     the bench that drives the real thing: builds a world, builds a
+             viewport, and times them. Above every layer, not inside one
   platform/  where the app meets the browser: `run.ts` owns one run — the
              world, the fitted kit, the viewport, the input and the loop
 assets/      models, textures, data
@@ -268,6 +282,12 @@ the debrief, the live voice, the shell, the volume control — it is `ui/` or th
 shell. The rig may read the machine; the machine knows nothing of the rig.
 **`makers/` is who they are rather than what they made**: colours, words and
 sound in one object per manufacturer, above both renderers that read it.
+
+**`probe/` is the one directory allowed to touch both halves**, because a
+profiler that could reach neither the sim nor the renderer would be profiling
+neither. It is not an exemption from rule 3, it is the other side of it: the
+bench reads everything, and **nothing reads the bench** — which is the half a
+test enforces.
 
 ## 12. Conventions
 

@@ -186,6 +186,20 @@ colour-coded to the automotive table, so a component's current draw is legible
 without printing a number; and power and mode moved from the plate to the slot,
 because *no manufacturer ships the fuse you power it through*.
 
+**The cab stopped being a frame around a screen and became an object you sit
+in.** The whole thing — cage, dash, pods and levers — is one rigid body and the
+head is the only hinge, sweeping 1:1 with a look, so a glance takes your
+instruments and your hands off the glass and the view springs back when you let
+go. That is the intended price and the reason the cage continues past the
+windscreen into a roof, door posts and side glass: turn far enough and you must
+land on a cab rather than on nothing. The horizon rolls with the hull for the
+same reason, and had not: the camera was aimed with `lookAt`, which discards
+roll about the view axis against its up vector, so the view leaned honestly into
+a climb and stayed spirit-level through a side slope. Composing the orientation
+instead of aiming it fixed it and produced `render/camera.ts`, a file that
+exists to be testable — and `npm run cab`, a bench for the view through the
+glass, because 25° of roll is a pose you drive into and cannot hold still.
+
 **The benches were built here and are the reason most of it is right** — a
 screenshot bench for the panel, a listening bench for the voice, both born of one
 finding: a thing you cannot cheaply perceive ships broken with everything green.
@@ -206,7 +220,12 @@ machine talking to you and the horn is you talking to everyone else.**
 The panel became switchgear in the same round, and almost all of it is heard
 **off the recording** — switching a component off changes its slot on the
 snapshot and the engine notices by itself, so a replay clicks in the right
-places without anything being added to the event channel.
+places without anything being added to the event channel — which had arrived
+just before it, as the **discrete half of the snapshot boundary**. Three files
+were each keeping a high-water mark into the damage list and diffing it every
+frame, two with a private hack to notice a RESET; audio would have been the
+fourth. `core/events.ts` made the sim stamp every happening into a bounded ring,
+and left the ledger as the record: **the channel notifies, the ledger keeps**.
 
 Two structural seams were redrawn while this was going on, and both were cases of
 a document describing something that had stopped being true. The triptych was

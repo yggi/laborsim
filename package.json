@@ -15,7 +15,8 @@
     "format": "biome check --write .",
     "shots": "node scripts/shots.mjs",
     "cab": "node scripts/cab.mjs",
-    "listen": "node scripts/listen.mjs"
+    "listen": "node scripts/listen.mjs",
+    "profile": "node scripts/profile.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

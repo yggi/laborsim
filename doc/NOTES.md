@@ -11,19 +11,24 @@ gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 ---
 
-## The mobile budget — bytes, frames, and world size
+## The cab is the part of the frame nobody has read
 
-One thread, because they are one question: mobile-first is a hard pillar and
-**nothing about it has been measured.**
+L-034 measured the world and the machine and closed;
+`doc/design/code/mobile-budget.md` holds the budget. What the bench does *not*
+put on the glass is the cab — the cage, the dash, the pods and the levers are
+DOM, and by design their per-frame cost is one custom property written on
+`:root` plus a 10 Hz reactive pass. That is the last part of the frame still
+asserted rather than read, and the measured half came back with enough headroom
+that it is not urgent — only unknown.
 
-*Bytes.* The empty scaffold already built to 3.44 MB raw / 1.25 MB gzipped, and
-`-compat` inlines Rapier's wasm as base64 at about a third more. Levers, cheapest
-first: `vite-plugin-wasm`, code-split build from sim, lazily load instruments.
-
-*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser belts,
-twelve sprung contacts — and no frame ever timed on a phone. L-034 gets the number;
-world size and part counts follow from it. One dial arrived by accident: E-01 runs
-22 props where the full site runs 130 — a cheap site, unmeasured like the dear one.
+The open question is *how*, not *whether*, and **L-070 closing changed the
+answer**. It used to be a thread because timing the app meant adding an eleventh
+concern to `App.svelte`; the loop is now `platform/run.ts`, a plain module with a
+tick and a snapshot hook, and teaching it to keep frame timings behind a flag is
+a small change rather than an argument. What is still undecided is the *readout*
+— a bench prints a block of text and the app has nowhere to put one, and a debug
+overlay that costs a frame to display the frame is its own joke. That is the
+sentence that has to be answered before this is a card.
 
 ## What counts as "operator interaction"?
 

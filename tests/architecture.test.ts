@@ -180,6 +180,28 @@ describe("rule 3 — the snapshot boundary is one-directional", () => {
     },
   );
 
+  /**
+   * `src/probe/` is not in that list and must not be added to it.
+   *
+   * The profiling bench builds a real world and a real viewport and times them
+   * (L-034), so it touches both halves by construction — a bench that could
+   * reach neither would be profiling neither. That is not a hole in rule 3, it
+   * is the other side of it, and *this* is the half worth enforcing: the bench
+   * reads everything, and nothing reads the bench. Something that imported it
+   * would be shipping a timer into the game.
+   */
+  it("nothing outside src/probe imports the profiling bench", () => {
+    const offenders: string[] = [];
+    for (const file of filesUnder(SRC)) {
+      if (file.includes("/probe/")) continue;
+      const imports = valueImports(stripComments(readFileSync(file, "utf8")));
+      if (imports.some((s) => s.includes("/probe/"))) offenders.push(file);
+    }
+    expect(offenders, "the bench reads the game; the game knows nothing of it").toEqual(
+      [],
+    );
+  });
+
   it("no reactive scene-graph wrapper is installed", () => {
     const manifest = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -303,5 +325,71 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
     const run = stripComments(readFileSync(join(SRC, "platform/run.ts"), "utf8"));
     expect(run).not.toMatch(/\$(?:state|derived|effect)\b/);
     expect(valueImports(run).filter((s) => s.startsWith("svelte"))).toEqual([]);
+  });
+});
+
+/**
+ * The profiling bench copies the game's loop, so the copy has to be checked.
+ *
+ * `src/probe/profile.ts` runs its own `requestAnimationFrame` loop rather than
+ * calling `createRun`, and that is deliberate: the real loop owns the pointer
+ * handlers, the resize listener and the `:root` writes, and exposes no seam to
+ * time the halves of a frame apart or to stop on a tick count. Widening it to
+ * suit a bench is the thing the bench does not do.
+ *
+ * But a copy is one fact in two places — the convention with the most scars in
+ * this repo — and the failure is silent in the worst way: the bench keeps
+ * producing numbers, for a loop the game no longer runs. It went unnoticed once
+ * already in the small, when the loop moved out of `App.svelte` and the bench's
+ * comment still named the component.
+ *
+ * So this checks the two things a frame's cost actually turns on: the clamp on
+ * elapsed time, and the order of the four calls that make up a frame.
+ */
+describe("one fact, one place — the bench's loop matches the game's", () => {
+  const run = readFileSync(join(SRC, "platform/run.ts"), "utf8");
+  const bench = readFileSync(join(SRC, "probe/profile.ts"), "utf8");
+
+  it("both clamp elapsed time to the same ceiling", () => {
+    // Matched on the *ceiling*, not the spelling: the bench keeps the raw
+    // interval as a sample before dividing it, so the expressions differ and
+    // the number is the thing that has to agree.
+    const clamp = /const elapsed = Math\.min\([^,]+,\s*([\d.]+)\s*\)/;
+    const inRun = run.match(clamp)?.[1];
+    const inBench = bench.match(clamp)?.[1];
+    expect(
+      inRun,
+      "src/platform/run.ts no longer clamps the way this expects",
+    ).toBeDefined();
+    expect(inBench, "the bench must clamp elapsed time as the game does").toBe(inRun);
+  });
+
+  it("both step, snapshot, then render, in that order", () => {
+    // Positions rather than text: the two differ in what they do *between*
+    // these calls — that is the whole point of the bench — and agree on the
+    // sequence, which is what a frame's cost is made of.
+    const sequence = (source: string): number[] => {
+      const body = source.slice(source.indexOf("clock.advance"));
+      return [
+        body.indexOf("clock.advance"),
+        body.indexOf("world.step()"),
+        body.indexOf(".snapshot()"),
+        body.indexOf(".render("),
+      ];
+    };
+    for (const [name, source] of [
+      ["src/platform/run.ts", run],
+      ["src/probe/profile.ts", bench],
+    ] as const) {
+      const at = sequence(source);
+      expect(
+        at.every((i) => i >= 0),
+        `${name} is missing one of the four`,
+      ).toBe(true);
+      expect(
+        at.every((value, i) => i === 0 || value > (at[i - 1] as number)),
+        `${name} does not advance, step, snapshot, render in that order`,
+      ).toBe(true);
+    }
   });
 });

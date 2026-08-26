@@ -46,18 +46,27 @@ npm run build      # typecheck, then production bundle
 npm run shots      # screenshot every cockpit specimen  → shots/
 npm run cab        # screenshot the cab at poses you cannot drive to → shots/cab/
 npm run listen     # render every voice to WAV, measured → renders/
+npm run profile    # drive the profiling bench headlessly and print the report
 ```
 
 `npm run dev` binds to `0.0.0.0` on purpose: the cockpit has to be tested on a
 real phone from day one, because desktop-only iteration hides touch problems
 that are mechanics here, not polish.
 
-The last three are benches, and they exist because the things they check are not
+The last four are benches, and they exist because the things they check are not
 expressible as assertions. `/sandbox.html` is every component in every state and
 `/listen.html` is every voice the machine has — both ship with the site, because
 a bench that only exists on somebody's laptop is one nobody uses. `npm run cab`
 has no page of its own: it drives the real app, and poses the hull at attitudes
 you cannot hold still long enough to look at.
+
+`/profile.html` is the third page and the strongest version of that argument:
+mobile-first is a pillar, so it times the real world through the real renderer
+**on the phone in your hand** and hands you a block of text to paste. One button,
+ninety seconds. `npm run profile` drives the same page headlessly, which is a
+check that the bench still works rather than a reading — a laptop's frame time is
+a fact about a different machine. What it has found so far:
+`doc/design/code/mobile-budget.md`.
 
 ### The three architecture rules
 

@@ -1,8 +1,8 @@
 # The code — the rules, the conventions, the stack, and the order of the work
 
 Start here before writing anything. Three of these pages are constraints you do
-not get to relax on a tired afternoon; the other two are why the tools are what
-they are and why the board is ordered the way it is.
+not get to relax on a tired afternoon; the others are why the tools are what they
+are, why the board is ordered the way it is, and what the target platform costs.
 
 ## Pages
 
@@ -13,6 +13,7 @@ they are and why the board is ordered the way it is.
 | [`code/stack.md`](code/stack.md) | the settled stack, and the rejected options with their reasons |
 | [`code/prototype-findings.md`](code/prototype-findings.md) | what `prototype/concept-3/` proved, what it faked, and what it cost |
 | [`code/roadmap.md`](code/roadmap.md) | forward-looking: the critical-path review and the argument behind the board's order |
+| [`code/mobile-budget.md`](code/mobile-budget.md) | what the phone actually costs — how it is measured, the payload, and the device table |
 
 ## Where to go instead
 

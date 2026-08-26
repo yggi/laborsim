@@ -107,13 +107,6 @@ waits on.
   under ten minutes without being told how.
 - **needs:** L-018
 
-### [L-034] Measure the mobile frame
-- **what:** frame time and draw-call count on a real mid-range phone, with the
-  current scene (~130 props, ink shells doubling meshes, greebles, grousers).
-  Mobile-first is a pillar we have never measured.
-- **done-when:** a number exists, and a written first-load and frame budget with
-  it.
-
 ### [L-015] The rail — drag to reorder
 - **what:** the pipeline model, verbs, settings and reordering all work, and the
   plates now look like equipment. What is missing is **drag**: reordering is
@@ -326,6 +319,29 @@ waits on.
 
 ## history
 
+### [L-034] Measure the mobile frame — **closed**
+`profile.html` and `src/probe/`: six passes over the same six seconds of the
+same run, one button, on the device itself. **The frame fits** — a Pixel 9 holds
+its panel's refresh through every pass on two browsers — so the answer is not a
+rendering crisis
+but the first price list: **a prop is 0.75 draw calls**, the site can triple
+before the furniture matters, and **the machine already costs more draw calls
+than the entire site does** (chase adds 170 over the cab's 224), which makes
+rung 2's arm the thing to watch rather than L-039's inventory. The ceiling is
+CPU, not GPU: 3–3.4 ms of a frame that may be 8.34 ms is already sim, snapshot
+and render submit, at ~7 µs per draw call. Bytes: 1.32 MB over the wire, 95 % of it Rapier's base64 wasm, and
+everything built since the empty scaffold adds 0.05 MB.
+Three runs, and each found a defect in the bench. (1) Every pass returned the
+refresh period, so every delta read 0 % and the fill verdict inverted — deltas
+now fall back to GPU-owed time when the frame is pinned. (2) On a 1 ms clock one
+tick *is* a 5 % delta, and two such ticks had been written down as prices. (3) A
+finer clock removed that excuse and the table still said parking the machine and
+removing 108 props each made it slower — so the floor is now the larger of the
+clock's step and the **drift measured by the control pass**, which was in the
+report all along. `tests/probe.test.ts` holds every branch, each verified by
+mutation. Budget, method, the device table and what two browsers disagree about:
+`doc/design/code/mobile-budget.md`.
+
 ### [L-074] `doc/`, and closed cards join the pipeline — **closed**
 Two changes with one shape. Closed cards were the archive pathology one level
 down: `doc/LOG.md` held 56 lines of six cards, every one describing something
@@ -439,29 +455,3 @@ small one. The arm is drawn, so a refusal is visible. One `--look-x`/`--look-y`
 write per frame on `:root`, read as `translate` (never `transform`, which
 carries transitions). `voice.tips` got its consumer. Found by looking: the
 recentring ease was per *frame*, so the neck was twice as slow at 30 fps.
-
-### [L-063] The horn, and the panel that clicks — **closed**
-The old `horn` was the annunciator's **buzzer** — the machine talking to you —
-and it had the name of the thing it was not. It is `alarm` now, and the horn is
-a horn: a chord of two or three trumpets on one air line, never quite in tune
-with each other, with the valve chuffing before the note and the tank sagging
-after it. It is the loudest thing the machine can do on purpose and the only
-voice that renders a **decision**, and it ducks everything else 7 dB while it is
-down. On the panel it is a rubber dome, held rather than toggled, outside the
-masters group. The panel became switchgear: a **click** for the button and a
-**clunk** for the contactor, in the voice of whoever built the kit — and almost
-all of it is heard off the *snapshot*, so a replay clicks too. Found by a new
-`everything-at-once` scene: the mix clipped at 1.04 before the duck existed.
-
-### [L-061] A machine is voiced by whoever built it — **closed**
-Sound gets an owner. A manufacturer's house is colours, words **and sound**, in
-one object at `src/makers/` above both renderers; the machine's voices are its
-**chassis maker's**, read off the recording, and the site's belong to materials.
-A house sets timbre and rate, never level. Depth on the drone (a detuned twin
-and a firing pulse, both measured into place against the headroom an impact
-needs), and three voices that were not there: the **chain**, one knock per track
-plate at the rate the renderer turns the belt; the **squeak**, which belongs to
-a heavy crawl and is gone by working speed; and the **rattle**, keyed to the
-hull's jerk, which is the only voice that renders the ground. `MachineState`
-gained an accelerometer. Rejected: a suspension voice (L-062), because nothing
-simulates suspension travel.
