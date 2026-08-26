@@ -231,6 +231,17 @@ export interface Knock {
    * it. Physically it is backwards too — a harder contact is a sharper one.
    */
   readonly strikeHz: number;
+  /**
+   * What fraction of `hz` the ring falls to by the end of its decay.
+   *
+   * Defaults to 0.6 in the graph, which is a struck body: hit something and its
+   * pitch sags as the energy leaves it. A **generated tone has no such excuse**,
+   * and the rig's cues are the first voice here that is generated rather than
+   * struck — a checkpoint blip sliding eight semitones downward is a machine
+   * breaking, not a system saying yes. So this is the one property of a knock a
+   * caller may refuse, and only the cues refuse it.
+   */
+  readonly bend?: number;
 }
 
 /** Dull at a touch, sharp at a slam. The contact, not the body. */
@@ -683,6 +694,93 @@ export function panelVoice(event: PanelEvent, house: SoundHouse): Knock {
         // hitting its stop, not a finger on plastic.
         strikeHz: strikeOf(0.25),
       };
+}
+
+/* -- the rig ---------------------------------------------------------------- */
+
+/**
+ * The training system's own cues — and the first noise in this cockpit that the
+ * **rig** makes rather than the machine, a manufacturer or the site.
+ *
+ * `docs/design/sound.md` said the rig voices *nothing, deliberately*, and that
+ * was right for as long as it was true: the only things the rig owned were the
+ * camera and the volume, which are furniture, and furniture that made noises
+ * would be the training system reaching into the cab. An **objective** is not
+ * furniture. Reaching a marker is a fact about the exercise that nothing in the
+ * world can announce — the machine does not know what a marker is, the marker is
+ * a stake in the ground, and NAV-1 may not even be fitted. Either the rig says
+ * it or nobody does, and an exercise whose one piece of good news is silent is
+ * an exercise you finish by squinting at a counter.
+ *
+ * So the rule changes, narrowly: **the rig speaks about the exercise and about
+ * nothing else.** It gets no voice for the machine, the site, or its own
+ * controls.
+ *
+ * Everything about the character follows from that boundary. These are the only
+ * voices here made of **intervals** — nothing on a machine plays a fifth — and
+ * they are near-pure tones that do not bend, because they are generated rather
+ * than struck. They should sound like something bolted to the outside of the
+ * world, because they are.
+ */
+export type Cue = "pin" | "success" | "failure";
+
+/** One note of a cue, offset in seconds from the start of it. */
+export interface CueNote {
+  readonly at: number;
+  readonly knock: Knock;
+}
+
+/**
+ * Loud enough to arrive over a machine at work and no louder.
+ *
+ * Unlike the panel and the squeak, this one is *not* fighting a filter — a cue
+ * is a triangle straight into a gain — so the number means roughly what it
+ * says, and it is set below the panel's rather than above it. The rig is
+ * talking over the machine, which is a thing worth doing quietly.
+ */
+const CUE_GAIN = 0.32;
+
+/** How far a cue's tone falls over its decay: not at all. */
+const NO_BEND = 1;
+
+const note = (hz: number, at: number, decay: number, gain = CUE_GAIN): CueNote => ({
+  at,
+  knock: {
+    hz,
+    gain,
+    decay,
+    // A trace of noise on the attack, so it reads as something switching on
+    // rather than as a test tone fading in.
+    grit: 0.06,
+    strikeHz: 5200,
+    bend: NO_BEND,
+  },
+});
+
+/**
+ * A cue, as notes to schedule.
+ *
+ * Three figures, and the shape of each is the whole message. **Up** is one more
+ * marker; **up further, and held** is the exercise done; **down** is the one the
+ * rig does not have to explain. Nobody has to be taught which is which, which is
+ * the only test a cue has to pass.
+ */
+export function cueVoice(cue: Cue): readonly CueNote[] {
+  switch (cue) {
+    case "pin":
+      return [note(880, 0, 0.14), note(1318, 0.085, 0.2)];
+    case "success":
+      return [
+        note(880, 0, 0.14),
+        note(1318, 0.1, 0.14),
+        note(1760, 0.2, 0.55, CUE_GAIN * 1.1),
+      ];
+    case "failure":
+      // Lower, slower, and the second note lands under the first. It is the
+      // same instrument saying the opposite thing, which is why it is two notes
+      // and not a buzzer — the machine already owns the buzzer.
+      return [note(587, 0, 0.2), note(440, 0.13, 0.5)];
+  }
 }
 
 /* -- the annunciator -------------------------------------------------------- */

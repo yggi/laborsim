@@ -24,7 +24,7 @@ import {
   type Verb,
   WARN,
 } from "../control/bus.ts";
-import type { Snapshot, Waypoint } from "../core/snapshot.ts";
+import { NO_EXERCISE, type Snapshot, type Waypoint } from "../core/snapshot.ts";
 import { G } from "../core/spec.ts";
 
 /**
@@ -174,6 +174,7 @@ export function snapshotOf(
     stages,
     props: [],
     route: ROUTE,
+    goal: NO_EXERCISE,
     damage: over.citizen
       ? [
           {

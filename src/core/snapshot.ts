@@ -113,6 +113,58 @@ export interface Waypoint {
 }
 
 /**
+ * How the exercise is going — the third beat of the loop, at last with a
+ * *success* in it.
+ *
+ * It is on the snapshot rather than held by the shell for the same reason the
+ * route is: an exercise that cannot be read off a recording is an exercise a
+ * replay cannot score, and scoring a replay is what `docs/design/missions.md`
+ * eventually wants. It is also why `outcome` is a settled fact with a tick on
+ * it rather than something a consumer derives — three surfaces answer to it
+ * (the overlay, the debrief, the cue), and three derivations of one fact is
+ * three chances to disagree about whether you finished.
+ */
+export type Outcome = "running" | "success" | "failed";
+
+export interface Goal {
+  /** Which exercise this run is, by id. The catalogue is `world/exercises.ts`. */
+  readonly exercise: string;
+  /**
+   * Tick each pin was reached at, in route order; `-1` for one still out there.
+   *
+   * A tick and not a flag, because *when* is the interesting half: it is the
+   * split time, it orders the pins by the order you actually took them, and it
+   * is what a scored run would be made of.
+   */
+  readonly reached: readonly number[];
+  /** How many of them, so nothing has to count the array to draw a fraction. */
+  readonly count: number;
+  readonly total: number;
+  readonly outcome: Outcome;
+  /** Tick the outcome settled at, or `-1` while it is still running. */
+  readonly settled: number;
+}
+
+/**
+ * No exercise: what a bench scene and a hand-built fixture are running.
+ *
+ * Not a null and not an optional field. A snapshot always answers the question
+ * "how is the exercise going", because three surfaces ask it every frame and an
+ * optional would put a `?.` in each of them — and because the honest answer for
+ * a rig with nothing scheduled is *nothing scheduled*, which is a state rather
+ * than the absence of one. `exercise` is empty, so nothing looks it up and finds
+ * a name for something that was never on the schedule.
+ */
+export const NO_EXERCISE: Goal = Object.freeze({
+  exercise: "",
+  reached: Object.freeze([]),
+  count: 0,
+  total: 0,
+  outcome: "running",
+  settled: -1,
+});
+
+/**
  * What an accelerometer bolted to the hull reads, in the body frame, m/s².
  *
  * **Proper acceleration, not `dv/dt`.** The difference is the whole usefulness
@@ -211,6 +263,8 @@ export interface Snapshot {
    * nothing to carry and it is never rebuilt.
    */
   readonly route: readonly Waypoint[];
+  /** What the rig asked for, and how much of it has happened. */
+  readonly goal: Goal;
   /** The ledger so far, oldest line first. */
   readonly damage: readonly DamageEvent[];
   /** Total billed, yen. */

@@ -4,7 +4,7 @@ Spilled from `docs/design/damage.md`, which is where the machine's voice started
 because the first thing worth hearing was something breaking. It has outgrown a
 table in somebody else's file.
 
-Status: **built** (L-040, L-061, L-063). The arithmetic is `src/audio/voices.ts`,
+Status: **built** (L-040, L-061, L-063, L-065). The arithmetic is `src/audio/voices.ts`,
 the graph is `src/audio/engine.ts`, and the manufacturers' half is
 `src/makers/sound.ts`.
 
@@ -38,7 +38,30 @@ itself is not only a visual act.
 | **the chassis maker** | the drivetrain, the running gear, the loose fittings, the horn, the buzzer, and the cab's own switchgear | that maker's `SoundHouse` |
 | **a component's maker** | its switchgear — and anything it later has to say for itself | that maker's `SoundHouse` |
 | **the material** | everything on the site being struck | the material table in `voices.ts` |
-| **the rig** | nothing, deliberately — the camera and the volume are the training system's furniture and it does not reach into the cab and make noises | — |
+| **the rig** | the exercise, and nothing else: a marker reached, the exercise complete, the exercise failed | `cueVoice` in `voices.ts` |
+
+### The rig used to voice nothing, and that was right until it had an objective
+
+This table said *nothing, deliberately* — the camera and the volume are the
+training system's furniture, and furniture that made noises would be the rig
+reaching into the cab. That reasoning still holds for furniture. It does not
+hold for an **objective**.
+
+Reaching a marker is a fact about the exercise that nothing in the world can
+announce. The machine does not know what a marker is and must not; the marker is
+a stake in the ground; NAV-1 may not even be fitted. Either the rig says it or
+nobody does — and an exercise whose one piece of good news is silent is an
+exercise you finish by squinting at a counter.
+
+So the rule is narrowed rather than repealed: **the rig speaks about the
+exercise and about nothing else.** It gets no voice for the machine, the site, or
+its own controls, and the camera and the volume stay silent.
+
+The character follows from that boundary. The cues are the only voices here made
+of **intervals** — nothing on a machine plays a fifth — and the only ones whose
+tone does not bend downward through its decay, because they are *generated*
+rather than struck (that is what `Knock.bend` is for). They should sound like
+something bolted to the outside of the world, because they are.
 
 The machine's house is read off the **chassis slot on the recording**, exactly
 as the dash reads its panel colours from it, so a replay sounds like the machine
@@ -84,6 +107,7 @@ had thought to apply it to.
 | grind | `slip`, and only where `contacts > 0` — the largest slip reading on the machine belongs to a track in mid-air, rubbing against nothing. | chassis |
 | impact | joules, as **amplitude ∝ √energy**. The ring is the material, the strike is the energy, and the wobble is `seq`. | material |
 | hull | the machine's own collisions, on a scale of its own — 140 kJ lands from 2.4 m and a real hit on a pipe stack is 15 J. | material |
+| cue | the exercise: two notes **up** for a marker, three up and held for complete, two **down** for failed. Read off the event channel like an impact, so a replay is congratulated too. | the rig |
 
 ### The horn and the buzzer are not the same object
 
@@ -160,11 +184,22 @@ brightness at each end, which is enough to make a claim falsifiable: *labouring
 gets brighter at constant track speed*, *rough ground is louder and brighter
 than smooth*, *the alarm scene gets quieter when it is acknowledged*.
 
-`everything-at-once` — rutted ground, the horn down, a pipe stack at speed and
-the master alarming — exists because the limiter's whole justification is summed
-transients, and it **clipped at 1.04 on its first run**, which is the scene
-doing its job. The horn's duck and its level were set against it; the worst case
-now peaks 0.88.
+`everything-at-once` — rutted ground, the horn down, a pipe stack at speed, the
+master alarming and now the rig calling the exercise complete over the top of it
+— exists because the limiter's whole justification is summed transients, and it
+**clipped at 1.04 on its first run**, which is the scene doing its job. The
+horn's duck and its level were set against it; the worst case still peaks 0.865
+with the cues **and** a rut under the running gear, because both duck under the
+horn like everything else on the bed.
+
+The cues were set the same way. `checkpoint` peaks 0.473 and 0.367 with them
+silenced; `exercise-failed` peaks 0.298 and 0.212. Both numbers exist because the
+first version of `exercise-failed` measured **identically** either way: it opened
+with a 180 J scooter and ran the drive note at 0.6 of full, and between them the
+bang and the bed owned the peak while the cue sat underneath. Nothing was wrong
+with the cue — the scene could not see its own subject. The fix was to make the
+scene the thing it is actually about: a *nudged* scooter at a crawl, which is
+both how anybody really clips one and how the number comes to mean something.
 
 It has now caught more defects than review has, and the same one four times:
 **a filtered voice's level is not what you hear — its bandwidth is.** A bandpass

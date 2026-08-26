@@ -66,9 +66,7 @@ enough to blame on *one design decision*.
 
 Everything in this project either serves that loop or is decoration and should
 be cut. This is the sharpest available statement of the guiding principles in
-`CLAUDE.md`, and it is the test to apply first.
-
-Four load-bearing commitments follow from it:
+`CLAUDE.md`, and it is the test to apply first. Four commitments follow:
 
 1. **The load chart is the Δv** → `docs/design/load-chart.md`
 2. **Arbitration is the game** → `docs/design/arbitration.md`
@@ -78,15 +76,16 @@ Four load-bearing commitments follow from it:
 ## 3. Scope of v0
 
 v0 is **sandbox and exploration**: build a machine, take it out, see what it
-does and how it breaks. Missions, progression and economy are **deferred, not
-dropped** — a v0 decision that forecloses them is a bad v0 decision.
+does and how it breaks. Progression and economy are **deferred, not dropped** —
+a v0 decision that forecloses them is a bad v0 decision. **The open site is on
+the schedule** so that adding exercises could not quietly repeal this.
 
 **v0's build surface is the rack, not part assembly**, and **edit mode is
 inline** — no separate screen. You move instruments around the glass and you
 swap, reorder and reconfigure modules in the rack, in the cab, while it runs.
 Order, verb, enable and a module's settings are four real design decisions, so
-the loop closes over them without a parts model. Additive later, not foreclosed.
-The ordering argument: `docs/design/roadmap.md`.
+the loop closes over them without a parts model. Additive later, not foreclosed
+(`docs/design/roadmap.md`).
 
 The v0 target is the acceptance test, on ladder rung 1 (tracked platform):
 
@@ -102,6 +101,17 @@ ledger is it: **the game's core feedback mechanism**, not a scoreboard. Damage i
 **joules absorbed**, never hit points, so it is a quantity the player can be
 shown — and now hear; **harming a citizen is categorical failure**, never a
 priced line item. Model, numbers and build order: `docs/design/damage.md`.
+
+### 3.2 An exercise is a site plus an objective, and the verdict can say yes
+
+**One objective verb — reach the markers you were given** — so "reach a marker"
+and "reach all of them" are one sentence with a different pin count, and the
+ladder is the *ground* rather than the task. `Exercise` is world data
+(`src/world/exercises.ts`); `Goal` is on the snapshot, settles once, and is the
+first thing the loop's third beat can say **yes** with. Failure stays exactly
+one thing: a citizen involved. **No score, no gate, no par time** — every
+exercise is on the schedule from the first session. Steps 3–5 of the progression
+each cost a new verb: `docs/design/missions.md`.
 
 ## 4. Core loop
 
@@ -133,7 +143,7 @@ balance controller — tipping is emergent from contacts alone.
 
 **Sequence the ladder, not the biped.** The biped is the worst entry point for
 physics and the best for concept art, which is why the probe started there and
-production must not. Full table: `docs/design/machinery-ladder.md`. The ladder is
+production must not (`docs/design/machinery-ladder.md`). The ladder is
 non-monotonic by design — the Phantom Labor attacks the sensor surface capability
 created — so the two-lever cage at rung one stays a good machine, not a tutorial.
 
@@ -153,10 +163,9 @@ Full detail: `docs/design/cockpit.md`. The load-bearing claims:
 - **The rail is a server rack, not a DIN rail**: faceplates stacked vertically
   and screwed in, each in its maker's house style. Viewport budgeting is a core
   mechanism rather than a UI style, which is *why* mobile-first is fixed (§ 9).
-- **The machine's own instruments are one part**, not a row of separate dials —
-  the KIBA-NAV-UNIT: speed, ATT-0 and TRACTION in one bezel, legends engraved in
-  its own metal. **The dash is one wrapping flow of parts, bottom-aligned**, and
-  the fitted kit sits behind a fixed seam. Never a pinned column, never a split.
+- **The rig's own surfaces are not fitted kit and cost no glass** — the debrief,
+  the live voice, the objective strip. The budget prices what a manufacturer
+  bolted into your cab; the training system is not a manufacturer (§ 3.2).
 
 ### 6.1 A component is a triptych, and each kind bills you differently
 
@@ -167,18 +176,15 @@ Spilled in full to `docs/design/components.md` (index). What must stay here:
   costs **capability**. A safety module shipping no pod is not a discount.
 - **Severity crosses the boundary as a number** (`0 nominal · 1 active · 2 warn ·
   3 alarm`); the masters are derived from it, never hand-wired.
-- **The dash is the seam** — visible in both postures, and it travels. Its theme
-  belongs to the **vehicle's** manufacturer, which is why the machine's own
-  instruments are one part (KIBA-NAV-UNIT) and fitted kit sits behind a seam.
 - **A manufacturer is one house** (`src/makers/`): colours, words **and sound**.
-  The machine's voice is its **chassis maker's**, a component's is its own, and
-  the site's belongs to materials. A house sets timbre, never level — the
-  rack-unit rule in another medium (`docs/design/sound.md`).
+  The machine's voice is its **chassis maker's**, a component's is its own, the
+  site's belongs to materials, and **the rig's is the exercise and nothing
+  else**. A house sets timbre, never level (`docs/design/sound.md`).
 
 ## 7. Mechanics that fall out of the above
 
-Detail: `docs/design/mechanics.md`. Each *follows* from a core commitment,
-which is the argument for keeping it.
+Detail: `docs/design/mechanics.md`. Each *follows* from a core commitment, which
+is the argument for keeping it.
 
 - **Phantom Labor** — attacks the sensor surface capability created.
 - **Hot-patching, anchored on LOTO** — lock outputs versus rewire live.
@@ -194,12 +200,10 @@ player cannot open is not a teaching layer.
 
 The engine of record is **Rapier (wasm)**, chosen for motorized joints, joint
 limits, and **determinism you can replay a failure with** — attribution is the
-design, so replay is not a nice-to-have.
-
-Target tier is the **virtual crane**: full dynamics plus a stabilising wrench on
-the hull with a finite authority budget. That wrench **is** STAB-2 — switching it
-off does not fake a fall, it removes the thing that was holding you up. Tier
-costs and what inverts: `docs/design/physics-migration.md`.
+design, so replay is not a nice-to-have. Target tier is the **virtual crane**:
+full dynamics plus a stabilising wrench on the hull with a finite authority
+budget. That wrench **is** STAB-2 — switching it off does not fake a fall, it
+removes the thing that was holding you up: `docs/design/physics-migration.md`.
 
 ## 9. Stack — settled
 
@@ -224,10 +228,9 @@ to load. Do not build one preemptively.
 
 `prototype/concept-3/` — one file, three.js from a CDN, no build. It answered
 *can this look and feel right in a browser, on a phone?* — yes. It is **concept
-art with working mechanisms**, not an architecture sketch: **do not port its
-structure**, do port the named mechanisms — the footstep policy above all, then
-the analytic 2-bone IK, the hydraulic rams, the cel pipeline. What it fakes and
-what it cost: `docs/design/prototype-findings.md`.
+art with working mechanisms**: **do not port its structure**, do port the named
+mechanisms — the footstep policy above all, then the analytic 2-bone IK, the
+hydraulic rams, the cel pipeline: `docs/design/prototype-findings.md`.
 
 ## 11. Repo map
 
@@ -246,8 +249,9 @@ src/
   makers/    who built the kit: one house per manufacturer, read by both renderers
   render/    three.js scene, cel pipeline
   audio/     the machine's voice: `voices.ts` is arithmetic, `engine.ts` the graph
-  world/     terrain, job sites, hazards (radiation, EMF)
-  ui/        everything the rig made: the shell, the debrief, the live voice
+  world/     terrain, job sites, exercises, hazards (radiation, EMF)
+  ui/        everything the rig made: the shell, the schedule, the objective
+             strip, the debrief, the live voice
   platform/  input (touch-first), persistence, config
 assets/      models, textures, data
 docs/design/ MEMORY.md spill files
@@ -280,16 +284,12 @@ and the checks: `docs/design/architecture-rules.md`.
    `src/control/`, `src/modules/`.
 2. **Fixed timestep, seeded PRNG.** Rendering interpolates and never drives; no
    `Math.random()` and no transcendental that closes a loop back into sim state.
-3. **One-directional snapshot boundary.** Sim imperative at 60 Hz, UI reads a
-   snapshot at 10 Hz. An instrument is a view of a recording — which is why the
-   same code drives a replay. **Svelte never owns the canvas. No Threlte.**
-   The snapshot has **two halves**: a *state*, sampled, for anything an
+3. **One-directional snapshot boundary.** An instrument is a view of a
+   recording, which is why the same code drives a replay. **Svelte never owns
+   the canvas. No Threlte.** Two halves: a sampled *state* for anything an
    instrument shows, and an *event channel* (`core/events.ts`) for anything that
-   *happens* — a bounded ring of `seq`-stamped values, read with one number and
-   never by diffing a growing list. The channel notifies; the ledger records.
-   **Renderers** (`render/`, `audio/`) read at 60 Hz and interpolate; **readers**
-   (`ui/`, `cockpit/`) read at 10 Hz. Audio is a renderer, so a replay sounds
-   exactly like the run it recorded.
+   *happens* — the channel notifies, the ledger records. **Renderers**
+   (`render/`, `audio/`) read at 60 Hz; **readers** (`ui/`, `cockpit/`) at 10.
 
 ### Coding
 

@@ -59,13 +59,18 @@ function valueNoise(x: number, z: number, seed: number): number {
  * only — the sim never calls this. Contact is measured against the collider,
  * which is what makes getting stuck real rather than scheduled.
  */
-export function heightAt(x: number, z: number, seed: number): number {
+export function heightAt(x: number, z: number, seed: number, relief = 1): number {
   // Steeper than it was, and steeper on the short wavelengths especially: the
   // machine's whole character is what happens on a grade, and gentle ground
   // gives it nothing to be bad at. The climb limit is 43.5°, so the site should
   // have plenty of ground either side of that.
+  //
+  // `relief` scales every octave at once, so a gentler site is **the same site,
+  // turned down** — the same hills in the same places, shallower. That is worth
+  // more than a second generator: a trainee who learns the first exercise's
+  // ground is not learning a shape they will never see again.
   let h = 0;
-  let amplitude = 7.6;
+  let amplitude = 7.6 * relief;
   let frequency = 1 / 54;
   for (let octave = 0; octave < 4; octave++) {
     h +=
@@ -154,7 +159,7 @@ export function makeRutTerrain(depth: number, at = 12): Terrain {
   return { heights, materials: new Uint8Array(GRID * GRID), seed: 0, extent };
 }
 
-export function generateTerrain(seed: number): Terrain {
+export function generateTerrain(seed: number, relief = 1): Terrain {
   const n = GRID + 1;
   const extent = GRID * CELL;
   const heights = new Float32Array(n * n);
@@ -162,7 +167,7 @@ export function generateTerrain(seed: number): Terrain {
     for (let iz = 0; iz < n; iz++) {
       const x = (ix / GRID - 0.5) * extent;
       const z = (iz / GRID - 0.5) * extent;
-      heights[ix * n + iz] = heightAt(x, z, seed);
+      heights[ix * n + iz] = heightAt(x, z, seed, relief);
     }
   }
   return { heights, materials: new Uint8Array(GRID * GRID), seed, extent };

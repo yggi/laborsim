@@ -158,11 +158,25 @@ const APP_SHOTS = [
   "app-lever-foot",
 ];
 
-if (!filter || APP_SHOTS.some((name) => name.includes(filter))) {
+/**
+ * Open the app and sit down in it.
+ *
+ * A session now starts on the schedule, and the schedule is over everything —
+ * so every shot in this section is of a cab behind a scrim until somebody
+ * presses BEGIN. It is also what starts the clock (`App.svelte` feeds the held
+ * frame zero seconds), so a bench that skipped it would be photographing a
+ * frozen site and calling it a drive.
+ */
+async function openCab() {
   await page.goto(`${base}/`, { waitUntil: "networkidle" });
   // Rapier initialises before anything is on screen; the canvas is the tell.
   await page.waitForSelector("canvas");
+  await page.getByRole("button", { name: "BEGIN EXERCISE" }).click();
   await page.waitForTimeout(1500);
+}
+
+if (!filter || APP_SHOTS.some((name) => name.includes(filter))) {
+  await openCab();
 
   for (const [name, dx, dy] of LOOKS) {
     if (filter && !name.includes(filter)) continue;
@@ -272,9 +286,7 @@ if (!filter || APP_SHOTS.some((name) => name.includes(filter))) {
   // has already looked around five times has spent it — which is exactly what
   // happened when this shot came back empty and read as the nag being broken.
   if (!filter || "app-nag".includes(filter) || "app-lever".includes(filter)) {
-    await page.goto(`${base}/`, { waitUntil: "networkidle" });
-    await page.waitForSelector("canvas");
-    await page.waitForTimeout(1500);
+    await openCab();
     await page.mouse.move(195, 400);
     await page.mouse.down();
     await page.mouse.move(195 - 400, 400, { steps: 5 });

@@ -20,6 +20,7 @@ import {
 } from "../core/snapshot.ts";
 import { G } from "../core/spec.ts";
 import { conjugate, rotate, vec } from "../core/vec.ts";
+import { DEFAULT_EXERCISE, type Exercise } from "../world/exercises.ts";
 import {
   generateProps,
   isBreakable,
@@ -36,6 +37,7 @@ import {
 } from "../world/terrain.ts";
 import { generateWaypoints, type Pin } from "../world/waypoints.ts";
 import { createLedger, impactOf, kineticEnergy, type Ledger } from "./damage.ts";
+import { createGoal } from "./goal.ts";
 import { GROUND_GROUP, spawnTrackedMachine, type TrackedMachine } from "./tracked.ts";
 
 /**
@@ -83,11 +85,20 @@ export interface SimWorld {
   readonly machine: TrackedMachine;
   /** Everything that has been broken so far, itemised and priced. */
   readonly ledger: Ledger;
+  /** What was asked for, and how it is going. */
+  readonly exercise: Exercise;
   free(): void;
   readonly tick: number;
 }
 
 export interface SimOptions {
+  /**
+   * The exercise to build: the ground, the furniture, the route, the objective.
+   * Defaults to the full site, which is what a bare `createWorld()` has always
+   * meant (`world/exercises.ts`).
+   */
+  readonly exercise?: Exercise;
+  /** Override the exercise's seed. A different site, the same exercise. */
   readonly seed?: number;
   /** Ordered top of the rail to the actuator terminal. Order is the game. */
   readonly modules?: readonly Module[];
@@ -96,13 +107,14 @@ export interface SimOptions {
 }
 
 export function createWorld(options: SimOptions = {}): SimWorld {
-  const seed = options.seed ?? 20260823;
+  const exercise = options.exercise ?? DEFAULT_EXERCISE;
+  const seed = options.seed ?? exercise.seed;
   const modules = options.modules ?? [];
 
   const world = new RAPIER.World({ x: 0, y: -G, z: 0 });
   world.timestep = STEP_SECONDS;
 
-  const terrain = options.terrain ?? generateTerrain(seed);
+  const terrain = options.terrain ?? generateTerrain(seed, exercise.relief);
   world.createCollider(
     RAPIER.ColliderDesc.heightfield(GRID, GRID, terrain.heights, {
       x: terrain.extent,
@@ -132,7 +144,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * average of 0.7 and nothing. It also gives the tracks grip *on* a prop,
    * which is right — a machine climbing a barrier should be able to.
    */
-  const props = generateProps(terrain);
+  const props = generateProps(terrain, exercise.props);
   const propBodies: RAPIER.RigidBody[] = [];
   /** Linear kinetic energy each breakable had at the end of the last step. */
   const propEnergy = new Float64Array(props.length);
@@ -170,7 +182,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
    * not touch them any more, so all that drop bought was a metre of fall to
    * absorb before anybody could be accountable for the machine.
    */
-  const startY = (options.terrain ? 0 : heightAt(0, 0, seed)) + 0.05;
+  const startY = (options.terrain ? 0 : heightAt(0, 0, seed, exercise.relief)) + 0.05;
   const machine = spawnTrackedMachine(world, vec(0, startY, 0));
 
   /**
@@ -207,7 +219,8 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     propEnergy[i] = kineticEnergy(body.mass(), v.x, v.y, v.z);
   }
 
-  const waypoints = generateWaypoints(terrain);
+  const waypoints = generateWaypoints(terrain, exercise.route);
+  const goal = createGoal(exercise.id, waypoints);
 
   let tick = 0;
   /** What the hull is being shaken by, measured each step. At rest, 1 g up. */
@@ -337,6 +350,30 @@ export function createWorld(options: SimOptions = {}): SimWorld {
       // different machine.
       distance += Math.abs(machine.speed()) * STEP_SECONDS;
       assessDamage();
+
+      /**
+       * How the exercise is going — read **after** the damage, so a citizen
+       * struck on this step has already reached the ledger and the same step
+       * that finished the route can still fail it.
+       */
+      const at = machine.body.translation();
+      const progress = goal.step(tick, at.x, at.z, ledger.citizenHarm);
+      for (const pin of progress.reached) {
+        recorder.emit(tick, {
+          kind: "waypoint",
+          pin,
+          count: goal.state.count,
+          total: goal.state.total,
+        });
+      }
+      if (progress.settled) {
+        recorder.emit(tick, {
+          kind: "outcome",
+          outcome: progress.settled,
+          count: goal.state.count,
+          total: goal.state.total,
+        });
+      }
     },
     snapshot(): Snapshot {
       const t = machine.body.translation();
@@ -361,6 +398,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
         stages,
         props: movedProps(),
         route: waypoints,
+        goal: goal.state,
         damage: ledger.events,
         bill: ledger.total,
         events: recorder.publish(),
@@ -374,6 +412,7 @@ export function createWorld(options: SimOptions = {}): SimWorld {
     waypoints,
     machine,
     ledger,
+    exercise,
     free() {
       world.free();
     },

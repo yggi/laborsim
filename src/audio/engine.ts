@@ -39,6 +39,7 @@ import {
   bogieVoice,
   chainLink,
   chainVoice,
+  cueVoice,
   driveVoice,
   grindVoice,
   hornVoice,
@@ -697,7 +698,9 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
     const tone = context.createOscillator();
     tone.type = "triangle";
     tone.frequency.setValueAtTime(voice.hz, start);
-    tone.frequency.exponentialRampToValueAtTime(voice.hz * 0.6, end);
+    // A struck body's pitch sags as the energy leaves it. A *generated* tone
+    // does not, and the rig's cues are the only voice that asks for that.
+    tone.frequency.exponentialRampToValueAtTime(voice.hz * (voice.bend ?? 0.6), end);
     tone.connect(body);
     tone.start(start);
     tone.stop(end);
@@ -734,6 +737,21 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
       strike.disconnect();
       body.disconnect();
     };
+  }
+
+  /**
+   * A figure of notes, laid out from one instant.
+   *
+   * It needs no graph of its own: a cue is a short tone that does not bend, and
+   * `knock` already builds exactly that — which is the argument for the `bend`
+   * field rather than a second scheduler. The offsets are scheduled forward, so
+   * a whole cue is committed on the frame the event arrived and nothing has to
+   * be remembered across frames.
+   */
+  function cue(which: Parameters<typeof cueVoice>[0], at: number) {
+    for (const { at: offset, knock: voice } of cueVoice(which)) {
+      knock(voice, at + offset, 0);
+    }
   }
 
   /* -- the frame ---------------------------------------------------------- */
@@ -959,6 +977,12 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
         if (event.kind === "impact") knock(impactVoice(event), now, 0);
         // The hull is you, so it is never off to one side.
         else if (event.kind === "hull") knock(hullVoice(event), now, 0);
+        // The rig, on the one subject it is allowed to have a voice about.
+        // Centred, and centred for a better reason than the others: it does not
+        // happen anywhere. It is the training system, not the site.
+        else if (event.kind === "waypoint") cue("pin", now);
+        else if (event.kind === "outcome")
+          cue(event.outcome === "success" ? "success" : "failure", now);
       }
     },
     panel(event, maker) {

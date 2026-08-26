@@ -9,9 +9,17 @@
  * The voice is condescending institutional politeness: the rig is not angry, it
  * is disappointed, patiently, and it has written everything down.
  *
- * Two ways out: RESET SIMULATOR re-racks the exercise; RESUME closes the folder,
+ * Ways out: RESET SIMULATOR re-racks the same exercise; RESUME closes the folder,
  * twists the stop back out and lets you keep driving — the rig never yanks
- * control (L-038).
+ * control (L-038), and that holds after a *success* too: a finished exercise is
+ * a site you may keep driving around. SCHEDULE goes back to the list, and NEXT
+ * EXERCISE appears only where one has been earned.
+ *
+ * **It has an outcome now.** Until missions arrived the folder had exactly one
+ * thing to say and it was always bad — the ledger's only verdict is a bill.
+ * Three states cross the top of it instead: still running, complete, failed.
+ * The failure loop's third beat could not previously say *yes*, and the whole
+ * of that change is the band under the title and the split times beside it.
  *
  * It also carries **the state of the machine in words**, which the dash used to
  * carry on a strip under the panel. That was the panel captioning its own lamp;
@@ -23,12 +31,16 @@
  */
 import { chassisConditions, masterLine } from "../cockpit/annunciator.ts";
 import type { Snapshot } from "../core/snapshot.ts";
+import { exerciseById, nextExercise } from "../world/exercises.ts";
+import { clockOf } from "./format.ts";
 
 const {
   snapshot,
   estopped,
   onReset,
   onResume,
+  onSchedule,
+  onNext,
 }: {
   snapshot: Snapshot | undefined;
   /** The stop is a cockpit control rather than a simulated quantity, so it is
@@ -36,7 +48,22 @@ const {
   estopped: boolean;
   onReset: () => void;
   onResume: () => void;
+  /** Back to the schedule. */
+  onSchedule: () => void;
+  /** Take the next exercise down the ladder. */
+  onNext: (id: string) => void;
 } = $props();
+
+const goal = $derived(snapshot?.goal);
+const exercise = $derived(goal ? exerciseById(goal.exercise) : undefined);
+const upNext = $derived(
+  goal?.outcome === "success" && exercise ? nextExercise(exercise.id) : undefined,
+);
+
+/** Frozen at the outcome, still running before it. Same clock as the overlay. */
+const elapsed = $derived(
+  goal && goal.settled >= 0 ? goal.settled / 60 : (snapshot?.simSeconds ?? 0),
+);
 
 /** The single worst thing the machine has to say, named. */
 const state = $derived(
@@ -53,10 +80,26 @@ const citizen = $derived(lines.some((d) => d.category === "citizen asset"));
 
 const yen = (n: number) => `−¥${n.toLocaleString("en-US")}`;
 
-/** The rig's closing remark. Register: unimpressed, never cruel, never a quip. */
+/**
+ * The rig's closing remark. Register: unimpressed, never cruel, never a quip.
+ *
+ * It reads the objective **before** the bill now, and that ordering is the
+ * point: an exercise is passed or not passed first, and expensively or cheaply
+ * second. The old lines survive underneath for the open site and for a run
+ * still in progress, where there is nothing but the bill to talk about.
+ */
 const verdict = $derived.by(() => {
   if (citizen)
     return "A person was involved. This session is recorded as a failure. Please reflect.";
+  if (goal?.outcome === "success") {
+    if (bill === 0)
+      return "Every marker reached and nothing charged. The exercise finds no fault. It will not say so twice.";
+    if (bill < 3000)
+      return "Every marker reached. The damage above is what it cost you to do it, and it was avoidable.";
+    return "The objective was met. So was a good deal of the site. Reaching a marker is not the only thing being assessed.";
+  }
+  if (goal && goal.total > 0 && goal.count > 0 && goal.outcome === "running")
+    return `${goal.count} of ${goal.total} markers reached. The exercise remains open, as does the account.`;
   if (bill === 0)
     return "No chargeable damage. The exercise notes that you also accomplished nothing.";
   if (bill < 3000)
@@ -83,6 +126,40 @@ function why(line: (typeof lines)[number]): string {
     <!-- What the panel is showing right now, spelled out. The colour is the
          lamp's; the words are the folder's. -->
     <div class="state" data-cond={state.condition}>{state.text}</div>
+
+    <!-- The exercise, and how far through it you are. Above the ledger, because
+         it is the question that was asked; the ledger is what it cost. -->
+    {#if goal && exercise}
+      <div class="outcome" data-outcome={goal.outcome}>
+        {#if goal.outcome === "success"}
+          EXERCISE COMPLETE
+        {:else if goal.outcome === "failed"}
+          EXERCISE FAILED
+        {:else}
+          EXERCISE IN PROGRESS
+        {/if}
+      </div>
+      <div class="task">
+        <div class="row1">
+          <span class="what">{exercise.id} &middot; {exercise.name}</span>
+          <span class="clock">{clockOf(elapsed)}</span>
+        </div>
+        <div class="row2">{exercise.objective}</div>
+        {#if goal.total > 0}
+          <!-- Split times, in route order. A marker you never reached says so
+               with a dash rather than by being absent from a list, which is the
+               same reason a bypassed module still gets a stage on the rack. -->
+          <div class="splits">
+            {#each goal.reached as at, i (i)}
+              <span class="split" class:lit={at >= 0}>
+                <span class="n">{i + 1}</span>
+                <span class="t">{at >= 0 ? clockOf(at / 60) : "—"}</span>
+              </span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
 
     {#if citizen}
       <div class="fail">CITIZEN PROPERTY INVOLVED &middot; EXERCISE FAILED</div>
@@ -113,9 +190,21 @@ function why(line: (typeof lines)[number]): string {
     </div>
     <div class="verdict">{verdict}</div>
 
+    <!-- Two rows, and the second one only where it has anything to offer. The
+         machine is always handed back first: RESUME is on the left of the top
+         row on every outcome, including a completed one. A finished exercise is
+         still a site, and the rig does not confiscate it. -->
     <div class="actions">
       <button class="resume" onclick={onResume}>RESUME</button>
       <button class="reset" onclick={onReset}>RESET SIMULATOR</button>
+    </div>
+    <div class="actions second">
+      <button class="schedule" onclick={onSchedule}>SCHEDULE</button>
+      {#if upNext}
+        <button class="next" onclick={() => onNext(upNext.id)}>
+          NEXT &middot; {upNext.id}
+        </button>
+      {/if}
     </div>
   </div>
 </div>
@@ -186,6 +275,70 @@ function why(line: (typeof lines)[number]): string {
     font-size: 9px;
     letter-spacing: 0.14em;
   }
+
+  /* The outcome band. Same shape as the machine-state line above it and a
+     different subject: that one is the machine's opinion of itself, this one is
+     the rig's opinion of the exercise. Neither flashes — a document does not. */
+  .outcome {
+    padding: 4px 12px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    background: #191d20;
+    color: #9aa6a1;
+    border-bottom: 1px solid #0d1012;
+  }
+  .outcome[data-outcome="success"] {
+    background: #1d4c3f;
+    color: #a9f2dd;
+  }
+  .outcome[data-outcome="failed"] {
+    background: #5d1d15;
+    color: #ffc9bf;
+  }
+  .task {
+    padding: 5px 12px;
+    background: #14171a;
+    border-bottom: 1px solid #23282a;
+  }
+  .task .row2 {
+    color: #9aa6a1;
+  }
+  .clock {
+    color: #e8b53a;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .splits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .split {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 1px 5px;
+    font-size: 8px;
+    background: #191d20;
+    border: 1px solid #2c3336;
+    color: #48524f;
+  }
+  .split.lit {
+    background: #1d4c3f;
+    border-color: #2f6d5c;
+    color: #a9f2dd;
+  }
+  .split .n {
+    color: #6d7a76;
+    letter-spacing: 0.14em;
+  }
+  .split.lit .n {
+    color: #6fe3c4;
+  }
+  .split .t {
+    font-variant-numeric: tabular-nums;
+  }
   .lines {
     flex: 1;
     overflow-y: auto;
@@ -249,13 +402,24 @@ function why(line: (typeof lines)[number]): string {
     border: 1px solid #0d1012;
     cursor: pointer;
   }
-  .resume {
+  .actions.second {
+    padding-top: 0;
+  }
+  .resume,
+  .schedule {
     background: #23282a;
     color: #c6d0cb;
   }
   .reset {
     background: #e8b53a;
     color: #14171a;
+    font-weight: 700;
+  }
+  /* The only green thing in the folder, and it is only ever here after the
+     exercise was actually completed. */
+  .next {
+    background: #2f6d5c;
+    color: #eafff8;
     font-weight: 700;
   }
 </style>

@@ -10,6 +10,9 @@ Archives:
 - `docs/log/2026-early.md` — the scaffolding and rung 1, up to the first deploy.
 - `docs/log/2026-mid.md` — the cab: the pipeline rack, the damage ledger, the
   dash and the triptych.
+- `docs/log/2026-panel.md` — the panel: prose replaced by marks, real fuses in
+  the rail, the cage, a slot that owns its own power and mode, and GRIP and SLIP
+  folding into one instrument.
 
 Entry format:
 
@@ -18,6 +21,56 @@ Entry format:
 Cards: [id] ...
 What happened, in past tense. Anything tried and rejected, and why.
 ```
+
+---
+
+## 2026-08-26 — the springs and the exercises meet
+
+Cards: none closed. Merged `suspension-springloaded-audio` and
+`missions-waypoint-levels` — two branches taken from the same commit, each green
+on its own.
+
+The code conflicts were all seam-level and none of them was interesting: an
+import line where both had added one, `generateTerrain` gaining a `relief`
+parameter in the same breath as `makeRutTerrain` appearing beside it, and the
+spawn height, where the suspension's *few centimetres over its own ride height*
+had to take the exercise's `relief` as its argument. `heightAt` had already
+grown `relief` on one side and was untouched on the other, so git took it.
+
+**The interesting part is what merged cleanly and was wrong anyway.** Nothing
+either branch could run would have caught either of these:
+
+- `everything-at-once` exists to be the mix's worst case, and the merge gave it
+  a worst case neither branch had ever rendered: a rut under the running gear
+  **and** the rig calling the exercise complete, on top of the horn and a pipe
+  stack. Both sides' edits to that scene landed side by side without a conflict.
+  Re-measured rather than assumed: **0.865**, still inside the ceiling, because
+  the bogies duck under the horn like everything else. `sound.md` said 0.88 and
+  now says what the merged scene measures.
+- `npm run cab` had been broken since a schedule became the app's first screen —
+  it opens `/`, waits for the canvas, and reaches for NAV-1's grip, which is
+  behind the briefing. It fails by timing out after thirty seconds, which is
+  loud, and nobody ran it. Reproduced on the missions branch alone in a worktree
+  to be sure the merge had not caused it. Fixed with an `openCab()` that presses
+  BEGIN EXERCISE, which is also what starts the clock, so the shots are of a
+  drive rather than of a frozen site.
+
+Everything else agrees: 231 tests, typecheck, lint, build, 20 audio scenes and
+19 cab shots. `the-rut` reads 0.048 between channels and `checkpoint` 0.473, the
+numbers each branch reported, so neither change moved the other. The
+end-to-end mission test — E-01 driven to completion by NAV-1 — passes against
+the sprung running gear, whose grip window moved from ~40° to 34–36°; E-01 tops
+out at 18°, so the ladder's first rung still clears the new model with room.
+
+The four doc surfaces were the real merge. Both branches had trimmed `NOTES.md`
+to exactly 100 lines and their union was 105; the equal-share normal-load thread
+was deleted rather than reconciled, because the springs answered it and the
+other branch had only reworded the question. `BOARD.md` history went to eleven
+and L-029 dropped off the bottom — it is in `docs/log/2026-mid.md`. `LOG.md`
+kept both session entries and then this one, which put it at 1024, so the two
+GRIP/SLIP sessions went to `docs/log/2026-panel.md`, whose subject they finish.
+`META.md` gained the lesson this session cost: **green plus green is a third
+state nobody measured.**
 
 ---
 
@@ -105,6 +158,82 @@ centimetres they always claimed rather than the metre of fall they were.
 
 Also: `makeRutTerrain` — flat ground with one bank under one track, the sibling
 of the ramp, because a claim about sides needs ground with a known shape.
+
+---
+
+## 2026-08-25 — the rig asks for something, and can be satisfied
+
+Cards: [L-065] closed. [L-064] made room for this entry but is **not** closed —
+`MEMORY.md` is back to 299 of 300, which is where it started.
+
+Missions, as far as the first two steps of `docs/design/missions.md` go: reach a
+marker, then reach all of them. The interesting decisions were nearly all about
+what *not* to build.
+
+**One objective verb.** An `ObjectiveKind` enum ("reach one" / "reach all") was
+written first and deleted within the hour: those are the same sentence with a
+different pin count. So an `Exercise` carries a `RouteSpec` and the ladder is
+`count: 1` → `3` → `5`, which meant the second level cost nothing at all — it was
+already built by the first. Steps 3–5 (use a tool, collect, move X to Y) each
+genuinely are a new verb and will each cost one. Rejected with it: requiring the
+markers in order. NAV-1 walks a route in order and a pair of levers has no way of
+being told to, so the objective is order-free and the debrief records the order
+you actually took as split times.
+
+**The ladder is the ground, not the task.** `relief` scales every octave of the
+terrain generator, so the first site is the same site turned down rather than a
+different generator — 18° steepest against a 43.5° climb limit, climbable
+everywhere. That is in the test as an angle rather than as an adjective, along
+with the full site being *above* the limit: a trainee who cannot get up a hill
+has to be finding out something about their driving.
+
+**"You can already see the flag" is a cone**, `z > 0 ∧ |x| ≤ 0.34·z`, not a hope
+about a seed. A first exercise you can fail by facing the wrong way teaches the
+wrong thing.
+
+**The rig got a voice, and `sound.md` had said it would never have one.** That
+rule was written when the only things the rig owned were the camera and the
+volume — furniture, and furniture making noises would be the training system
+reaching into the cab. An objective is not furniture: nothing in the world can
+announce a marker, because the machine does not know what a marker is, the marker
+is a stake in the ground, and NAV-1 may not be fitted. So the rule was narrowed
+rather than repealed — **the rig speaks about the exercise and nothing else** —
+and the cues are the only voices made of intervals and the only ones whose tone
+does not bend downward, because they are generated rather than struck. That last
+part is `Knock.bend`, one optional field, and it is the whole graph change: a cue
+is a short tone, which `knock()` already builds.
+
+**The bench earned its keep again, in the way META keeps describing.**
+`exercise-failed` measured **identically** with the cues silenced on its first
+run — peak 0.351 either way. Nothing was wrong with the cue; the scene opened
+with a 180 J scooter and ran the drive note at 0.6 of full, and between them the
+bang and the bed owned the peak. Fixing the *scene* rather than the voice also
+made it truer: a scooter **nudged** at 30 J from a crawl, which is how anybody
+actually clips one, and categorical failure for it. It now reads 0.298 against
+0.212 silenced. `checkpoint` reads 0.473 against 0.367. `everything-at-once` took
+both cues on top of everything else and still peaks 0.884, because they duck
+under the horn like the rest of the bed.
+
+**Where the objective is drawn matters.** The strip is `src/ui/`, does not sweep
+with the cab, and costs no glass — the panel budget prices what a *manufacturer*
+bolted into your cab, and the rig is not a manufacturer. Had it gone on the dash,
+the machine would have had to know what a marker is.
+
+**The debrief can say yes.** It had exactly one verdict and it was always a bill.
+There is an outcome band, an objective block with split times, a stopped clock,
+SCHEDULE, and NEXT — which is the only green thing in the folder and only appears
+after a success. RESUME still comes first on every outcome, including a completed
+one: a finished exercise is still a site, and the rig does not confiscate it.
+
+Two things found by driving it rather than by testing it. The debug telemetry
+column and the new objective strip both owned the top-left corner and overlapped;
+the debug one moved, because one of them is for a player. And **turning NAV-1 on
+by itself does nothing** — it sits below the pilot with verb `CAP`, so parked
+levers cap guidance to zero. That is the dead-man's throttle and the acceptance
+scenario working perfectly, met by a first-timer with nothing to tell them
+whether they are looking at arbitration or at a fault. Carded as L-066 and
+deliberately *not* fixed by changing the rack default, which would repeal the
+best thing in it.
 
 ---
 
@@ -740,143 +869,6 @@ the glass does not. The deck's travel is in `dvh` and the rack takes 74 of them,
 which is a portrait number, so turned sideways the glass is a letterbox and the
 pods sit where a portrait layout left them. Camera FOV, cage geometry and deck
 travel want deciding together, and not as a CSS pass.
-
-## 2026-08-25 — GRIP and SLIP become one head
-
-Cards: closed [L-055]. History trimmed to its gate: [L-017] dropped, already
-narrated above.
-
-**TRACTION.** The cluster now has two big heads and they are the machine's two
-viewpoints: ATT-0 the horizon, seen from the side, and TRACTION the plan view,
-seen from above — nose up, hull in the middle, a track channel either side. The
-answer to yesterday's question was *both readings, one instrument*, which the
-measurements had already forced: slip alone deletes the panel's only warning
-that arrives before the failure, and GRIP alone was wrong in three regimes out
-of four.
-
-Three marks, chosen because a person reads them as separate channels: the
-channel's **colour** is the fraction of the friction cone in use, its **length**
-is the contact patch (hatched where samples have left the ground), and the
-centre-zero **bar** is slip, growing the way the track is sliding. Contacts had
-never been on the panel at all — only on the debug telemetry line — and folding
-them into the channel's length is what made the outer contact rail unnecessary.
-
-**Rejected: a separate rail for contacts.** Built it first, 2.5 units wide in a
-100-unit viewBox — 1.3 px at the size this is actually bolted on at. The
-screenshot settled it (META again): a reading nobody could take. Making contact
-*be* the live length of the channel is one mechanism instead of two, and it
-degrades into the no-contact state for free.
-
-**Rejected: a heat ramp that runs to red.** Also settled by screenshot. At 0.94
-the channel was rust-red and the red slip bar vanished into it — the two marks
-this head exists to separate, collapsed. The ramp stops at amber now, and red
-belongs to the things that have *happened*: the slip bar and the frame at the
-limit.
-
-**`traction` is `null`, not 0, for a track with no ground.** The type change is
-the actual fix for the defect found yesterday; the instrument is downstream of
-it. 0 is what a *parked* machine reports, and a dial that takes a number for
-both showed the same thing for opposite conditions. Every consumer now has to
-decide — `Telemetry`, the readout (which blanks to `---`), and the fixtures,
-where `contacts: 0, traction: 1` used to be expressible and described a machine
-that does not exist.
-
-**Damping lives in the instrument, and the numbers say it is enough.** Undamped,
-traction sat above the gauge's own danger band 21% of a flat-ground run at full
-speed. The UI reads snapshots at 10 Hz and *decimating* a signal like that
-rather than averaging it triples the jump between updates (0.06 → 0.19 of full
-scale). Measured four pipelines: raw 60 Hz (23.0% false alarms, 1.50 σ between
-flat and 40°), decimated 10 Hz (21.0%, 1.53 σ), decimated and damped at 0.6 s
-(**0.0%, 2.12 σ**), sim-side window mean then damped (0.0%, 2.29 σ). The damper
-alone does the work, so the sim keeps one meaning for one field; 0.17 σ is not
-worth a second. A damped needle *is* the real quantity — every dial on a real
-machine has oil or a shorted coil in it — and `damping.ts` carries that argument
-with the table.
-
-**Both tells point at TRACTION**, which is the fix for the mis-attachment: GND
-used to light a lamp beside a dial that read 0% for a track in the air. And the
-`max(left, right)` reduction is gone rather than repaired — both channels are
-drawn, so a machine hanging one track over an edge no longer reads identically
-to one in a hard turn. There is a bench specimen for exactly that now; it was
-not previously expressible, because `snapshotOf` gave both tracks the same
-contact count.
-
-**The odometer.** Right-aligned, so the digits sit against the KM screened
-beside them instead of floating in a window sized for the clock above. The
-metres are their own colour (`--mfg-odo-fraction`, defaulting to the integer
-colour so an unopinionated maker sees no change) — a real trip meter puts the
-fractional drum on a separate wheel because it is the part always moving and the
-part you are not reading. And the decimal point got a full column: it had a
-quarter-width one with the glyph absolutely positioned inside it, which was a
-space fix for a window this reel no longer lives in.
-
-Not done, and deliberately: no annunciation for *low margin*. Traction pins at
-1.00 for 100% of a normal hard turn — skid-steer fills the friction circle by
-construction — so a lamp on it would cry wolf every time the machine turns. The
-colour carries it; a lamp would need a condition that understands turning, and
-that is a module's opinion, not a chassis symptom.
-
-`MEMORY.md` is now full at 300 lines and `NOTES.md` at 100. The next durable
-fact or open thread forces a spill; the log itself took a cut to make room for
-this entry.
-
-## 2026-08-25 — is GRIP the same instrument as SLIP?
-
-Cards: none touched. Opened: [L-055]. No code changed — this was a measurement.
-
-The question was whether the dash needs both dials or could be reduced to SLIP.
-Answer: **they are different quantities, and the difference is real — but the
-GRIP instrument as built delivers it in one regime and misleads in three.**
-Measured headless over 7200 steps across eleven scenarios (flat cruise and
-crawl, spin in place, hard turn, ramps at 10/25/40/42/55°, idle on flat and on
-grade), reading the panel's own reductions rather than the raw `TrackState`.
-
-**The quantities.** `slip` is a velocity difference at the contact — state.
-`traction` is impulse wanted over impulse the ground can hold, per step —
-demand over capacity. Pearson r between the two dials is **0.267**. Neither
-determines the other, and the buckets show why: below the SLIP lamp's 0.4
-threshold, GRIP ranges across its entire scale.
-
-**What GRIP knows that SLIP does not: margin.** On a 40° ramp the machine
-climbs cleanly — slip under the lamp threshold 89% of the time, mean 0.31 —
-while GRIP sits at 0.93 (5–95 pct: 0.87–1.00). At the edge of the cone and not
-yet sliding. That is the only leading indicator on the panel; everything else
-is lagging. Delete it and the dash can only tell you about failures that have
-already happened.
-
-**What SLIP knows that GRIP does not: the ground is gone.** Fully airborne on
-the 55° ramp, over 426 steps: GRIP reads **0.00**, SLIP pegs at 2.20 m/s, past
-its 1.6 span. `summarize()` returns `traction: 0` for `contacts === 0`, which is
-also what `idleTrack()` returns — so 0% means *parked* or *clawing air*, two
-opposite conditions on one reading. That matters because the GND tell is bolted
-to GRIP, whose comment claims the dial is "pinned, with no ground under it". It
-is not. It reads zero, which looks nominal, beside a lit red lamp.
-
-**Three more defects, all measured.** `Math.max` over the two tracks takes the
-*good* side's number: on the 55° ramp with exactly one track down, the dial read
-1.00 for every such step — indistinguishable from a turn. In a hard turn GRIP is
-pinned at exactly 1.00 for 100% of steps (per-step jitter 0.000): skid-steer
-saturates the friction circle by construction, so the dial is dead at full scale
-through a normal manoeuvre. And on flat ground at full speed it spends **21.9%**
-of steps above its own 0.85 danger band, jittering 0.058 per step — six dial
-points a frame, crying wolf at a machine doing nothing wrong.
-
-**Tried: smoothing.** An EMA over the raw dial, τ from 0.15 s to 1.2 s. At 0.6 s
-the flat-ground false-alarm rate falls from 21.9% to **1.8%** and the ordering
-stays clean and readable (flat 0.56 · 25° 0.67 · 40° 0.88). So the noise half is
-a display filter and belongs in the instrument, not in the sim — but smoothing
-does nothing for the zero-means-two-things overload or the turn saturation,
-which are the model and the reduction, not the render.
-
-Rejected: reducing to SLIP only. It would delete the panel's one warning that
-arrives *before* the failure, and L-040 wants "a machine labouring at 90% grip
-sounds like it", which needs the quantity whether or not a dial shows it.
-
-Named but not taken: replace GRIP % with **MARGIN %** (`1 − utilization`). Same
-number read the other way up, it falls toward zero as you get into trouble, and
-"no ground" becomes zero margin rather than zero use — the overload disappears
-by construction. A bigger change to the face than to the sim. Carded as part of
-[L-055].
 
 ## Cards pushed out of `BOARD.md` history
 

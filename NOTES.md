@@ -19,30 +19,32 @@ One thread, because they are one question: mobile-first is a hard pillar and
 `-compat` inlines Rapier's wasm as base64 at about a third more. Levers, cheapest
 first: `vite-plugin-wasm`, code-split build from sim, lazily load instruments.
 
-*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser track
-geometry — and no frame ever timed on a phone. L-034 gets the number. World size
-and part counts follow from those two rather than preceding them, and 130 dynamic
-bodies now step every frame. Answer before `src/sim/` grows.
+*Frames.* ~130 props, ink shells doubling every mesh, greebles, per-grouser belts,
+twelve sprung contacts — and no frame ever timed on a phone. L-034 gets the number;
+world size and part counts follow from it. One dial arrived by accident: E-01 runs
+22 props where the full site runs 130 — a cheap site, unmeasured like the dear one.
 
-## Missions, and what "operator interaction" means
+## What counts as "operator interaction"?
 
-Zachtronics-style budgeting scored on budget / time / **complexity**, written up
-in `docs/design/missions.md` and explicitly **not v0**. Two things worth carrying
-even if it never lands: it inverts the chase camera from a cost into a reward,
-and determinism becomes the substrate for *verifying* a solution. The unresolved
-core is the metric — **what counts as operator interaction**: lever changes,
-seconds hands-on, distinct inputs? It is the load-bearing number in the only
-scoring axis that puts two goods in tension, and it is undefined.
+The exercises are built (L-065) and deliberately carry **no score**, because the
+metric a score needs is undefined: budget / time / **complexity**, where
+complexity is parts plus *operator interaction*. Lever changes? Seconds
+hands-on? Distinct inputs? It is the load-bearing number in the only axis that
+puts two goods in tension, and until it is answered a score would measure
+whichever thing was easiest to count. The clock is recorded and commits to
+nothing; the interaction term commits to everything. `docs/design/missions.md`.
 
-## The site is hard to crash into on purpose
+## Can a generator be given an objective?
 
 A twelve-year-old found the fun in seconds by driving at the material; a scripted
 driver went ten minutes without touching anything, because 130 props sit in six
-clusters the route never passes. A site-design problem, not a damage one. Both
-halves are carded now — composed-not-scattered (L-039, L-027) and standing up at
-all (L-057, measured: most furniture is lying flat before the exercise starts).
-What stays a thread is what "composed" means **as a generator**: footing,
-clearances, an unsurveyed obstruction on the route you were actually given.
+clusters the route never passes. A site-design problem, not a damage one, and
+carded twice: composed-not-scattered (L-039, L-027) and standing up at all
+(L-057). The exercises sharpened it without answering it — an `Exercise` is three
+dials on the same generator, and E-01 reads as *graded for a purpose* because it
+is nearly empty, which is not the same as designed. Still a thread: what
+"composed" means **as a generator** — footing, clearances, and an unsurveyed
+obstruction on the route you were actually given.
 
 ## The suspension is simulated and heard, and neither drawn nor shown
 
@@ -61,15 +63,12 @@ that follows the six compressions, which nobody has costed.
 The physics tiers in `physics-migration.md` are a *development* fidelity ladder,
 not a player-facing one. Unanswered: whether the player sees a **domain stack**
 (structure / mechanics / power / thermal / signal), a **fidelity ladder** they
-descend, or both as a matrix. Shapes `src/sim/layers/` directly.
+descend, or both as a matrix. Shapes `src/sim/layers/`, which is still empty.
 
 ## The lemon — degradation
 
-The symptom half became cards and most are closed — the status panel (L-043), the
-voice (L-040); lights (L-046) remain. Smoke, lamps and a rougher note teach the
-player to *listen* before anything costs them.
-
-What is still a thread is **degradation**: the drive genuinely changes — per-track
+The symptom half became cards and most are closed (L-043, L-040; lights L-046
+remain). Still a thread is **degradation**: the drive genuinely changes — per-track
 `MU` falls, a bias enters the normal-load share, a sprocket will not take full
 torque. A damaged machine becomes a *different machine*, which is the whole
 subject and the expensive part. It keeps getting cheaper: the friction model can
@@ -79,15 +78,15 @@ audio work at all**. Not v0; do not let the reset design (L-038) foreclose it.
 
 ## Does a component ship a voice?
 
-Half answered. A component's **switchgear** is in its own maker's voice now, and
-it needed no new machinery — the engine hears a slot change on the snapshot and
-plays it. So *whose* noise it is was never the hard part.
-
-Still open is **a voice of its own**: TILT-GUARD winding you down, a servo
-hunting, a relay chattering. Not a control being operated but a component saying
-something about its state — either a fourth part of the triptych, or a thing a
-component *does*. The switchgear is evidence for the second, and so are the
-bogies: both arrived as readings on the recording, not as surfaces to fit.
+Half answered: a component's **switchgear** is in its own maker's voice and it
+needed no new machinery, so *whose* noise it is was never the hard part. Still
+open is **a voice of its own** — TILT-GUARD winding you down, a servo hunting, a
+relay chattering: a component saying something about its state rather than a
+control being operated. Either a fourth part of the triptych, which the
+plate/cell/pod argument would have to survive, or not a part at all but a thing a
+component *does*. Three pieces of evidence for the second, all **readings on the
+recording** rather than surfaces to fit: the switchgear, the bogies, the rig's
+cues.
 
 ## How much of the cab should a glance cost you?
 
@@ -96,5 +95,6 @@ off the glass within about 15°, and past 35° you are looking at the door
 (`docs/design/cockpit.md`). Honest, and the intended price — but you cannot find
 a touchscreen lever by feel, and only somebody who did not build it can say if
 that is the right price. Two dials if it is too much: shorten the pan range (you
-see less of the site) or damp the sweep below 1:1 (the cab stops being rigid).
-Prefer the first; a sim-sickness mitigation is the same dial.
+see less of the site), or damp the sweep below 1:1 (the cab stops being rigid).
+Prefer the first; a sim-sickness mitigation is the same dial. The rig's own
+surfaces are exempt — they do not sweep, because they are not in the cab.

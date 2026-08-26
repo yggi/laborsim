@@ -66,21 +66,20 @@ Assert the scenario too — here, that the impact speed was non-zero.
 
 **A check that cannot fail is not a check.**
 Scars enough, one shape: the thing you judge by is the broken thing. Two
-`str.replace` edits matched nothing, because the formatter had reflowed the file
-— one blanked the dash and everything stayed green. A deploy failed on
-formatting because the local check grepped output for `lint/`, which a formatter
-diagnostic does not match. A bench measured brightness as zero-crossing rate,
-blind to the filter opening it existed to see. A bench *scene* built from sines,
-then from spikes too sharp for its own 60 Hz sampling, called rough ground
-identical to smooth both times, until the machine was probed and the fixture
-fitted to what it measured. Assert the edit matched; verify by exit code; move
-the instrument before you trust it; **fit a fixture to a measurement, not to
-your idea of one.** And **prove a new thing by taking it away**: a panel of
-switches was finished, firing at the right instants, and inaudible — the scene
-measured the same with its gain zeroed. If silencing what you added changes
-nothing you did not add it, *unless the instrument cannot see the claim* — the
-bogie knock's null test said so and was wrong, because the bench measured one
-channel and the claim was about **sides**.
+`str.replace` edits matched nothing because the formatter had reflowed the file —
+one blanked the dash and everything stayed green. A deploy failed on formatting
+because the local check grepped output for `lint/`, which a formatter diagnostic
+does not match. A bench measured brightness as zero-crossing rate, blind to the
+filter opening it existed to see. A bench *scene* built from sines, then from
+spikes too sharp for its own 60 Hz sampling, called rough ground identical to
+smooth both times, until the machine was probed and the fixture fitted to what it
+measured. Assert the edit matched; verify by exit code; move the instrument
+before you trust it; **fit a fixture to a measurement, not to your idea of one.**
+And **prove a new thing by taking it away**: a finished panel of switches, firing
+at the right instants, measured the same with its gain zeroed. If silencing what
+you added changes nothing you did not add it — *unless the instrument cannot see
+the claim*, as the bogie knock's null test proved by measuring one channel when
+the claim was about **sides**.
 
 **Rules enforced by a test — and scoped to where they can break.**
 Rule 2 was written down, read and violated twice anyway; a scanner found both
@@ -90,22 +89,25 @@ the first violation landed in `src/ui/`, unwatched — and widening it to a
 hand-listed pair of directories was the same mistake with a longer list.
 
 **Tests can encode accidents.**
-An autonav test asserted raw displacement over a short window, and broke when
-the route changed — because the first pin can be *behind* the machine. It was
-testing an accident of layout. Assert the thing you mean: the range to the pin
-closes.
+An autonav test asserted raw displacement over a short window and broke when the
+route changed, because the first pin can be *behind* the machine — an accident of
+layout. Assert the thing you mean: the range to the pin closes.
 
 **Perception catches what CI cannot — so make it cheap first.**
 Build green, tests green, and the cab view was a solid black wall: an ink shell
 seen from inside. Then a cyan wall — a windscreen 0.47 m from the eye. Re-earned
 on the dash, written blind for an hour, typechecked, 104 tests green, and the
 cluster off-screen at 390 px. None of it is expressible as an assertion, and
-perception is only reliable when it costs nothing — so when the work is visual,
-or audible, build the bench *first*. The audio bench paid for itself three times
-in its first run: a limiter crushing every impact, a strike filter tied
-backwards to the ring, and a cue that measured beautifully and could not be
-heard. It pays twice: the readout a developer needs is the readout the player
-needs.
+perception is only reliable when it costs nothing — so when the work is visual or
+audible, build the bench *first*: the audio bench paid for itself three times in
+its first run (a limiter crushing every impact, a strike filter tied backwards to
+the ring, a cue that measured beautifully and could not be heard), and the
+readout a developer needs is the readout the player needs. **But a bench has no
+assertion to fail, so it fails silently, and a merge is where that lands.**
+Suspension and exercises merged clean, 231 tests green, while the worst-case
+scene had gained a rut *and* the rig's cues — a sum nothing had rendered — and
+`npm run cab` had not reached the cab since a schedule became the first screen.
+Green plus green is a third state nobody measured: run the benches on the merge.
 
 ## Design
 
@@ -138,12 +140,10 @@ settled question comes back every few months wearing a new hat.
 **A gate you do not check is not a gate.**
 `MEMORY.md` was reported as within its 300-line limit at 307. Print the number;
 do not estimate it — and print it *before* the commit, not after: a later round
-did run `wc`, in the same command that committed the trim, and shipped `NOTES.md`
-at 104 with the message claiming it was done.
-
-**Spill before the gate forces you to.**
-Trimming under pressure produces worse cuts than trimming on purpose. The
-sections that spilled well were the ones spilled early.
+ran `wc` in the same command that committed the trim and shipped `NOTES.md` at
+104 claiming it was done. A merge re-earned it at 105: both branches had landed
+on exactly 100, and their union is nobody's 100. Spill on purpose rather than
+under that pressure — the sections that spilled well were spilled early.
 
 **Write the log entry as if the next session has no context.**
 Because it does not. The entries that proved useful later recorded *why a thing

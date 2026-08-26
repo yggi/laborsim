@@ -82,6 +82,22 @@ export const MASS = 6200;
 /** Top track speed, m/s. About 8 km/h — a working speed, not a driving one. */
 export const MAX_TRACK_SPEED = 2.2;
 
+/**
+ * How close the machine has to get before the rig calls a marker reached, m.
+ *
+ * Generous, and it has to be: a marker is a stake in the ground, not a docking
+ * port, and a rung-one machine steered by two levers cannot be asked for
+ * precision it does not have. Precision is a rung-two subject.
+ *
+ * It lives here rather than with the goal tracker because **two things measure
+ * it and they must not disagree**: the rig decides a pin is reached, and NAV-1
+ * decides a pin is behind it and moves on (`modules/autonav.ts`, `ARRIVED`).
+ * Let NAV-1's radius exceed this one and an autopilot would sail past a pin the
+ * rig never credited — an exercise that cannot be completed by the only thing
+ * built to complete it. `tests/mission.test.ts` pins the inequality.
+ */
+export const PIN_REACH = 8;
+
 /** Height of the cab box sitting on the hull, and where it sits along it. */
 export const CAB = {
   width: 1.1,
