@@ -37,6 +37,21 @@ that three feature branches in one week had each bent. What is left here is
 features again, and `L-032` is the one everything downstream of *attribution*
 waits on.
 
+### [L-072] The shell still holds six cab concerns
+- **what:** `App.svelte` is 991 lines — 497 of script, 494 of template — and the
+  sim lifecycle leaving (L-070) took the biggest piece but not the rest. Still in
+  there: the annunciator (`lamps`, `master`, `acked` and the effect that winds
+  acknowledgement back down), the E-stop and its `preEstop` restore, the horn,
+  the manufacturer notices and their timers, the audio context's lifetime, and
+  the chassis maker's nag with its three pieces of cooldown state. Each is a
+  clump of state plus the two or three functions that own it, already fenced off
+  by its own comment block. Svelte 5 puts runes in `.svelte.ts`, so these can
+  move without becoming plain-object state machines.
+- **done-when:** the script half is under ~200 lines and every remaining `let` in
+  it is either bound to the template or read by one function beside it; each
+  extracted concern is testable without mounting the component.
+- **needs:** nothing — L-069 and L-070 cleared the boundary these sit behind.
+
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
   guidance to zero — the dead-man's throttle, and the acceptance scenario in one
@@ -310,6 +325,17 @@ waits on.
 
 ## history
 
+### [L-073] `HISTORY.md` — the log's downstream side condenses — **closed**
+`docs/log/` was a dump with a label: 1,577 lines holding 32 entry blocks of which
+**28 were distinct** — four were stored twice between two archives, three of them
+byte-identical — condensing 2% of what it held, gated by nothing, read by nothing,
+and duplicating what git already stores twice over. Replaced by `HISTORY.md` at
+the root: one condensed arc, oldest first, **rewritten rather than appended to**,
+with a target below `MEMORY.md`'s because current truth outranks how it was
+arrived at. A LOG overflow now folds its oldest sessions into the narrative and
+deletes them. `tests/docs.test.ts` checks its links, which the archives were
+exempt from.
+
 ### [L-070] The loop leaves the component — **closed**
 `App.svelte` was 1082 lines with the sim lifecycle in the middle of it. It is
 `platform/run.ts` now: the world, the fitted kit, the viewport, the input and the
@@ -425,20 +451,3 @@ a heavy crawl and is gone by working speed; and the **rattle**, keyed to the
 hull's jerk, which is the only voice that renders the ground. `MachineState`
 gained an accelerometer. Rejected: a suspension voice (L-062), because nothing
 simulates suspension travel.
-
-### [L-055] GRIP and SLIP become one head — **closed**
-TRACTION: the plan view, nose up, a channel per track. Channel colour is the
-fraction of the friction cone in use, channel length is the contact patch, the
-centre-zero bar is slip. `TrackState.traction` is `null` rather than 0 for a
-track with no ground. Needle damped at 0.6 s. The GND and SLIP tells both point
-at it, and the odometer got its right-alignment, its own colour for the metres
-and a full column for the point.
-
-### [L-052] The dash becomes a panel — **closed**
-No inline labelling: every control is named by a separate engraved plate, a
-plate never changes, and the lens carries the state. One wrapping flow, no
-horizontal split and no scrolling. The rack toggle became the latch it always
-was — full width on the bottom seam, and the rack's duplicate close went. The
-masters are push-to-acknowledge and the E-STOP latches beside them. Dropped the
-SLIP/GND/¥ legend row, which was the panel explaining itself in words. Found,
-not built: ordering a guard above what it guards makes it advisory.

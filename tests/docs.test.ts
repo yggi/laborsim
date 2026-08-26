@@ -94,10 +94,11 @@ describe("every markdown path that is written down resolves", () => {
     const broken: string[] = [];
     for (const file of markdownUnder(ROOT)) {
       const rel = relative(ROOT, file);
-      // The log and its archives are append-only history. They record paths
-      // that were correct when written, and rewriting them to keep a checker
-      // happy would be editing the record to match the present.
-      if (rel === "LOG.md" || rel.startsWith("docs/log/")) continue;
+      // The log is append-only. It records paths that were correct when
+      // written, and rewriting them to keep a checker happy would be editing
+      // the record to match the present. `HISTORY.md` is *not* exempt: it is
+      // rewritten rather than appended to, so its links have to resolve.
+      if (rel === "LOG.md") continue;
       for (const path of mentionedPaths(readFileSync(file, "utf8"))) {
         const target = path.startsWith("docs/")
           ? join(ROOT, path)

@@ -79,10 +79,10 @@ Non-negotiable, and `npm test` fails if you break them. Full rationale in
 | `META.md` | what building it has taught us about building it |
 | `NOTES.md` | open, unresolved threads |
 | `BOARD.md` | task board |
-| `LOG.md` | worklog and closed tasks |
+| `LOG.md` | worklog and closed tasks, this session first |
+| `HISTORY.md` | the arc — decisions, reversals, and what each cost |
 | `LORE.md` | the world — manufacturers, the L.A.B.O.R. institution, how kit fails |
 | `docs/design/` | four clusters — [machine](docs/design/machine.md), [cab](docs/design/cab.md), [rig](docs/design/rig.md), [code](docs/design/code.md) — each indexing its own pages |
-| `docs/log/` | `LOG.md` archives, cut when it hits its gate |
 | `prototype/` | frozen feasibility probes — evidence, not a starting point |
 
 Start with `MEMORY.md` for the design, `BOARD.md` for what's next.

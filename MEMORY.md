@@ -252,8 +252,7 @@ src/
   platform/  where the app meets the browser: `run.ts` owns one run — the
              world, the fitted kit, the viewport, the input and the loop
 assets/      models, textures, data
-docs/design/ MEMORY.md spill files
-docs/log/    LOG.md yearly archives
+docs/design/ MEMORY.md spill files, in four clusters
 prototype/   frozen feasibility probes — evidence, never a starting point
 tests/
 ```

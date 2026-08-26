@@ -19,12 +19,16 @@ where it gets condensed.
 4. `NOTES.md` — what is *unresolved right now*. Open threads only.
 5. `BOARD.md` — what to *do next*. Cards in doing / ready / backlog.
 
-Read `LOG.md` only when you need history (why was X done, what was tried).
-Do not read it as context by default.
+`HISTORY.md` is the arc — read it once when you are new, or when a decision
+looks arbitrary and you want to know what it cost. `LOG.md` is the detail behind
+the last few weeks of it; read that only when you need to know why X was done or
+what was tried. Neither is context by default.
 
 ## Write order (before ending a session)
 
-1. `LOG.md` — append what you actually did and closed. Newest first.
+1. `LOG.md` — append what you actually did and closed. Newest first. When it is
+   over its line, fold its oldest sessions into `HISTORY.md` rather than moving
+   them anywhere.
 2. `BOARD.md` — move cards, add cards you discovered. Trim history.
 3. `NOTES.md` — delete threads you closed, add threads you opened.
 4. `MEMORY.md` — only if something became *durably true*. Rare. Deliberate.
@@ -42,6 +46,7 @@ A change that touches code and leaves these files untouched is incomplete.
 | `NOTES.md` | open, uncrystallized threads | anything settled, anything actionable-as-a-task | 100 lines |
 | `BOARD.md` | task cards | rationale, narrative | see below |
 | `LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
+| `HISTORY.md` | the arc — decisions, reversals, what each cost | this session's detail | 250 lines |
 
 ### Target, and the line where you act
 
@@ -51,6 +56,7 @@ when it is **20% over**, and not before:
 | | target | act at |
 |---|---|---|
 | `MEMORY.md` | 300 | 360 |
+| `HISTORY.md` | 250 | 300 |
 | `META.md` | 150 | 180 |
 | `NOTES.md` | 100 | 120 |
 | `LOG.md` | 1000 | 1200 |
@@ -82,7 +88,11 @@ three sessions running is telling you a section wants spilling, not trimming.
   MEMORY, becomes a BOARD card, or gets deleted. Nothing else.
 - **BOARD.md** → history past its target moves to `LOG.md`; ready past its target
   means something goes back to backlog, not that ready is bigger now.
-- **LOG.md** → cut the oldest sessions into a `docs/log/` archive and link it.
+- **LOG.md** → fold the oldest sessions **into `HISTORY.md`'s narrative** and
+  delete them. Not moved intact: a verbatim archive is what git already is, and
+  the one that existed grew to 1,577 lines, condensed 2%, and was read by nothing.
+- **HISTORY.md** → the older sections are too fine-grained. A month becomes a
+  section, a quarter a paragraph, a year a line. It has to converge.
 
 Never let a surface grow past the line to avoid the work. Condensing *is* the
 work.
