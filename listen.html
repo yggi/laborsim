@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314171a'/%3E%3Cpath d='M8 2 L13 14 L8 10 L3 14 Z' fill='%23e8b53a'/%3E%3C/svg%3E" />
+    <title>LABOR SIM — listening bench</title>
+    <style>
+      /* A bench you look down, like the cockpit sandbox. Same reasoning: this
+         is a workbench, not a cab. */
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #101314;
+        color: #c6d0cb;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      #listen {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 28px 16px 60px;
+      }
+      h1 {
+        font-size: 13px;
+        letter-spacing: 0.22em;
+        color: #6fe3c4;
+        margin: 0 0 6px;
+      }
+      p.blurb {
+        color: #78827f;
+        font-size: 11px;
+        margin: 0 0 26px;
+        max-width: 62ch;
+      }
+      .scene {
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        gap: 10px 12px;
+        align-items: start;
+        padding: 12px 0;
+        border-top: 1px solid #232829;
+      }
+      .scene button {
+        width: 34px;
+        height: 34px;
+        background: #1a1e20;
+        border: 1px solid #333a3b;
+        color: #6fe3c4;
+        font: inherit;
+        cursor: pointer;
+      }
+      .scene button:disabled {
+        color: #4a5250;
+        cursor: default;
+      }
+      .label b {
+        display: block;
+        letter-spacing: 0.14em;
+        color: #c6d0cb;
+      }
+      .label span {
+        color: #78827f;
+        font-size: 11px;
+      }
+      .scene audio {
+        grid-column: 2;
+        width: 100%;
+        height: 30px;
+      }
+    </style>
+    <script type="module" crossorigin src="/laborsim/assets/listen-CLozxE6n.js"></script>
+    <link rel="modulepreload" crossorigin href="/laborsim/assets/snapshot-DOzZbKA8.js">
+    <link rel="modulepreload" crossorigin href="/laborsim/assets/clock-BmNcGdf7.js">
+  </head>
+  <body>
+    <div id="listen">
+      <h1>LISTENING BENCH</h1>
+      <p class="blurb">
+        Every voice the machine has, in the states worth hearing it in. Each one is
+        rendered through the same graph the cab plays, on an offline context, and
+        handed to you as a file — so what you hear here is what you would hear in
+        the seat. Nothing below is simulated: a scene holds one condition still
+        long enough to listen to it, which a real run refuses to do.
+        <br /><br />
+        <code>npm run listen</code> renders the same set to <code>renders/</code>
+        and prints what it measured.
+      </p>
+    </div>
+  </body>
+</html>
