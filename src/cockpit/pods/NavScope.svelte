@@ -20,14 +20,11 @@
  * draw the route it was following is not a recording.
  */
 import type { PodProps } from "../contract.ts";
+import { plot as plotAt, R } from "../scope.ts";
 
 const { stage, style, snapshot, controls }: PodProps = $props();
 
 const waypoints = $derived(snapshot?.route ?? []);
-
-/** Metres from edge to edge of the scope. */
-const SPAN = 190;
-const R = 62;
 
 const target = $derived(stage.readout?.target ?? 0);
 const live = $derived(stage.enabled && !stage.idle);
@@ -41,26 +38,15 @@ const live = $derived(stage.enabled && !stage.idle);
  */
 const select = (index: number) => controls.setParam("target", index + 1);
 
-/** World position → scope position, rotated so the machine's nose is up. */
-function plot(x: number, z: number) {
-  const pose = snapshot?.machine.pose;
-  if (!pose) return { px: 0, py: 0, range: 0 };
-  const [mx, , mz] = pose.position;
-  const [qx, qy, qz, qw] = pose.rotation;
-  // Machine forward in world, from the quaternion.
-  const fx = 2 * (qx * qz + qw * qy);
-  const fz = 1 - 2 * (qx * qx + qy * qy);
-  const len = Math.hypot(fx, fz) || 1;
-  const ux = fx / len;
-  const uz = fz / len;
-  const dx = x - mx;
-  const dz = z - mz;
-  // Rotate into machine frame: ahead is up the scope, right is +X on screen.
-  const ahead = dx * ux + dz * uz;
-  const side = dx * uz - dz * ux;
-  const k = (R * 2) / SPAN;
-  return { px: R + side * k, py: R - ahead * k, range: Math.hypot(dx, dz) };
-}
+/**
+ * World position → scope position, nose-up.
+ *
+ * The geometry is `../scope.ts` and not here: it shipped **mirrored**, and it
+ * could not be caught by a test while it lived inside a component nothing
+ * mounts. It now shares one statement of which way the machine's right is with
+ * the module it is drawing (`core/vec.ts`).
+ */
+const plot = (x: number, z: number) => plotAt(snapshot?.machine.pose, x, z);
 </script>
 
 <div

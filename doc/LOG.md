@@ -20,6 +20,88 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-26 — the shell lets go of six concerns, and two bugs off the side
+
+Cards: [L-072] — closed. Plus two defects the session was asked to squash.
+
+**The route scope was mirrored, and had been since it existed.** NAV-1's plot
+put every pin on the wrong side of own ship: a route curving right read as
+curving left, and the pin the module was steering toward sat opposite the way
+the machine turned. The cause is the convention with the most scars here — the
+machine's right-hand axis was written out **twice**, once in NAV-1's steering
+and once in the instrument, and the instrument's copy had the sign flipped.
+`core/vec.ts` now states it once as `bearing()`, both read it, and the two are
+checked against each other on four pins rather than trusted to agree. The
+geometry left the component for `cockpit/scope.ts` on the way, because that is
+*why* nothing had caught it: a `.svelte` file no test mounts and no bench
+asserts on is a place a sign error can live forever. Six new assertions, each
+verified by planting the fault — including the mirror itself, which takes the
+cross-check down with it.
+
+**Switching to the chase camera reset the run.** `run.setView(mode)` sat inside
+the effect that builds a run, so reading the camera *subscribed* to it: pressing
+CHASE tore down the world and handed back an identical, untouched copy of the
+site you had been driving. It looked like anything but a camera bug, because
+`setView` had already pointed the camera correctly on the way past. `untrack`
+fixes it in one line. The chase view is "hands off the wheel", not a reset
+(`doc/MEMORY.md` § 6), and it had quietly become the most destructive button in
+the cab. Driven in a real browser to confirm both directions: the rig's clock
+read 0:03 → 0:00 with the bug and 0:03 → 0:04 → 0:06 without.
+
+`tests/architecture.test.ts` now reads the effect that builds a run and lists
+what it depends on — local runes, and what it takes off the session — so adding
+a dependency has to be a deliberate act. It is the same shape as the checks
+around the loop's extraction, and for the same reason: **a read is a
+subscription, and nothing about the syntax says so.**
+
+**L-072: six concerns out of `App.svelte`, and three the card had not found.**
+The script half went 497 → 237 and the file 991 → 732. Out: the annunciator's
+acknowledgement (`cockpit/alarm.svelte.ts`), the stop and its restore
+(`cockpit/estop.svelte.ts`), the maker's notices (`cockpit/notices.svelte.ts`),
+the chassis maker's nag (`cockpit/nag.ts`), the sound's lifetime and the room's
+volume (`platform/sound.svelte.ts`). The three the card had not listed are what
+made the number move: the pilot module (`modules/pilot.ts`), the rig's session —
+which exercise, whether you have sat down, whether the folder is open
+(`ui/session.svelte.ts`) — and what a rung-one machine is fitted with, which is
+the first file in the long-empty `src/build/` and, in v0, *is* the build.
+
+`tests/cab.test.ts` is what was bought: 27 assertions, **no component mounted**,
+over machinery none of which had ever been asserted. Every one was verified by
+planting the fault, and the exercise found the shape of the thing it was
+checking twice — the annunciator's wind-down is a fold over *time* rather than a
+`min` over the current pair (an operator who silenced an ALARM would otherwise
+never hear the next WARN), and the E-stop's latch is what stops a second press
+overwriting the enable-state RESUME hands back.
+
+Two things learned about the mechanics. **An `$effect` outside a component is an
+orphan and throws**, so a module that opened one would have been exactly as
+unreachable as the code it replaced — every fold is a method the shell drives
+with a one-line effect and a test drives by calling. And the suite runs in plain
+Node on purpose, so `open()` takes the `EventTarget` the first gesture arrives
+on rather than reaching for `window`. Found on the way: `Notice` was declared
+twice with the same four fields, and muting during the boot was lost, because
+the knob reached an `AudioContext` that did not exist yet.
+
+Not reached: the card's "~200 lines". 237 is what honest work landed on — 27 of
+those are imports and the rest is prose that is not duplicated anywhere else.
+Shaving it to the number would have bought the wrong thing, which is the same
+argument the surfaces' band makes one level up. Every remaining `let` in the
+file is bound to the template or read by one function beside it, which was the
+other half of the card and is the half that says what the file is *for*.
+
+Measured rather than assumed, since nine module boundaries are not free: the
+main entry's payload went **1.2434 → 1.2438 MB** gzipped against `main`'s build,
+58.0 → 58.7 kB of it outside Rapier's wasm chunk. `doc/MEMORY.md` § 9's 1.32 MB
+is quoted to two places and does not move. `src/build/.gitkeep` is gone, because
+the container has contents.
+
+Benched rather than assumed: `npm run shots` (the scope now plots pin 3 down and
+to the left, where a pose at the origin facing +Z puts a pin at +61 −28),
+`npm run cab`, and `npm run listen` — all twenty scenes identical to the numbers
+in `doc/design/cab/sound.md`, which is the claim a refactor has to make. The app
+itself was driven through BEGIN, both levers, both cameras, the cabinet, the
+stop and RESUME with no console errors.
+
 ## 2026-08-26 — merged onto the restructured trunk
 
 Cards: [L-034] — reconciled with `doc/`, `HISTORY.md` and the extracted loop.

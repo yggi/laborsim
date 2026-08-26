@@ -57,3 +57,33 @@ export function rotate(q: Quat, v: Vec3): Vec3 {
 
 export const clamp = (v: number, lo: number, hi: number): number =>
   v < lo ? lo : v > hi ? hi : v;
+
+/** How much of a world offset is in front of the machine, and how much is to
+ *  its right. See `bearing`. */
+export interface Bearing {
+  readonly ahead: number;
+  readonly right: number;
+}
+
+/**
+ * A world offset, in the machine's own frame, flattened to the ground plane.
+ *
+ * The machine's forward is +Z and its **right is −X** (`core/spec.ts`), so the
+ * right axis is `(-forward.z, 0, forward.x)` and `right` is the offset's
+ * component along it. Units are whatever you hand it: a unit vector gives the
+ * cosine and sine of the bearing without a transcendental (rule 2), metres give
+ * metres.
+ *
+ * It exists because that sign was written out twice — once in NAV-1's steering
+ * and once in the route scope's plotting — and the two disagreed. The module
+ * turned the right way and the instrument drew every pin on the wrong side, for
+ * as long as the instrument had existed. One fact, one place
+ * (`doc/design/code/conventions.md`).
+ */
+export function bearing(rotation: Quat, dx: number, dz: number): Bearing {
+  const forward = rotate(rotation, vec(0, 0, 1));
+  return {
+    ahead: forward.x * dx + forward.z * dz,
+    right: forward.x * dz - forward.z * dx,
+  };
+}

@@ -249,7 +249,8 @@ src/
   control/   the rack: ordering, arbitration, actuator-bus ownership;
              `Controls`, the one channel a command crosses back through, and
              `hands`, the one the loop reads the cab through
-  build/     build mode: assembly, load-chart computation
+  build/     build mode: assembly, load-chart computation — and, in v0, what a
+             machine is *fitted with*, which is the whole of the build here
   cockpit/   everything the machine's manufacturers made: the cab, the dash,
              the rack's rail, and each component's three parts —
              cells/ faces/ pods/, registered as one packet in `parts.ts`
@@ -315,3 +316,12 @@ and the checks: `doc/design/code/architecture-rules.md`.
 fact in two. The rest, each with the bug that earned it — body axes, the
 rotation triple, the two custom-property namespaces:
 `doc/design/code/conventions.md`. Do not invent conventions there in advance.
+
+**A concern with state of its own is a `.svelte.ts` module beside the component,
+never a clump inside it.** Runes work in one, so a concern moves without becoming
+a plain-object state machine — and a module can be built, stepped and asserted
+without mounting anything, which is the whole reason to move it. The one rule
+that follows: **it may not open an `$effect`**, because an `$effect` outside a
+component is an orphan and throws, so a fold is a method the component drives
+with a one-line effect and a test drives by calling. `App.svelte` held six such
+clumps and none had ever been asserted (L-072).

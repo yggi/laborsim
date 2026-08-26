@@ -19,7 +19,7 @@
 import type { Module, TrackCommand, Verb } from "../control/bus.ts";
 import type { Waypoint } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
-import { clamp, type Quat, rotate, vec } from "../core/vec.ts";
+import { bearing, clamp, type Quat } from "../core/vec.ts";
 
 /**
  * How close counts as arrived. Generous: it is not a precision instrument.
@@ -125,25 +125,23 @@ export function createAutonav(
         if (skipped === waypoints.length) return null;
       }
 
-      // Heading error without trigonometry: the machine's forward vector
-      // against the unit vector to the pin. The dot gives how much of the pin
-      // is ahead; the Y of the cross gives which side it is on — signed,
-      // bounded, and exactly what a differential drive needs.
+      // Heading error without trigonometry: the unit vector to the pin, taken
+      // into the machine's frame. `ahead` is how much of the pin is in front —
+      // signed, bounded, and exactly what a differential drive needs — and
+      // `right` is which side it is on.
       //
-      // Sign check, because a mirrored control shipped here once already:
-      // forward +Z, pin to the machine's right (−X, see core/spec.ts) gives
-      // cross(forward, toPin).y = −1. Turning right needs the left track to
-      // outrun the right, i.e. a positive `steer` — so this is negated.
-      const forward = rotate(here.rotation, vec(0, 0, 1));
-      const toPin = { x: dx / range, y: 0, z: dz / range };
-      const ahead = forward.x * toPin.x + forward.z * toPin.z;
-      const side = -(forward.z * toPin.x - forward.x * toPin.z);
+      // The sign lives in `bearing`, not here, because it was written out twice
+      // and the route scope's copy had it backwards (`core/vec.ts`).
+      const { ahead, right } = bearing(here.rotation, dx / range, dz / range);
 
       // Slow for big heading errors so it turns rather than arcing wide. This
       // is the only concession it makes to anything, and it is about its own
       // heading, not about the world.
+      //
+      // Turning right needs the left track to outrun the right, so a pin on the
+      // right is a positive `steer`.
       const drive = MAX_TRACK_SPEED * clamp(ahead, 0.18, 1);
-      const steer = clamp(side * STEER_GAIN, -1, 1) * MAX_TRACK_SPEED;
+      const steer = clamp(right * STEER_GAIN, -1, 1) * MAX_TRACK_SPEED;
 
       return {
         left: clamp(drive + steer, -MAX_TRACK_SPEED, MAX_TRACK_SPEED),
