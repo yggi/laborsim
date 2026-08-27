@@ -20,6 +20,128 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-27 — the recording was already there
+
+Cards: [L-032] — closed. Opened [L-083] (a replay somebody can watch).
+
+**The card was stale in its shape, not its target.** "Record and playback — one
+engine" read like a feature to build. Twelve pieces of it were already in the
+tree, built for other reasons, and *most of them carried a comment saying they
+were there for the replay*: the seed on the snapshot ("a recording that cannot
+rebuild its own world is not a recording"), the route on it, `AT_REST` ("the
+honest value for a replay, whenever there is one"), `inertControls()` ("what a
+replay gets"), `Clock.tick` ("sim time, and the replay's clock"), the event
+channel's `rewound` flag ("a RESET, **or a replay scrubbed**"), the audio
+engine's switchgear clicks ("a replay clicks too"), and every impact's entropy
+drawn from a `seq` that is on the recording. Nothing had ever replayed
+anything. **Before building a thing this project has been anticipating for
+months, read what it has already written down about it** — the work turned out
+to be closing three seams, and every one of them was a place where one idea was
+spelled as several special cases.
+
+**Seam 1: the sim's input was ambient.** `world.step()` takes no arguments and
+the pilot closes over a live mutable `Hands`, so there was no moment at which
+anybody said *this is what the hands did on this tick* — live and replay could
+only have differed by swapping a module, which is two engines. `control/trace.ts`
+is the input twin of `core/events.ts`, same shape pointing the other way: an
+`Operator` supplies one tick's input, and the cab is one, a recording is
+another, a script is a third.
+
+Three of the six fields on `Hands` are **not** on the trace and each deleted
+itself. `seated` gates the clock, so a tick *existing* already says the operator
+was in the seat. `horn` was documented as off the recording before there was
+one. `alarm` is derived by the annunciator from the snapshot. What is left is
+two levers and a posture, as change-points: thirty seconds of a rampage is 53
+inputs, not 1,800 frames — and the trace is the same length whether it was
+driven at 30 fps or 144, because it is stamped per **tick**, not per frame.
+
+**Seam 2: rack edits crossed by four routes and none carried a tick.** The
+designed channel, `Controls`, could express neither a reorder nor a verb change
+— the two decisions the rack actually *is*, and the two the ledger most needs.
+So `Rack.svelte` spliced the live array and wrote `module.verb` in place, which
+is precisely what `cockpit/contract.ts` claims cannot happen; the E-stop wrote
+every module's field; and every one of them landed synchronously inside a
+pointer event's turn. Architecture rule 3 has said commands cross back "as
+discrete, **queued** inputs" since before there was production code. They did
+not. One command value, one applier, queued with the tick that applies it — and
+the four call sites that each bumped `rackVersion` themselves are now one bump
+per frame in which anything landed.
+
+**Seam 3: the frame was written twice, and had already drifted.**
+`probe/profile.ts` kept a copy of `run.ts`'s loop and said so, naming the
+reason: the game's loop owns `requestAnimationFrame`, the pointer handlers and
+the `:root` writes, and "exposes no seam to time the halves of a frame
+separately or to end on a tick count". All three are true of `createRun` and
+none is true of a *frame* — the loop was two things wearing one name. L-080 had
+already recorded the copy drifting (no `audio.render()`, so `cpu` was never the
+frame's), and the guard against it was two regexes scanning both files for a
+literal `0.25` and four call names in order. `platform/frame.ts` is the frame;
+the callers own what advances it and when it stops, via three hooks placed at
+exactly the boundaries the profiler stamps. **Two files agreeing about a literal
+is an approximation of one file**: the regexes are deleted and the rule is
+structural — `world.step(` appears in one place under `src/`. The bench also
+stopped hand-building a chassis module (its copy had no `condition()`, so it was
+timing a rack the annunciator would have read differently) and drives the real
+`createPilot`.
+
+**The test that could not fail, and the reason it could not.** The first
+`replay.test.ts` was green on the claim and red on the guards, and the answer
+was worse than a bug: `record()` and `replay()` both assembled the rail from
+`fitRungOne` alone and **neither fitted the chassis**, so the levers reached
+nothing and two parked machines agreed with each other perfectly. *A test where
+both sides are built from the same wrong assumption is not a weak test, it is a
+tautology* — and the thing that exposed it was the assertion that the run had
+actually broken something, which is `doc/META.md`'s "prove the scenario happened
+before trusting that it did" earning its place again.
+
+So half the suite is the other direction. The levers, each of the four rack
+commands, the *timing* of those commands, the seed, and the order the rail was
+fitted in are each removed in turn and required to change the answer — because
+damage on this site is mostly a function of the seed, and a replay that read
+none of the trace would reproduce a great deal of it by accident. Two faults
+were then planted and watched to fail: an off-by-one on the input tick, and an
+applier that silently ignores a reorder.
+
+**Writing a script that actually hits something took three tries**, and each
+failure is the NOTES thread about generated objectives in miniature. Driving
+straight went nowhere near the furniture (nearest prop: 40 m). Steering at it
+put the sign the wrong way round and the machine spun in place for 30 seconds
+of sim. Steering at it correctly drove *past* it and beached on the next one,
+because nothing said what to do on arrival. What works is re-picking the nearest
+intact thing more than 4 m away, every tick — which is a twelve-year-old's
+strategy, and the first line lands at tick 1,640.
+
+**The profile is unchanged and this container cannot say so.** `npm run profile`
+before and after moves `cpu` on FULL SITE from 5.20 to 5.50 — and running it
+*twice on the same tree* moves it 5.50 → 6.30, with FULL SITE against its own
+control differing by 24% inside one run. The container is SwiftShader at 4 fps
+with every pass saturated at the clock's 5-step cap, so its timed columns cannot
+resolve a difference this size in either direction. What *is* identical across
+all three runs is every deterministic column — `calls` 289/305/529/150, `nodes`,
+`triangles`, `programs` — which is what a changed frame would actually move. The
+device table in `code/mobile-budget.md` was taken on a Pixel 9 and has not been
+re-taken; it is unchanged rather than re-measured, and that is stated here
+rather than left to look like a reading.
+
+**The four rack commands were driven through the real app**, in Chromium: a fuse
+pulled, a verb cycled CAP → ADD, a slot moved to the top of the rail, a pitch
+limit dragged 18 → 25, and an E-stop that took every fuse out. None of that is
+reachable by any suite or bench (L-075), and the deferral is exactly the kind of
+change that types and unit tests cannot see.
+
+**Rejected.** *Applying a command eagerly and merely stamping it with the next
+tick* — identical for replay purposes and it would have avoided a frame of UI
+lag, but it leaves rule 3's "queued" a lie and leaves four writers of a module
+instead of one. *Unifying `sandbox/scenes.ts` with playback*: `Scene.frame(t)`
+and a replay's `at(t)` are the same interface and 22 hand-authored scenes are
+sitting there, but they reach isolated extremes a real drive will not, and
+putting audio-level regressions in the same diff as a sim seam move is the merge
+`doc/META.md` warns about. It is a NOTES thread. *Recording the whole of `Hands`*:
+contradicts three comments that were already right.
+
+346 tests, 18 files. `everything-at-once` still peaks 0.922 against the 0.999
+gate; 20 shots, 19 cab shots, 22 renders.
+
 ## 2026-08-26 — the graph gets tests, and the note gets its second oscillator
 
 Cards: [L-080] — closed. Opened from a bug report that did not survive a refresh.

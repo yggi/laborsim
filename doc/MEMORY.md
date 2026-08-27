@@ -256,8 +256,9 @@ src/
     layers/  the individual simulation layers
   modules/   rack components: loops that hold one invariant in one frame
   control/   the rack: ordering, arbitration, actuator-bus ownership;
-             `Controls`, the one channel a command crosses back through, and
-             `hands`, the one the loop reads the cab through
+             `Controls`, the one channel a command crosses back through,
+             `hands`, the one the loop reads the cab through, and `trace.ts` —
+             the input twin of the event channel, where a command gets its tick
   build/     build mode: assembly, load-chart computation — and, in v0, what a
              machine is *fitted with*, which is the whole of the build here
   cockpit/   everything the machine's manufacturers made: the cab, the dash,
@@ -277,7 +278,9 @@ src/
   probe/     the bench that drives the real thing: builds a world, builds a
              viewport, and times them. Above every layer, not inside one
   platform/  where the app meets the browser: `run.ts` owns one run — the
-             world, the fitted kit, the viewport, the input and the loop
+             world, the fitted kit, the viewport, the input and the loop —
+             over `frame.ts`, which is one turn of it and belongs to nobody:
+             the game, the bench and `replay.ts` all advance the same object
 assets/      models, textures, data
 doc/         every document but CLAUDE.md and README.md: the surfaces, and
              design/ in four clusters
@@ -316,11 +319,16 @@ and the checks: `doc/design/code/architecture-rules.md`.
 2. **Fixed timestep, seeded PRNG.** Rendering interpolates and never drives; no
    `Math.random()` and no transcendental that closes a loop back into sim state.
 3. **One-directional snapshot boundary.** An instrument is a view of a
-   recording, which is why the same code drives a replay. **Svelte never owns
-   the canvas. No Threlte.** Two halves: a sampled *state* for anything an
-   instrument shows, and an *event channel* (`core/events.ts`) for anything that
-   *happens* — the channel notifies, the ledger records. **Renderers**
-   (`render/`, `audio/`) read at 60 Hz; **readers** (`ui/`, `cockpit/`) at 10.
+   recording, which is why the same code drives a replay — and since L-032 that
+   is a fact rather than an aspiration: **a run is a `Setup` plus a trace of what
+   the operator did**, and the frame cannot tell the cab from a recording.
+   **Svelte never owns the canvas. No Threlte.** Two halves: a sampled *state*
+   for anything an instrument shows, and an *event channel* (`core/events.ts`)
+   for anything that *happens* — the channel notifies, the ledger records. Its
+   twin (`control/trace.ts`) is how a command crosses back: **queued, and stamped
+   with the tick that applies it**, which the rule had claimed for a year and four
+   separate writers of the rack had made untrue. **Renderers** (`render/`,
+   `audio/`) read at 60 Hz; **readers** (`ui/`, `cockpit/`) at 10.
 
 ### Coding
 

@@ -35,8 +35,9 @@ conflict.
 
 The foundation pass is done — [L-068] through [L-072] closed the seams that three
 feature branches in one week had each bent, and the shell is wiring again rather
-than a sixth home for cab state. What is left here is features, and `L-032` is
-the one everything downstream of *attribution* waits on.
+than a sixth home for cab state. `L-032` closed the same way: what everything
+downstream of *attribution* was waiting on turned out to be three seams rather
+than a feature. A run is a recording now — what is left is somebody watching one.
 
 ### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
 - **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
@@ -150,6 +151,13 @@ the one everything downstream of *attribution* waits on.
   the stop and RESET found the first in one run and would have found it the day
   it landed. Wants deciding: whether it asserts (a fifth suite) or reports (a
   fifth bench), and what it does about the fact that it needs a real browser.
+  **Half of it is built:** a `Trace` *is* a script, `platform/frame.ts` takes
+  hooks, and `tests/replay.test.ts` already drives a scripted operator headless.
+  What is missing is the *shell* — BEGIN, the cameras, the cabinet latch, RESET
+  — which is the half no trace reaches, and the half both of that session's bugs
+  were in. Driving those four rack commands by hand in Chromium is what checked
+  L-032's own riskiest change, and it was thrown away afterwards, which is the
+  card in one sentence.
 - **done-when:** one command drives the shipped app through its verbs and fails
   when one of them stops working.
 
@@ -348,6 +356,40 @@ the one everything downstream of *attribution* waits on.
 ---
 
 ## history
+
+### [L-032] Record and playback, one engine — **closed**
+The card read like a feature to build and was not. Twelve pieces of a replay
+were already in the tree, **most carrying a comment saying they were put there
+for the replay** — the seed and route on the snapshot, `AT_REST`,
+`inertControls()`, `Clock.tick`, the event channel's `rewound` flag, impact
+entropy drawn from `seq`. Nothing had ever replayed anything, because of three
+places where one idea was spelled as several special cases.
+
+The sim's input was **ambient**: `world.step()` takes nothing and the pilot
+closes over a live `Hands`, so live and replay could only have differed by
+swapping a module. `control/trace.ts` is the input twin of `core/events.ts` —
+an `Operator` gives one tick its input, and the cab, a recording and a script
+are three of them. Three `Hands` fields deleted themselves: a tick existing
+already says `seated`, and `horn` and `alarm` were documented as off the
+recording before there was one.
+
+Rack edits crossed by **four routes and none carried a tick**, and the designed
+one could express neither a reorder nor a verb — the two the ledger most needs.
+One command value, one applier, queued with the tick that applies it. Rule 3 has
+said "queued" since before there was production code; it is true now.
+
+The frame was **written twice on purpose** and had already drifted (L-080).
+`platform/frame.ts` is the frame; callers own what advances it and when it
+stops. Two source-scanning regexes existed only to police the copy and are
+deleted: `world.step(` appears in one file now.
+
+The first version of the test **could not fail** — `record()` and `replay()`
+both omitted the chassis, so the levers reached nothing and two parked machines
+agreed perfectly. Half the suite is now the other direction: the levers, each of
+the four commands, their *timing*, the seed and the rail's fitted order are each
+removed and required to change the answer. 346 tests. The profile is unchanged
+and this container cannot say so — two runs on the same tree move `cpu` more
+than the extraction did, while every deterministic column is identical.
 
 ### [L-080] The graph gets tests, and the note gets its second oscillator — **closed**
 Opened by a dropout report that did not survive a refresh, and the hunt for it

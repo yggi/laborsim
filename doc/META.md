@@ -38,7 +38,7 @@ fetched. **Every branch, absolute paths, and the contradiction is the finding.**
 
 ## Verification
 
-**A green test can prove nothing, in three ways.**
+**A green test can prove nothing, in four ways.**
 It *passes either way*: steering tests asserted that yaw changed, never which
 way, so a mirrored control shipped — the fix is not a better assertion but
 *reintroducing the bug to watch it fail*. It *measures the bug*: the first
@@ -46,7 +46,12 @@ way, so a mirrored control shipped — the fix is not a better assertion but
 disabled, because `step()` overwrote its `drive` with HALT and what it saw was
 furniture destroying itself on spawn. And it *asserts an accident*: an autonav
 test took raw displacement and broke when the route changed, because the first
-pin can be behind the machine. Assert the thing you mean — the range closes — and
+pin can be behind the machine. And it is a **tautology**: the first replay test
+compared a recorded run against its replay and *neither* had fitted the chassis,
+so the levers reached nothing and two parked machines agreed perfectly. Two
+sides built from one wrong assumption do not check each other — the agreement is
+the assumption, restated — and what exposed it was the assertion that the run had
+broken something. Assert the thing you mean — the range closes — and
 prove the scenario happened before trusting that it did.
 
 **Doubt the instrument before the system. It fails in four ways.**

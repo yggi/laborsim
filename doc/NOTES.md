@@ -78,6 +78,23 @@ already express most of it, and the voices are per track and read `traction`,
 `commanded` and `contacts` directly, so a lost tooth would sound wrong with **no
 audio work at all**. Not v0; do not let the reset design (L-038) foreclose it.
 
+## A hand-authored scene and a replay are the same interface
+
+`sandbox/scenes.ts` has `frame(t) => { snapshot, alarm, horn }` — 22 of them,
+hand-written — and a replay's operator answers `at(tick)`. Those are one type
+wearing two names, and the `alarm`/`horn` split in the scene signature is
+*already* the recording boundary `control/trace.ts` arrived at independently.
+So the listening bench could take either a posed sequence or a real recording,
+and L-075's missing driver and this are the same shape again.
+
+Not scheduled, and the reason is not doubt about the resemblance. The 22 scenes
+exist to reach **isolated extremes** — one bogie knocking, one track in the air —
+that a real drive produces only tangled together with everything else, so a
+recording cannot replace them and the unification would buy a shared type rather
+than fewer scenes. And putting audio-level regressions in the same change as a
+sim seam move is the merge `doc/META.md` warns about. What would make it a card
+is a scene that is *hard to author* and easy to drive.
+
 ## Does a component ship a voice?
 
 Half answered: a component's **switchgear** is in its own maker's voice and it
