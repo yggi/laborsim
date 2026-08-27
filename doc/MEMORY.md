@@ -257,8 +257,9 @@ src/
   modules/   rack components: loops that hold one invariant in one frame
   control/   the rack: ordering, arbitration, actuator-bus ownership;
              `Controls`, the one channel a command crosses back through,
-             `hands`, the one the loop reads the cab through, and `trace.ts` —
-             the input twin of the event channel, where a command gets its tick
+             `hands`, the one the loop reads the cab through — levers, horn,
+             posture and the view — and `trace.ts`, the input twin of the event
+             channel, where a press gets its tick and its side of the recording
   build/     build mode: assembly, load-chart computation — and, in v0, what a
              machine is *fitted with*, which is the whole of the build here
   cockpit/   everything the machine's manufacturers made: the cab, the dash,
@@ -329,6 +330,13 @@ and the checks: `doc/design/code/architecture-rules.md`.
    with the tick that applies it**, which the rule had claimed for a year and four
    separate writers of the rack had made untrue. **Renderers** (`render/`,
    `audio/`) read at 60 Hz; **readers** (`ui/`, `cockpit/`) at 10.
+
+**A recording is of a session, not of the physics.** It has two channels —
+`commands`, which reached the machine and reproduce it exactly, and `attention`,
+which is what the operator saw, heard and did about it and reaches nothing. The
+sorting rule is § 11's: a manufacturer's kit is recorded, the rig's own furniture
+is not, and the camera is the one stated exception because it takes the levers
+away. The sim may read three fields off the hands and a test says so.
 
 ### Coding
 

@@ -79,6 +79,26 @@ State crosses that boundary in exactly one direction, through an explicit
 snapshot. Commands cross back as discrete, queued inputs — never as shared
 mutable state.
 
+**A recording has two channels, and only one may reach the machine.**
+`commands` is what reached it — the levers and the rack — and reproduces the run
+exactly. `attention` is what the operator saw, heard and did about it: the horn,
+the acknowledgement, the mushroom latch, the cabinet, the view they watched from,
+where their head was, where they put their instruments. The rig reviews the
+second and the physics must never notice it.
+
+Half of that is structural — `createPlayback` takes `readonly Command[]` and is
+never handed the other side, so a headless replay *cannot* read it. What types
+cannot say is that the recording put each thing on the right side, so the check
+is a scan: **the sim, the rack and the modules may read exactly three fields off
+the hands** — `leverL`, `leverR`, `seated`. A fourth is a decision about what a
+recording *is*, and it has to be made in `control/trace.ts` first.
+
+The line between the channels is `doc/MEMORY.md` § 11's: a manufacturer's kit is
+recorded, the training system's own furniture is not. The camera is the one
+stated exception — it is the rig's, but chase takes away the levers, the pods and
+the dash, and `cab/cockpit.md` already said stepping out to use it "is a thing
+the rig can record".
+
 **That last clause was aspirational until L-032.** There was no queue and no
 tick: `Controls` mutated a module inside the pointer event's own turn, and it
 was not even the only writer — `Rack.svelte` spliced the live rail and assigned

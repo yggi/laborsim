@@ -20,6 +20,172 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-27 — a recording is of a session, not of the physics
+
+Cards: [L-084] — closed, opened and closed the same day. [L-085] opened (the
+pod bug's other half). Follows [L-032], same branch.
+
+**The card above was right and its edge was wrong.** It recorded the levers,
+the posture and the rack, and argued the rest out on the grounds that it was
+"not a sim input" — which answers the **determinism** question and is not the
+**recording** question. A rig reviewing a session cares whether the operator
+sounded the horn before moving off, whether they acknowledged an alarm or drove
+on with it blaring, and where they were looking when they hit something. None of
+that touches the physics; all of it is what the rig exists to review.
+
+**Both cases were already written down and neither had been read.**
+`doc/design/cab/sound.md`: "The horn tells nobody anything… When a citizen can,
+the horn stops being a cab state and becomes a sim input, **and it joins the
+recording where the levers are**" — which sorts the horn as *not-yet-a-command*,
+never as *not-recorded*. `doc/design/cab/cockpit.md` on chase: "a rig plausibly
+has an external observation view, and **stepping out to use it is a thing the rig
+can record**." Twice in one week the design had anticipated the thing being
+built and the anticipation was found *after* the wrong version shipped. The
+lesson from the card above — read what the project has already written about a
+thing before building it — did not stick the first time, because it was applied
+to the *mechanism* and not to the *scope*.
+
+**Two channels, and the split is structural rather than promised.** `commands`
+is what reached the machine; `attention` is what the operator saw, heard and did
+about it. `createPlayback` takes `readonly Command[]` and is never handed the
+other side, so the headless replay cannot read it by accident — the guarantee is
+in what the function is given rather than in what it remembers not to touch.
+What a type cannot say is that the *recording* put each thing on the right side,
+so `tests/architecture.test.ts` scans for the only `hands.` fields the sim, the
+rack and the modules may read: `leverL`, `leverR`, `seated`. A fourth is a
+decision about what a recording is, and it has to be made in that file first.
+
+**The line was already drawn and cost nothing to apply.** `doc/MEMORY.md` § 11 —
+if a manufacturer built it, it is `cockpit/`; if the training system built it, it
+is `ui/`. Kit a maker bolted in is recorded; the schedule, the debrief and the
+volume are not, and BEGIN and RESET *bound* a recording rather than sit inside
+one. **The camera is the one stated exception**: it is the rig's, not a maker's,
+but chase takes away the levers, the pods and the dash, and the cockpit page
+says the rig records it.
+
+**One queue, and it was never a rack queue.** The rack's four commands were its
+first members and for a while its only ones, which made it look like one. It is
+the channel a *press* crosses on; where the press lands afterwards is
+`trace.ts`'s business. `Act` now carries the acknowledgement, the E-stop latch
+and a pod placement beside the rack command, and `Controls` and `createEstop`
+needed only a wider type.
+
+**The E-stop emits the latch and the fuses, and that is not redundancy.** A rack
+with every module off is a rack somebody could have emptied by hand; the mushroom
+being in is a different fact. **ACK is recorded as a press and never as a
+condition** — `alarm.svelte.ts` holds exactly one thing (`acked`) and derives the
+lamps, the master and the unacked condition from the snapshot, so a test replays
+the annunciator from the recorded snapshots plus the recorded ticks.
+
+**The head is sampled rather than caught, and the reason is a decision nobody
+should reverse casually.** The neck spring runs on `performance.now()` with a
+`deterministic-exempt:` marker saying "camera feel, never sim state, so it can
+use the wall clock that rule 2 keeps out of the simulation" — so *no gesture
+would reproduce it*, and recording `look()` deltas would have been recording
+something that replays differently. The result goes on the trace at
+`SNAPSHOT_HZ`, and **in radians rather than pixels**: `viewport.head()` is
+`focalPixels(fov, glassHeight)` through a tangent, so the same glance is
+±10,730 px on a phone and ±13,740 px on a desktop, and a trace in pixels replays
+on the wrong glass. Measured: `LOOK_TAU = 0.37 s`, the spring snaps to exactly
+zero below 1e-3 rad, so a released glance is ~180 entries at 60 Hz and ~30 at 10,
+after which a cab nobody is sweeping costs nothing — the same as a parked lever.
+
+**The camera joined `hands`, and a private route went with it.** `Run.setView`,
+the mode stashed during the wasm boot, and the `untrack` that existed because
+reading the camera in the run effect once threw the world away are all deleted;
+`run.ts` reads the field and points the viewport on an **edge**, because
+`setMode` toggles a layer and zeroes the head and calling it every frame would
+straighten your neck sixty times a second. The scar moved to `hands.ts`.
+
+**A shipped bug fell out of asking where a placement lives.** `placed` was
+component-local `$state` in `Glass.svelte`, which the shell mounts under
+`mode === "cab" && !rackOpen` — so **every instrument placement was destroyed by
+opening the cabinet or stepping outside**, while the field's own comment promised
+that unfitting a component and putting it back gives you your instrument where
+you left it. Nothing could have caught it: no suite mounts the glass, and the
+benches pose it. Lifted to the shell, and proved both ways in a browser — put
+back local, a pod dragged to (189, 70) returns to (244, 50) after a rack round
+trip; lifted, it stays. Reload persistence is still L-012.
+
+**The drop that would not land, which is the browser earning its place twice.**
+Two synthetic drags in a row were silently refused and the check read green:
+the first was outside the arm's 200 px reach, the second overlapped the second
+pod. Both refusals are `Draggable.legal()` working exactly as designed — and a
+test that asserts "it survived" after a move that never happened is the
+tautology from the card above, in a new costume. Only printing the transform
+each step found it.
+
+**Four faults planted and watched to fail:** `hands.horn` read in the pilot's
+`intent` (the scan), the head recorded in pixels (the radians test), the two
+attention runs compared on different seeds (the equality is not trivial), and
+the ACK act dropped from the queue (the annunciator round trip).
+
+**Rejected.** *Recording the `look()` deltas and moving the neck onto the fixed
+step* — five to ten times cheaper (~1 KB against ~5–10 KB per 30 s) and the
+"record what the operator did" discipline everything else follows, but it
+revokes a written decision and changes cab feel on a 120 Hz panel to save bytes
+on a trace that is already small. *Recording the camera without moving it to
+`hands`* — would have bolted it on beside a route that already existed.
+*Fixing the pod bug without recording placements, or recording them without
+fixing it* — the second reproduces faithfully what the live run threw away.
+
+355 tests, 18 files. `everything-at-once` still peaks 0.922 against the 0.999
+gate; 20 shots, 19 cab shots, 22 renders. Driven in Chromium: CAB/CHASE, a head
+sweep and its spring, the horn's press and release, ACK, the E-stop across every
+fuse, and the pod round trip. No page errors.
+
+**A bookkeeping error from the session above, found while fixing the board.**
+The previous commit's message says "L-083 opened" and **it was not**: the script
+that was to remove `L-032` from `ready` and add `L-083` printed a diagnostic and
+exited before writing the file, and the second script wrote a version without
+either change. So `L-032` sat in `ready` *and* in `history` at once for a commit,
+and a card the message announced did not exist. Both are fixed here. The lesson
+is small and mechanical: **a script that edits a file and also prints something
+must write the file last, or the print is a silent early return** — and a claim
+in a commit message is not a check on the file it describes.
+
+**The surfaces overflowed and this is the pass.** `doc/LOG.md` reached 1,225
+against its 1,200 line, so its four oldest sessions — the deploy race, the
+fixture kit, `hands`, and the band-and-clusters round — were **folded** into
+`doc/HISTORY.md` and deleted: 269 lines of log into one section, which is the 9:1
+the fold is supposed to be. That pushed HISTORY to 328 against its 300, so it got
+the pass it exists for and went to **251**: the two oldest sections tightened,
+`Instruments measured` merged into the cab section it was an instance of, and the
+foundation pass merged with the recording because they are the same lesson twice.
+That merge is the one worth recording — the sections were 37 and 30 lines saying
+*one idea spelled as several special cases* about different code.
+
+`doc/NOTES.md` reached 133 against its 120 and went to **108** — over its target
+of 100, and stopped there deliberately. Two threads *left*: the benches-driven-by-
+a-recording one folded into `L-075`'s card, where it was always really a note,
+and the belt not following its own bogies became `L-086`, because half of that
+thread was a question and half was a defect with a known fix. Two more merged:
+whether the suspension earns an instrument is an instance of *which simulated
+quantities does the player get to see*, not a separate question. The remaining
+eight are all genuinely open, and cutting further would have been the
+line-shaving the band was invented to stop — which is why this says 108 rather
+than trimming three more sentences to say 100.
+
+**Two surfaces are flagged rather than fixed, and saying so is the point.**
+`doc/MEMORY.md` is at 355 against its 360 and has been in the band two sessions
+running; the band's own rule says a third means a section wants *spilling* to a
+cluster rather than trimming, and § 3 and § 6 are the fattest.
+
+`doc/META.md` is worse and more interesting: it went **past** its 180 line when
+this session added an entry, got a real pass — four entries merged, two worked
+examples cut back — and landed at **168, still 18 over its target of 150**. That
+is not compliance and this entry is not going to claim it is. Continuing would
+have meant cutting lessons that each still carry the incident that earned them,
+which is the file's own stated test for what may go. The honest reading is that
+the *target* may be the thing that is wrong — fifteen hard-won lessons at 150
+lines is ten lines each — but changing a number in `CLAUDE.md` is a deliberate
+act and not something to do at the end of a long session to make a gate go green.
+Next session inherits the choice: cut a lesson, or move the line on purpose.
+
+`doc/BOARD.md`: history hit 12, its act-at line, so `L-069` and `L-071` were
+deleted — their arc is in the HISTORY section this session wrote, which is what
+"fold" means. Ready 6, backlog 31, history 10.
+
 ## 2026-08-27 — the recording was already there
 
 Cards: [L-032] — closed. Opened [L-083] (a replay somebody can watch).
@@ -838,274 +1004,3 @@ annunciator, the E-stop, the horn, the notices, the audio lifecycle and the nag.
 Those are all *cab* concerns and they belong to a component; the card was about
 the sim lifecycle, and stretching it into a general decomposition would have been
 a different, worse change.
-
-## 2026-08-26 — one channel for what the loop reads
-
-Cards: [L-069] closed. Rule 3 gained an edge in
-`doc/design/code/architecture-rules.md`.
-
-**Five values crossed into the render loop by three different mechanisms.** Two
-were mirrored into plain variables by their own effects — and the second one's
-comment said, in as many words, that it was "the same shape, and the same reason"
-as the first, which is a duplicate noticed and then left. The horn was read raw
-from inside `requestAnimationFrame`, which is precisely the untracked read those
-two comments existed to avoid. The rack-open posture was read raw from inside a
-pointer handler.
-
-And the fifth, which the card had not found: **both levers, read raw by the pilot
-module's `intent`, which `runRack` calls inside `world.step()`, inside the loop,
-sixty times a second.** The hottest path in the application, and it had gone
-unnoticed for as long as it did for a structural reason worth keeping — it does
-not cross *in the loop body*, where somebody auditing the loop would look. It
-crosses inside a module callback that the loop happens to invoke. Depth hid it.
-
-`control/hands.ts` is the one channel now: one plain object, written by one
-effect, read as fields by everything downstream. It is the continuous twin of
-`Controls`, and deliberately shaped like it — that file's own argument is that
-each command "crossed by its own private route" until there was one channel, and
-this is the same sentence about values instead of commands.
-
-**The five turn out to be one kind of thing**, which is the part that makes it a
-seam rather than a bag. A clock hold, a lamp, a horn, a posture and two levers
-look unrelated; every one of them is *something the operator is currently doing
-or has not yet done* — they have not pressed BEGIN, they have not acknowledged
-the master, they are leaning on the horn, they have the cabinet open, their
-thumbs are where they left them. `audio/engine.ts` had already drawn that line
-for the two fields it takes: the snapshot is what the machine did, this is what
-the hands did.
-
-Scanned rather than trusted. `tests/architecture.test.ts` extracts the three
-blocks that run outside the reactive graph — the pilot module, the loop's `tick`,
-the canvas drag handler — and fails on any rune name that appears in them other
-than as an assignment target, because a *write* is the snapshot boundary working
-(`latest = current`) and only reads have to go through the seam. Each of the
-three was verified by putting the old code back and watching the right one fail.
-
-The scanner failed on its own fix first, which was instructive: `\bleverL\b`
-matches inside `hands.leverL`, so the check reported the seam as a violation of
-itself. A lookbehind for `.` fixes it — a property access is not a rune read.
-
-Verified in the real app rather than only in tests: `npm run cab` puts both
-levers at opposite ends of their throw and the rack reads `PILOT [SET]
-+2.20/-2.20` down the whole chain to TERMINAL, with the clock running — which is
-`hands.leverL`, `hands.leverR` and `hands.seated` all doing their job through the
-new channel. 242 tests, lint, typecheck, build, 19 cab shots.
-
-Board bookkeeping: history reached 12, which is the act-at line under the new
-band, so [L-048] and [L-043] went to the archive below and it is back at 10. The
-band's first real trim, and it moved two whole cards rather than shaving a row.
-
-## 2026-08-26 — a band instead of a line, and four clusters instead of a star
-
-Cards: [L-071] closed, [L-064] closed with it. `CLAUDE.md` changed, which is
-rare and deliberate.
-
-**The gates became targets with a band.** Every surface keeps the size it had;
-what changed is where you act — 20% over, so 300/150/100/1000 become 360/180/120/
-1200 and the board's card counts become 4 · 12 · 48 · 12.
-
-The reason is a habit worth naming. A hard limit at the target buys the *wrong*
-work: one line over, and what happens is a sentence reflowed, a word deleted, an
-entry compressed by exactly one line. This session alone did it three times —
-`doc/NOTES.md` from 105 to 100 by rewording a paragraph that was fine, `doc/META.md` from
-154 to 150 the same way, `doc/MEMORY.md` from 301 to 300 by shortening a sentence
-about exercises that nobody had complained about. None of that condensed
-anything; it cost a real edit's worth of attention each time and left the
-surfaces exactly as sprawling. The band's rule is *condense to the target or
-below in one pass, not to the line* — a trim landing at 359 has bought one line
-and will be back next session. And sitting in the band for three sessions running
-means a section wants spilling, not trimming.
-
-Immediately visible: `doc/BOARD.md`'s history sits at 11 against a target of 10 and
-nothing is owed, which under the old rule would have been a card moved to the
-archive to buy one row.
-
-**The docs were a star, and are now four clusters.** `doc/MEMORY.md`'s index named
-all twenty spill files. That is one hop to everything and no distance between
-anything: no page knew it had siblings, `sound.md` sat between `roadmap.md` and
-`stack.md` in a table sorted by nothing in particular, and each new page made the
-list worse to read. Worst, the question a reader actually has — *where does this
-belong* — could only be answered by scanning twenty rows.
-
-Four clusters of five, each with an entrypoint page:
-
-- **machine/** — tracked-platform, machinery-ladder, physics-migration,
-  load-chart, arbitration. *A limit with a person attached.*
-- **cab/** — cockpit, components, instrument-rendering, theming, sound.
-  *A budget: glass is finite and so is attention.*
-- **rig/** — training-frame, tone, damage, missions, mechanics. *The reason
-  failure is affordable.*
-- **code/** — architecture-rules, conventions, stack, prototype-findings,
-  roadmap. *A constraint with a receipt.*
-
-Each cluster page says what the cluster is about, indexes its five in one line
-apiece, and — the part that a flat list cannot do — carries a **go there
-instead** section. "An instrument's needle is cab, the limit it reads is
-machine." "The rig may read the machine; the machine knows nothing of the rig."
-Those sentences had nowhere to live before. `doc/MEMORY.md` now names four things
-instead of twenty and got five lines shorter doing it, which closed [L-064]
-without spilling anything.
-
-Files moved rather than only re-indexed, so the shape is on disk and not just in
-a table: 145 references across docs, source comments and tests were rewritten.
-`doc/LOG.md` and `doc/log/` were deliberately **not** rewritten — they are
-append-only history and record paths that were right when written.
-
-**`tests/docs.test.ts`** checks the three things that rot without a sound: a path
-that no longer resolves (links and backticked prose both, because both get
-followed), a page in no cluster, and a content page creeping back into the
-`MEMORY` index — that last one being the star topology regrowing. Verified by
-breaking each in turn.
-
-Which is where the session's own mistake came from. Undoing the third probe with
-`git checkout MEMORY.md` reverted the file to HEAD and took the entire index
-rewrite with it, because the work was uncommitted — while `git checkout` on the
-*untracked* cluster page failed and left its planted broken link in place. Both
-were caught and redone. **A probe you undo with the VCS needs the work committed
-or copied first**; on a tree with uncommitted edits, `git checkout <file>` is not
-an undo, it is a discard.
-
-## 2026-08-26 — one kit for a hand-built snapshot
-
-Cards: [L-068] closed. Opened: [L-069] and [L-070], both found rather than
-planned. Convention added to `doc/design/code/conventions.md`.
-
-A foundation pass, and the seam it picked was the one three feature branches had
-each bent in the same week.
-
-**Three places built `Snapshot` values by hand**, and none of them was the sim:
-the cockpit bench, the listening bench, and `tests/cockpit.test.ts`. Each had
-grown its own `track()`, its own stage builder, and its own literal for
-*standing on the ground* — one of them spelling `heave: 9.81` where `spec.ts`
-exports `G`. No test imported anything from `src/sandbox/`; the three had never
-shared a foundation, and it showed.
-
-The cost was not hypothetical and it is in the history: `suspension` landed in
-one commit and `goal` in another, twenty-three seconds apart on two branches,
-and **each had to teach all three kits separately**. Two features, six lessons.
-
-**Worse than the tax was the drift.** One kit had been fixed so that
-`contacts: 0` with a traction reading was unrepresentable — its comment says it
-"described a machine that does not exist". The other two were not fixed. So the
-listening bench duly grew a scene running a track through the air at the
-**parked 45% spring compression**, which no sim step can produce. Being precise
-about the damage: the bogie voice reads `{ damping, bottomed }` and not
-`compression`, so it was a wrong reading rather than a wrong sound — bad data in
-a bench whose only job is to be right about readings.
-
-`core/fixture.ts` is the one way now. Both invariants live in it — no contact
-means no traction reading *and* no compression — after the spread, so a caller
-naming them cannot reintroduce the state the function exists to refuse.
-
-**The refactor's claim is that nothing changed, so it was measured.** All twenty
-audio scenes read identically to before: `idle` 0.122, `full-ahead` 0.490,
-`the-rut` 0.642 with 0.048 between channels, `everything-at-once` 0.865. Twenty
-cockpit shots, 232 tests, typecheck, lint.
-
-Getting there took one wrong turn worth keeping. The first unified `track()`
-defaulted `traction` to 0.2, because that is what the *cockpit* kit did — and
-`idle` came back 0.122 → 0.140 and `caution` 0.203 → 0.210. The two kits had
-quietly disagreed about what a parked track's traction is, and 0.2 was a dial
-reading somebody wanted to see rather than a state a stationary machine is in.
-A duplicate is not only a sync you have to remember; it is two answers to a
-question nobody noticed was being asked twice, and the wrong one is invisible
-until they meet.
-
-`tests/architecture.test.ts` now fails if a fourth copy appears — scoped to
-`src` **and** `tests`, because the last scanner written to watch only the tree
-whose author already thinks about the rule missed the first violation. Verified
-by breaking it: a planted file is named in the failure with the fix in the
-message. `machine: {` now occurs exactly once in the repo, in `sim/world.ts`.
-
-Net: −252 lines across the three callers, +one kit that is mostly its own
-argument. `doc/MEMORY.md`'s repo map gained `sandbox/`, which it had never listed.
-
-Not taken, and carded instead: `App.svelte` at 1080 lines (L-070), and the three
-different ways its render loop gets a reactive value across the boundary into
-`requestAnimationFrame` — two mirrored through effects, one read raw, with the
-comment on the second saying "same shape, and the same reason, as" the first
-(L-069). That is the same defect as this one, one layer up, and it deserves its
-own session rather than a rider on this.
-
----
-
-## 2026-08-26 — a build per branch, and the one that was eating the others
-
-Cards: none. Found while answering "how do I always get a build per branch": the
-answer was *you do not, and you have not been*.
-
-**The deploy was a race, and had been since branches were added to it.**
-`pages.yml` triggered on `main` and `claude/**`, but the `deploy` job had no
-branch condition and `actions/deploy-pages` replaces the entire site with one
-artifact. So every branch push overwrote whatever was live, including `main`'s.
-The evidence was sitting in the run list: the suspension and exercises branches
-deployed twenty-three seconds apart, both green, and only one of them was on the
-site afterwards. Nothing reported this, because from CI's point of view both
-deploys succeeded.
-
-**One site, one directory per branch.** `main` at the root, everything else at
-`/b/<slug>/`, with `/b/` an index of what is currently up. That needs a site
-that can be *modified* rather than replaced, so publishing moved off
-`actions/deploy-pages` and onto the `gh-pages` branch (Pages source is now
-**Deploy from a branch**, which is a one-time switch in Settings).
-
-The read-modify-write is in `scripts/publish.sh` rather than inline in the
-workflow, for one reason: its failure mode is deleting somebody else's preview.
-Publishing `main` clears the root **except `b/`**, which is the whole trick and
-is one line worth being able to find. `SITE_REMOTE` overrides the remote, so it
-was rehearsed against a scratch bare repo instead of against the live site —
-publish main, publish two branches, republish main and watch the branch
-directories survive while a stale hashed asset does not, remove a branch, remove
-it twice, refuse to remove the root.
-
-`.build` is stamped from the **commit**, not the clock. With a timestamp, every
-re-run produced a diff and the "nothing to push" path could never be taken; with
-the commit, a workflow re-run on an unchanged commit is genuinely a no-op and
-the gh-pages history is a list of real changes.
-
-The index is a surface, so it was looked at rather than reasoned about — 390 px,
-light and dark. It wraps the stamp under long branch names, which is fine.
-
-Not done: the older `claude/**` branches still carry the previous `pages.yml`,
-so a push to one of them would still try the old whole-site deploy. They are
-merged or stale; the first one that is not gets rebased.
-
-**The `delete` event is not a broom, and going to sweep found out why.** Runs
-share the `pages` concurrency group and GitHub keeps exactly **one** pending run
-per group — so deleting three branches at once queues three cleanups and cancels
-two. Those two directories would be orphaned for ever, because nothing else was
-ever going to look. So the event is now an *optimisation* (removal is instant)
-and the mechanism is that **every publish re-checks**: `git ls-remote` for the
-live branches, and any `b/<slug>` without one goes. The site converges on the
-truth however many events were dropped.
-
-It fails safe on purpose, and the interesting part is that "safe" needed saying
-twice. A failed listing means *unknown*, not *no branches* — confusing those
-deletes every preview the first time the network hiccups. But an **empty**
-listing is also unknown: `main` publishes the root, so it is always in that list,
-and an empty one means the output did not mean what the code thought it meant.
-
-And testing that second path is what caught a real defect. Under `set -e` a
-`while` loop exits with the status of its **last iteration**, so a body ending in
-a `&&` chain whose test fails makes the command substitution non-zero and kills
-the script — exit 1, nothing printed, in a step whose whole job is to say what it
-did. It had been passing only because `main` sorts after `gh-pages`, so the last
-ref read happened to be one that was kept. A `case`/`continue` fixed it. The bug
-was invisible on the happy path and on the live repo; it took building the
-unhappy remote to see it at all.
-
-**And a doc pass, because the README had been lying for a while.** It said "no
-rack yet", which stopped being true around L-015's ancestors, and "watch SLIP",
-which stopped being true when SLIP folded into TRACTION. `doc/META.md` and `doc/LORE.md`
-were missing from its own map of the repo. Worse was `roadmap.md`, whose opening
-argument was *the damage ledger does not exist, in any form, not even a console
-line* — the single largest gap it named has been closed for days, and the
-document says in its own header to rewrite it when it stops matching the board.
-Marked reviewed rather than rewritten: the loop table gained a second column,
-the closed items in "Now" are marked closed, and the critical reading's first
-point is struck through and answered with what the largest gap is now — that
-everything the loop says, it says after the fact and in words. `L-032` is what
-changes that, which is an argument for the board's existing order rather than
-against it.
-
----

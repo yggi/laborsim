@@ -63,12 +63,18 @@ than a feature. A run is a recording now — what is left is somebody watching o
   it survives a reload.
 - **needs:** L-012 (persistence is where a record of a run belongs)
 
-### [L-032] Record and playback — one engine
-- **what:** an input trace plus the seed reproduces a run exactly in this
-  browser. Rack state (order, verbs, enables) is part of the trace, because the
-  ledger has to say what was driving. Splits off the cross-browser half (L-019).
-- **done-when:** replaying a recorded run yields the same damage events in the
-  same order, asserted in a test.
+### [L-083] A replay somebody can watch
+- **what:** the engine records and replays; nothing shows you one. Every part of
+  the cab already takes `inertControls()` and reads a snapshot, the audio clicks
+  switchgear off the recording, and the trace now carries the horn, the
+  acknowledgement, the mushroom, the view you watched from and where your head
+  was — so a viewer has everything it needs and no new channel to invent. What
+  is missing is a way in, a way out, and an answer to what the levers show while
+  something else is driving them. `EventReader`'s `rewound` flag is the scrub.
+  Diegetic register: the rig playing a session back, not a video player.
+- **done-when:** after a run, you can watch the moment you broke something, and
+  see on the rack what was driving when you did.
+- **needs:** L-032, L-084 (both built)
 
 ### [L-018] The acceptance scenario, made legible
 - **what:** levers and NAV-1 under `CAP` already are two components fighting
@@ -157,7 +163,15 @@ than a feature. A run is a recording now — what is left is somebody watching o
   — which is the half no trace reaches, and the half both of that session's bugs
   were in. Driving those four rack commands by hand in Chromium is what checked
   L-032's own riskiest change, and it was thrown away afterwards, which is the
-  card in one sentence.
+  card in one sentence. **And the benches are half of it:** `sandbox/scenes.ts`
+  has `frame(t) => { snapshot, alarm, horn }` — twenty-two hand-authored
+  parametric recordings — while a replay answers `at(tick)`. Those are one
+  interface, and the scene signature's alarm/horn split is the recording boundary
+  `control/trace.ts` arrived at independently. What stops it being a merge is
+  that the scenes reach isolated extremes a real drive will not (one bogie
+  knocking, one track in the air), so a recording cannot replace them: the prize
+  is one type, not fewer scenes. What would make it worth doing is a scene that
+  is hard to author and easy to drive.
 - **done-when:** one command drives the shipped app through its verbs and fails
   when one of them stops working.
 
@@ -203,6 +217,17 @@ than a feature. A run is a recording now — what is left is somebody watching o
   the camera is behind the machine rather than in it.
 - **done-when:** clipping a cone on one side is audibly on that side, in the cab,
   and the chase camera does not lie about which side it was.
+
+### [L-086] The belt does not follow its own bogies
+- **what:** the running gear is sprung at twelve contact points and the belt is
+  still one rigid loop bolted to the hull, so the bogies move underneath a track
+  that does not — and a big enough hit passes the belt through the ground. A real
+  track drapes over its wheels; the honest fix is a bottom run that follows the
+  six compressions. Promoted out of `doc/NOTES.md`, where it had been sitting as
+  half of a question whose other half (whether compression earns an instrument at
+  all) is still genuinely open.
+- **done-when:** a hard landing shows the belt taking up the travel rather than
+  the hull sinking through it.
 
 ### [L-058] The ground seam
 - **what:** props read as hovering, and it is not a gap: the rest gap under a
@@ -342,6 +367,15 @@ than a feature. A run is a recording now — what is left is somebody watching o
 - **done-when:** two generated sites demand different machines.
 - **needs:** NOTES thread "What does the procedural generator generate?"
 
+### [L-085] An instrument stays where you put it, across a reload
+- **what:** placements survive the cabinet and the chase view now (L-084 lifted
+  them out of `Glass.svelte`, where opening the rack destroyed them) and they
+  are on the recording. They do not survive a *reload*, which is the half L-012
+  owns — this card is the note that the shape is settled and only the storage is
+  missing: a `Record<id, {x, y}>` on the shell, already what a save would write.
+- **done-when:** a pod moved in one session is where you left it in the next.
+- **needs:** L-012
+
 ### [L-012] Persistence
 - **what:** save and load a machine — geometry, rack order, cockpit layout
   (instrument placements are already tracked; this makes them survive a reload).
@@ -356,6 +390,35 @@ than a feature. A run is a recording now — what is left is somebody watching o
 ---
 
 ## history
+
+### [L-084] A recording is of a session, not of the physics — **closed**
+L-032's edge was wrong. It recorded the levers, the posture and the rack and
+argued the rest out as "not a sim input" — the **determinism** question, not the
+**recording** one. A rig reviewing a session cares about the horn before moving
+off, the alarm acknowledged or driven through, and where you were looking when
+you hit something. Both cases were already written down and unread:
+`cab/sound.md` has the horn "joining the recording where the levers are", and
+`cab/cockpit.md` has stepping out to chase as "a thing the rig can record".
+
+**Two channels.** `commands` reached the machine; `attention` did not, and
+`createPlayback` is handed `readonly Command[]` so a headless replay cannot read
+the other side by accident. The line is `doc/MEMORY.md` § 11's — a maker's kit is
+recorded, the rig's furniture is not — with the camera the stated exception,
+because chase takes the levers away. `Act` widened so the cab has **one** queue
+for a press; the E-stop records its latch *and* the fuses it pulls, because a
+rack somebody emptied by hand is not a stopped machine.
+
+The head is **sampled**, at `SNAPSHOT_HZ` and in **radians**: the neck spring is
+wall-clock driven on purpose, so no gesture reproduces it, and `viewport.head()`
+is pixels through a tangent that differ by a third between a phone and a desktop.
+The camera moved onto `hands`, deleting `Run.setView`, the boot-time mode stash
+and the `untrack` that existed because reading the camera in the run effect once
+threw the world away.
+
+**A shipped bug fell out of it:** `placed` was local `$state` in `Glass.svelte`,
+which unmounts when the cabinet opens — so every instrument placement was
+destroyed by looking down, while the field promised the opposite. Lifted, and
+proved both ways in a browser. 355 tests; four faults planted and watched.
 
 ### [L-032] Record and playback, one engine — **closed**
 The card read like a feature to build and was not. Twelve pieces of a replay
@@ -543,29 +606,3 @@ the chain exactly as before, and CHASE pressed on the same tick as BEGIN now
 lands. `tests/architecture.test.ts` fails if a `requestAnimationFrame` reappears
 in the component or a rune reaches the run.
 
-### [L-069] `hands` — one channel across the reactive boundary — **closed**
-Five values crossed into the loop by three mechanisms: two mirrored through
-effects (one of whose comments said it was "the same shape, and the same reason"
-as the other), the horn read raw inside `rAF`, the rack posture read raw inside a
-pointer handler, and — the one the card had not found — **both levers read raw by
-the pilot module's `intent`, which `runRack` calls inside `world.step()`, sixty
-times a second**. That instance had gone unnoticed for as long as it did because
-it crossed inside a module callback rather than in the loop body. `control/hands.ts`
-is the one channel now, written by one effect; the five turn out to be one kind of
-thing, *something the operator is doing or has not yet done*. Scanned rather than
-trusted: `tests/architecture.test.ts` reads the pilot module, the loop's `tick`
-and the drag handler and fails on a rune read that is not an assignment — each of
-the three verified by putting the old code back.
-
-### [L-071] Four clusters instead of a twenty-row index — **closed**
-`doc/MEMORY.md` indexed all twenty spill files, which made `doc/design/` a star: a
-long list at the centre, everything one hop from it, nothing near anything else,
-and every addition making the list worse to read. Now four clusters of five —
-machine, cab, rig, code — each with an entrypoint page that indexes its own five,
-says what the cluster is *about*, and cross-links the siblings with *go there
-instead* rather than a bare pointer. `doc/MEMORY.md` names the four. 145 references
-across docs, source comments and tests were rewritten to the new paths.
-`tests/docs.test.ts` checks the three things that rot silently: a path that no
-longer resolves, a page in no cluster, and a content page creeping back into the
-index. Closed [L-064] on the way — it wanted MEMORY spilled for room, and the
-band plus the shorter index gave it five lines back instead.

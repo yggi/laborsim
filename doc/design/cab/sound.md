@@ -404,6 +404,9 @@ Two more, both about *scenes* rather than about the machine:
   The `doc/NOTES.md` thread asks the shape question: is a voice a fourth part of the
   triptych, or a thing a component *does*?
 - **The horn tells nobody anything.** Nothing on the site can hear it, because
-  nothing on the site can hear. When a citizen can, the horn stops being a cab
-  state and becomes a sim input, and it joins the recording where the levers
-  are.
+  nothing on the site can hear. **It is on the recording anyway** (L-084) — a rig
+  reviewing a session cares whether you sounded it before moving off — but on the
+  *attention* channel, beside where you were looking, rather than with the levers.
+  When a citizen can hear it, it becomes a sim input and moves to `commands`,
+  which is the sentence this bullet used to make in one step and now makes in
+  two: what is recorded and what reaches the machine are different questions.
