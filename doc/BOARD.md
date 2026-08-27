@@ -33,35 +33,17 @@ Order and reasoning: `doc/design/code/roadmap.md`. These close the core loop at 
 exercises are built; what remains is more to break, replay, and the path to the
 conflict.
 
-The foundation pass is done — [L-068] through [L-072] closed the seams that three
-feature branches in one week had each bent, and the shell is wiring again rather
-than a sixth home for cab state. `L-032` closed the same way: what everything
-downstream of *attribution* was waiting on turned out to be three seams rather
-than a feature. A run is a recording now — what is left is somebody watching one.
+**A run is a recording now**, in full: what reached the machine and what the
+operator saw, heard and did about it, exactly reproducible from a seed. So the
+order below is the acceptance sentence in `doc/MEMORY.md` § 3, taken one clause at
+a time — a viewer first, because *attributable from a replay* needs somebody to
+be able to watch one; then the conflict made legible, then the same conflict met
+by a newcomer, then the path that gets them there unaided. Those three are one
+sentence and stay three cards, because each has its own observable.
 
-### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
-- **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
-  guidance to zero — the dead-man's throttle, and the acceptance scenario in one
-  slot. It is also the first thing a new operator meets: they flip the switch,
-  nothing moves, and nothing on any surface distinguishes *this is arbitration
-  working* from *this is broken*. Do not fix it by changing the rack default;
-  the fix is that the machine can be *read*. Candidates: the rack's stage chain
-  already shows `NAV-1 [CAP] +0.00/+0.00` and nobody looks at the debug column;
-  the NAV cell's lamp is lit while the module is contributing nothing.
-- **done-when:** somebody who flips NAV on with the levers parked can tell, from
-  the cab and without being told, that their thumbs are the reason.
-- **needs:** L-018 (this is the same conflict, met earlier)
-
-### [L-067] The exercise is over and the rig has nothing to say next
-- **what:** the debrief offers NEXT · E-02 after a success and that is the whole
-  of the progression. Nothing remembers what you finished, nothing carries a run
-  forward, and re-opening the schedule shows every exercise identically whether
-  you have driven it or not. It wants the smallest honest thing — a record of
-  *completed*, on the schedule, per exercise — and explicitly **not** a gate:
-  every exercise stays available from the first session.
-- **done-when:** the schedule shows what has been completed and in what time, and
-  it survives a reload.
-- **needs:** L-012 (persistence is where a record of a run belongs)
+Behind them: the two smallest things that unblock everything else. Persistence,
+which was held down by a blocker meant for a different card, and a driver for the
+shipped app, which this branch built by hand twice and threw away twice.
 
 ### [L-083] A replay somebody can watch
 - **what:** the engine records and replays; nothing shows you one. Every part of
@@ -82,7 +64,22 @@ than a feature. A run is a recording now — what is left is somebody watching o
   it, or names it. Make it land.
 - **done-when:** a player can say what each module did to the signal, from a
   replay, after breaking something because of it.
-- **needs:** L-029, L-032
+- **needs:** L-083 — L-029 and L-032 are both built, and what is left of "from a
+  replay" is somebody being able to watch one.
+
+### [L-066] Turning NAV on does nothing, and that is the best thing in the rack
+- **what:** NAV-1 sits below the pilot with verb `CAP`, so parked levers cap
+  guidance to zero — the dead-man's throttle, and the acceptance scenario in one
+  slot. It is also the first thing a new operator meets: they flip the switch,
+  nothing moves, and nothing on any surface distinguishes *this is arbitration
+  working* from *this is broken*. Do not fix it by changing the rack default;
+  the fix is that the machine can be *read*. Candidates: the rack's stage chain
+  already shows `NAV-1 [CAP] +0.00/+0.00` and nobody looks at the debug column;
+  the NAV cell's lamp is lit while the module is contributing nothing.
+- **done-when:** somebody who flips NAV on with the levers parked can tell, from
+  the cab and without being told, that their thumbs are the reason.
+- **needs:** L-018 — the same conflict, met earlier, which is why it sits
+  directly below it here.
 
 ### [L-033] First run — the ten-minute path
 - **what:** the other half of the acceptance criterion, which no card owned. A
@@ -92,60 +89,18 @@ than a feature. A run is a recording now — what is left is somebody watching o
   under ten minutes without being told how.
 - **needs:** L-018
 
-### [L-015] The rail — drag to reorder
-- **what:** the pipeline model, verbs, settings and reordering all work, and the
-  plates now look like equipment. What is missing is **drag**: reordering is
-  still arrows. Also ~8 slots, and whether it is editable during sim (which is
-  L-026, not a UX choice).
-- **done-when:** you can drag a slot with a thumb and the machine changes.
-
----
-
-## backlog
-
-### [L-049] Themes, authored independently — the agentic round
-- **what:** one author per manufacturer, each given only its own `doc/LORE.md`
-  entry, `cab/components.md`, `cab/theming.md` and the KIBA reference — blind to the
-  other makers' work. Each produces that maker's plate, cell and pod. Then a
-  **non-blind** adversarial comparison pass over all three side by side.
-- **done-when:** three racks read as kit from three suppliers *and* as one game,
-  and the pre-registered failure conditions in `cab/theming.md` are answered either
-  way — including the one where a person cannot pick the maker of an unlabelled
-  plate.
-- **needs:** L-048 (built)
-
-### [L-051] The cage and the levers are KIBA's too
-- **what:** the chassis component brings the cab furniture. It has the geometry
-  now — a roof, door posts, side glass, and levers that are sticks in a gate —
-  but it is all generic steel. It belongs in the chassis maker's packet like the
-  dashboard does.
-- **done-when:** the cage frame and the levers are recognisably the same
-  manufacturer's as the panel they sit behind.
-
-### [L-082] The cab is the part of the frame nobody has read
-- **what:** `profile.html` reads the world, the machine, and now the voice; the
-  cab is still asserted rather than measured. The cage, dash, pods and levers are
-  DOM, and by design cost one custom property on `:root` plus a 10 Hz reactive
-  pass per frame. Was a thread while the readout was undecided; it is not any
-  more — the profile page *is* the readout, and the loop is a plain module with a
-  snapshot hook, so timing the reactive pass is a `probe/` shadow like
-  `ear.ts` and `gl.ts` rather than an eleventh concern in the shell.
-- **done-when:** a `profile.html` pass reports what a frame spends on the cab,
-  and the budget page says whether the assumption held.
-
-### [L-081] The audio thread is the half nobody can see
-- **what:** `profile.ts` now times `audio.render()` and counts the nodes it
-  builds, but that is what the *frame* pays for scheduling. Whether the browser's
-  own audio thread keeps up — the only place a dropout can actually happen — is
-  not observable from `src/probe/ear.ts` and was not observable from the
-  container either: a bare oscillator drifts 0.272 s in 30 s here, so drift
-  measured in this environment measures the environment. Candidates that survive
-  that: `context.baseLatency`/`outputLatency`, `AudioContext.state` transitions
-  logged with their timestamps, and the count of scheduled sources still alive.
-  Wants a real device, which is `profile.html`'s whole idiom.
-- **done-when:** a `profile.html` pass on a phone reports something that would
-  differ during a dropout, and the report says what it read.
-- **needs:** thread in `doc/NOTES.md` (the dropout that did not survive a refresh)
+### [L-012] Persistence, narrowed — three things that must survive a reload
+- **what:** absorbs **L-067** (the schedule remembers nothing) and **L-085** (a
+  pod comes back at its default). All three are one `Record` on the shell that
+  outlives the tab: the rack's order, verbs, enables and settings; where each pod
+  was put (already lifted out of `Glass.svelte` and already on the recording);
+  and which exercises have been completed and in what time. Explicitly **not** a
+  gate — every exercise stays available from the first session — and explicitly
+  **not** the part model: the old `needs: L-006` was for saving a *machine*, and
+  `doc/design/code/roadmap.md` had already narrowed this to "rack order and
+  settings". That wrong blocker is what had been holding the other two down.
+- **done-when:** a rack you reordered, a pod you moved and an exercise you
+  finished are all still there after a reload, and the schedule shows the time.
 
 ### [L-075] Nothing drives the app
 - **what:** four benches read the game and none of them *plays* it. `shots` and
@@ -174,6 +129,54 @@ than a feature. A run is a recording now — what is left is somebody watching o
   is hard to author and easy to drive.
 - **done-when:** one command drives the shipped app through its verbs and fails
   when one of them stops working.
+
+### [L-015] The rail — drag to reorder
+- **what:** the pipeline model, verbs, settings and reordering all work, and the
+  plates now look like equipment. What is missing is **drag**: reordering is
+  still arrows. Also ~8 slots, and whether it is editable during sim (which is
+  L-026, not a UX choice).
+- **done-when:** you can drag a slot with a thumb and the machine changes.
+
+---
+
+## backlog
+
+### [L-049] The makers reach the whole cab — the agentic round
+- **what:** one author per manufacturer, each given only its own `doc/LORE.md`
+  entry, `cab/components.md`, `cab/theming.md` and the KIBA reference — blind to the
+  other makers' work. Each produces that maker's plate, cell and pod. Then a
+  **non-blind** adversarial comparison pass over all three side by side.
+  Absorbs **L-051**: the chassis component brings the cab furniture, and the
+  cage, the door posts, the side glass and the levers-in-a-gate are all still
+  generic steel. That is KIBA's packet exactly as the dashboard is, and running
+  the round without it authors three racks of plates inside a cab nobody made —
+  which is also half a comparison pass.
+- **done-when:** three racks read as kit from three suppliers *and* as one game;
+  the cage and the levers are recognisably the same maker's as the panel behind
+  them; and the pre-registered failure conditions in `cab/theming.md` are answered
+  either way — including the one where a person cannot pick the maker of an
+  unlabelled plate.
+- **needs:** L-048 (built)
+
+### [L-081] The profile page measures the two things it asserts
+- **what:** absorbs **L-082**. Two numbers `profile.html` currently states rather
+  than reads, and both want the same `probe/` shadow beside `ear.ts` and `gl.ts`
+  and the same trip to a real phone.
+  **The audio thread:** `profile.ts` times `audio.render()` and counts the nodes
+  it builds, which is what the *frame* pays for scheduling. Whether the browser's
+  own thread keeps up — the only place a dropout can happen — is not observable
+  from `ear.ts`, and not from this container either: a bare oscillator drifts
+  0.272 s in 30 s here, so drift measured in this environment measures the
+  environment. Candidates that survive that: `baseLatency`/`outputLatency`,
+  `AudioContext.state` transitions with timestamps, live scheduled-source count.
+  **The cab:** the cage, dash, pods and levers are DOM and cost, *by assertion*,
+  one custom property on `:root` plus a 10 Hz reactive pass. Nothing has ever
+  read it, and the loop is a plain module with a snapshot hook, so it is a shadow
+  rather than an eleventh concern in the shell.
+- **done-when:** one `profile.html` pass on a phone reports what a frame spends
+  on the cab *and* something that would differ during a dropout, and
+  `doc/design/code/mobile-budget.md` says whether the assumption held.
+- **needs:** thread in `doc/NOTES.md` (the dropout that did not survive a refresh)
 
 ### [L-076] Fire, and the things that carry it
 - **what:** a drum of fuel and a scooter's tank are the two things on site that
@@ -207,7 +210,8 @@ than a feature. A run is a recording now — what is left is somebody watching o
   eventually — it is the clearest case of *the thing you did, two steps later*,
   and the ledger's attribution column is exactly what would have to carry it.
 - **done-when:** a line in the ledger names something you hit with something else.
-- **needs:** L-032 (a second-order line has to be arguable from a replay)
+- **needs:** nothing — L-032 is built, so a second-order line is arguable from a
+  replay now.
 
 ### [L-060] Impacts you can hear the side of
 - **what:** an impact's voice is centred. It knows where it happened — the event
@@ -266,7 +270,10 @@ than a feature. A run is a recording now — what is left is somebody watching o
   bypassed sensor visible, and is the surface L-009's hazards attack.
 - **done-when:** the debrief can say what each module was considering, and a
   module's inputs are declared data rather than a prose string.
-- **needs:** L-006 (the part/module model is where a declared input lives)
+- **needs:** L-006 for the **second** half only. `considers` is already a string
+  on every module and the debrief already exists, so putting the sentence on a
+  surface is unblocked; it is turning the sentence into declared inputs that
+  wants the part model.
 
 ### [L-053] The second chassis — a TOWA tracked platform
 - **what:** the same machine in a new dress. Identical mechanics, tuned only
@@ -319,7 +326,9 @@ than a feature. A run is a recording now — what is left is somebody watching o
   are missions.
 - **done-when:** the same input trace yields the same snapshot hash on two
   different browsers, and the cost of that guarantee is in `doc/MEMORY.md`.
-- **needs:** L-032
+- **needs:** nothing — L-032 is built, and the trace this would compare across
+  engines is now a real format (`control/trace.ts`). Still deferred for its own
+  reason: it needs a second engine, and nothing in v0 depends on it.
 
 ### [L-021] Load chart v0
 - **what:** compute a payload-vs-reach envelope from geometry, mass, actuator
@@ -365,22 +374,7 @@ than a feature. A run is a recording now — what is left is somebody watching o
 - **what:** footing, clearances, load, an unsurveyed obstruction — the thing
   that makes a load chart insufficient. Landscape is scenery, not the puzzle.
 - **done-when:** two generated sites demand different machines.
-- **needs:** NOTES thread "What does the procedural generator generate?"
-
-### [L-085] An instrument stays where you put it, across a reload
-- **what:** placements survive the cabinet and the chase view now (L-084 lifted
-  them out of `Glass.svelte`, where opening the rack destroyed them) and they
-  are on the recording. They do not survive a *reload*, which is the half L-012
-  owns — this card is the note that the shape is settled and only the storage is
-  missing: a `Record<id, {x, y}>` on the shell, already what a save would write.
-- **done-when:** a pod moved in one session is where you left it in the next.
-- **needs:** L-012
-
-### [L-012] Persistence
-- **what:** save and load a machine — geometry, rack order, cockpit layout
-  (instrument placements are already tracked; this makes them survive a reload).
-- **done-when:** a built machine survives a page reload intact.
-- **needs:** L-006
+- **needs:** NOTES thread "Can a generator be given an objective?"
 
 ### [L-028] Footstep policy port
 - **what:** the probe's most valuable mechanism — world-planted stance feet,

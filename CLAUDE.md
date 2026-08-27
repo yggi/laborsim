@@ -70,11 +70,11 @@ count — take it again and write what it now says.
 | File | Holds | Never holds | Target |
 |---|---|---|---|
 | `doc/MEMORY.md` | durable facts, decisions, structure, conventions | tasks, status, speculation | 300 lines |
-| `doc/META.md` | method lessons, each with its incident | project facts, tasks | 150 lines |
+| `doc/META.md` | method lessons, each with its incident | project facts, tasks | 200 lines |
 | `doc/NOTES.md` | open, uncrystallized threads | anything settled, anything actionable-as-a-task | 100 lines |
 | `doc/BOARD.md` | task cards | rationale, narrative | see below |
 | `doc/LOG.md` | append-only worklog, closed cards | plans, open questions | 1000 lines |
-| `doc/HISTORY.md` | the arc — decisions, reversals, what each cost | this session's detail | 250 lines |
+| `doc/HISTORY.md` | the arc — decisions, reversals, what each cost | this session's detail | 400 lines |
 
 ### Target, and the line where you act
 
@@ -84,8 +84,8 @@ when it is **20% over**, and not before:
 | | target | act at |
 |---|---|---|
 | `doc/MEMORY.md` | 300 | 360 |
-| `doc/HISTORY.md` | 250 | 300 |
-| `doc/META.md` | 150 | 180 |
+| `doc/HISTORY.md` | 400 | 480 |
+| `doc/META.md` | 200 | 240 |
 | `doc/NOTES.md` | 100 | 120 |
 | `doc/LOG.md` | 1000 | 1200 |
 | `doc/BOARD.md` | doing 3 · ready 10 · backlog 40 · history 10 | 4 · 12 · 48 · 12 |

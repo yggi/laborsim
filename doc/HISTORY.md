@@ -4,10 +4,16 @@ The arc, at low resolution: what was decided, what was reversed, and what each
 turn cost. `doc/LOG.md` is what happened *this session*, in detail; this is what
 happened *to the project*, in the shape somebody arriving needs.
 
-**Target: 250 lines, act at 300** (`CLAUDE.md`). Oldest first, because it is a
-story rather than a feed. The target sits below `doc/MEMORY.md`'s on purpose:
-current truth outranks how it was arrived at, so this may never be the longest
-thing in the repo.
+**Target: 400 lines, act at 480** (`CLAUDE.md`). Oldest first, because it is a
+story rather than a feed. It sits *above* `doc/MEMORY.md`'s 300, which reads
+backwards until you notice what the two limits are for: **MEMORY has somewhere to
+spill and this does not.** MEMORY's is a hub limit — its fattest section moves
+down into a `doc/design/` cluster and the index keeps one line, so the number
+governs the *index*, not the material. Below this file there is nothing.
+Everything the project has learned that is no longer current has to fit here or
+be deleted outright, and a terminal surface needs more room than one with an
+outlet. (It said the opposite until 2026-08-27, on the reasoning that current
+truth outranks how it was arrived at — true, and not what the limits measure.)
 
 **It is rewritten, not appended to.** When `doc/LOG.md` overflows, its oldest
 sessions are *folded into the paragraph they belong to* and deleted — never moved

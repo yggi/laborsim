@@ -5,7 +5,7 @@ project *is*, and this is what building it has taught us about building it. Ever
 entry names the incident that earned it — an entry that has lost its incident has
 probably stopped being true.
 
-**Target: 150 lines, act at 180** (`CLAUDE.md`). At 180, merge or cut.
+**Target: 200 lines, act at 240** (`CLAUDE.md`). At 240, merge or cut.
 
 ---
 

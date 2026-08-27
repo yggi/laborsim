@@ -20,6 +20,78 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-27 — two gates move, and the board catches up with the branch
+
+Cards: none closed. [L-067], [L-085], [L-082] and [L-051] **absorbed** into
+[L-012], [L-081] and [L-049]. [L-012] and [L-075] promoted to ready.
+`CLAUDE.md` changed, which is rare and deliberate.
+
+**The gates the last entry flagged were moved rather than met.** `doc/META.md`
+had gone past its 180 line, got a real merge pass, and landed at 168 against a
+target of 150 — and the entry said plainly that continuing would have meant
+cutting lessons that still carried the incidents that earned them, which is that
+file's own test for what may go. It handed the choice forward: *cut a lesson, or
+move the line on purpose.* The line moved. **META 150 → 200, HISTORY 250 → 400**,
+act-at following the band's own 20% rule at 240 and 480.
+
+**One rationale died with the number and had to be rewritten rather than left.**
+`doc/HISTORY.md`'s header said its target "sits below `doc/MEMORY.md`'s on
+purpose: current truth outranks how it was arrived at, so this may never be the
+longest thing in the repo". At 400 it is above MEMORY's 300, and the sentence
+would have been a lie sitting at the top of the file. The replacement is the
+reason the new number is defensible, and it is a better reason than the old one:
+**MEMORY has somewhere to spill and HISTORY does not.** MEMORY's limit is a *hub*
+limit — the fattest section moves down into a `doc/design/` cluster and the index
+keeps one line, so the number governs the index rather than the material. Below
+HISTORY there is nothing. Everything the project has learned that is no longer
+current has to fit there or be deleted outright, and a terminal surface needs
+more room than one with an outlet. The old sentence is not deleted silently; the
+header says what it used to claim and why that was the wrong thing to measure.
+
+**No test reads either number**, which was worth confirming rather than assuming:
+`tests/doc.test.ts` checks doc *shape* — cluster indexes, no content page in the
+MEMORY index, every markdown path resolving — and never a line count. So these
+gates stay a thing a person runs `wc -l` for, which is the arrangement `doc/META.md`
+already has a scar about.
+
+**The board had six stale blockers and every one of them named a card this
+branch closed.** `L-018` waited on `L-029` and `L-032`, `L-019` and `L-079` on
+`L-032` — all built. Two were wrong in a more interesting way. `L-012`'s
+`needs: L-006` was written for saving a *machine*, and the roadmap had already
+narrowed the card to "rack order and settings"; that blocker was holding down two
+cards that have nothing to do with the part model. `L-054`'s `needs: L-006`
+covers only its second half — putting `considers` on the debrief needs no part
+model, because the string is on every module and the debrief exists. And `L-027`
+named a NOTES thread by a title it lost when the thread was rewritten.
+**A `needs:` line is the one part of a card that rots without anybody reading
+it**, because it is only consulted when somebody picks the card up.
+
+**Three combinations, lowest id surviving and naming what it took.** `L-012`
+absorbed `L-067` and `L-085`: three cards, one `Record` on the shell that has to
+outlive the tab — the rack, the pod placements, the completed exercises. `L-081`
+absorbed `L-082`: two numbers `profile.html` asserts rather than reads, one
+`probe/` shadow, one trip to a phone. `L-049` absorbed `L-051`: authoring three
+makers' plates inside a cab whose cage and levers are generic steel is half a
+comparison pass.
+
+**The acceptance trio was deliberately *not* combined.** `L-066`, `L-018` and
+`L-033` each own a clause of `doc/MEMORY.md` § 3's acceptance sentence, and the
+temptation was to make them one card because they can only be judged together.
+They stay three, because each has its own observable and a card whose done-when
+is three done-whens is a card nobody finishes. What they got instead is the
+corrected `needs` chain and adjacency: `L-018` now needs `L-083`, because
+*attributable from a replay* needs somebody able to watch one, and ready is
+ordered as that sentence read left to right.
+
+Ready 5 → 7, backlog 31 → 26, history unchanged at 10 — an absorbed card is named
+inside the card that took it, not closed, so it spends no history slot.
+
+Surfaces after: META 168/200, HISTORY 257/400, NOTES 108/120, LOG under its 1200,
+BOARD 7 · 26 · 10. **`doc/MEMORY.md` is untouched at 355/360 and stays flagged** —
+two sessions in the band, and its own rule says a third means a section wants
+*spilling* to a cluster rather than trimming. 355 tests, lint and typecheck clean;
+no code changed in this pass, so those confirm the branch rather than the work.
+
 ## 2026-08-27 — a recording is of a session, not of the physics
 
 Cards: [L-084] — closed, opened and closed the same day. [L-085] opened (the
