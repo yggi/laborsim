@@ -37,8 +37,11 @@
  * did not: every one of these mutated a module synchronously, inside the pointer
  * event's own turn, out of band from the tick counter — so nothing could say
  * *what was driving* when a thing broke, which is the ledger's whole missing
- * column. Now a handle produces a `RackCommand` and hands it to `issue`; the
- * frame applies it at a tick and writes it down (`control/trace.ts`).
+ * column. Now a handle produces an `Act` and hands it to `issue`; the frame
+ * applies it at a tick and writes it down (`control/trace.ts`). The `Act` union
+ * is wider than the rack — the horn's neighbours on the dash issue through the
+ * same queue — because what a press *is* and where it *lands* are two questions,
+ * and only the second one sorts a rack command from an acknowledgement.
  *
  * The delay is at most one frame, and only the schedule can stop the ticks —
  * and the schedule covers the cab, so nothing can be pressed while nothing is
@@ -46,7 +49,7 @@
  */
 
 import type { Module, Verb } from "./bus.ts";
-import type { RackCommand } from "./trace.ts";
+import type { Act } from "./trace.ts";
 
 export interface Controls {
   /**
@@ -104,13 +107,13 @@ export interface ControlHooks {
  * what verb is it?), never to write; writing is `issue`'s job and, one layer
  * down, `applyRack`'s.
  *
- * @param issue where a command goes. In the app this is the run's tracer, which
- *   stamps it with the tick that applies it. A bench or a test can pass a sink
- *   that applies it at once.
+ * @param issue where an act goes. In the app this is the run's tracer, which
+ *   stamps it with the tick that applies it and files it under `commands`. A
+ *   bench or a test can pass a sink that applies it at once.
  */
 export function createControls(
   modules: readonly Module[],
-  issue: (command: RackCommand) => void,
+  issue: (act: Act) => void,
   hooks: ControlHooks = {},
 ): (id: string) => Controls {
   return (id: string): Controls => {
@@ -122,16 +125,16 @@ export function createControls(
         const module = find();
         if (!module) return;
         if (module.enabled && module.safety === true) hooks.onBypass?.(module);
-        issue({ kind: "enable", id, on: !module.enabled });
+        issue({ kind: "rack", command: { kind: "enable", id, on: !module.enabled } });
       },
       setParam(paramId: string, value: number) {
-        issue({ kind: "param", id, param: paramId, value });
+        issue({ kind: "rack", command: { kind: "param", id, param: paramId, value } });
       },
       setVerb(verb: Verb) {
-        issue({ kind: "verb", id, verb });
+        issue({ kind: "rack", command: { kind: "verb", id, verb } });
       },
       reorder(to: number) {
-        issue({ kind: "order", id, to });
+        issue({ kind: "rack", command: { kind: "order", id, to } });
       },
     };
   };

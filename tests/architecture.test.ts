@@ -405,6 +405,56 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
 });
 
 /**
+ * The recording is two channels, and only one of them may reach the machine.
+ *
+ * `commands` is what reached it — the levers and the rack. `attention` is what
+ * the operator saw, heard and did about it: the horn, the acknowledgement, the
+ * mushroom, the cabinet latch, the view they watched from, where their head
+ * was. The rig reviews the second and the physics must never notice it.
+ *
+ * Half of that is structural: `createPlayback` takes `readonly Command[]` and is
+ * never handed the other channel, so a headless replay *cannot* read it. What
+ * types cannot say is that the recording put each thing on the right side —
+ * nothing stops a future `hands.horn` in a module's `intent`, and then the horn
+ * would be a sim input filed under attention, and every guarantee here would be
+ * quietly false while every test stayed green.
+ *
+ * So: the sim, the rack and the modules may read exactly three fields off the
+ * hands. Adding a fourth is a decision about what a recording *is*, and it has
+ * to be made here first.
+ */
+describe("the sim reads three fields off the hands, and no more", () => {
+  const COMMANDED = ["leverL", "leverR", "seated"];
+
+  it.each(SIM_TREES)("src/%s touches no other hand", (tree) => {
+    const read = new Set<string>();
+    for (const path of filesUnder(join(SRC, tree))) {
+      // `trace.ts` is the one file whose job is to know about all of them: it
+      // reads every field in order to write it down. It commands nothing.
+      if (path.endsWith("control/trace.ts")) continue;
+      const code = blankComments(readFileSync(path, "utf8"));
+      // Not preceded by a slash, or `"../control/hands.ts"` reads a field
+      // called `ts` and the rule fails on its own import.
+      for (const m of code.matchAll(/(?<!\/)\bhands\.(\w+)/g)) read.add(m[1] as string);
+    }
+    expect(
+      [...read].filter((field) => !COMMANDED.includes(field)),
+      `only ${COMMANDED.join(", ")} may reach the machine — see control/trace.ts`,
+    ).toEqual([]);
+  });
+
+  it("and the horn, the view and the head are on the other channel", () => {
+    // The complement, so the rule cannot pass by the fields simply not existing.
+    const hands = blankComments(readFileSync(join(SRC, "control/hands.ts"), "utf8"));
+    for (const field of ["horn", "headDown", "view", "alarm"]) {
+      expect(hands, `hands.${field} has gone`).toMatch(
+        new RegExp(`\\b${field}(\\??):`),
+      );
+    }
+  });
+});
+
+/**
  * One fact, one place — **there is one frame**.
  *
  * This used to be the other thing. `src/probe/profile.ts` ran its own

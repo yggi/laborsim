@@ -29,7 +29,7 @@
  */
 
 import type { Module } from "../control/bus.ts";
-import type { RackCommand } from "../control/trace.ts";
+import type { Act } from "../control/trace.ts";
 
 export interface Estop {
   readonly engaged: boolean;
@@ -43,13 +43,10 @@ export interface Estop {
 
 /**
  * @param rack read to see what is in circuit, never written.
- * @param issue where each `enable` command goes — the run's tracer, which
- *   stamps it with the tick that applies it.
+ * @param issue where the latch and each `enable` command go — the run's tracer,
+ *   which stamps them with the tick that applies them.
  */
-export function createEstop(
-  rack: readonly Module[],
-  issue: (command: RackCommand) => void,
-): Estop {
+export function createEstop(rack: readonly Module[], issue: (act: Act) => void): Estop {
   let engaged = $state(false);
   /** Enabled-state of each module before the stop, so release can restore it. */
   let before: Record<string, boolean> = {};
@@ -62,16 +59,24 @@ export function createEstop(
       if (engaged) return;
       engaged = true;
       before = {};
+      // The latch first, then what it does. A recording of the press before its
+      // consequences is the order it happened in, and the order the debrief
+      // will want to read it back in.
+      issue({ kind: "estop", engaged: true });
       for (const mod of rack) {
         before[mod.id] = mod.enabled;
-        issue({ kind: "enable", id: mod.id, on: false });
+        issue({ kind: "rack", command: { kind: "enable", id: mod.id, on: false } });
       }
     },
     release() {
       if (!engaged) return;
       engaged = false;
+      issue({ kind: "estop", engaged: false });
       for (const mod of rack) {
-        issue({ kind: "enable", id: mod.id, on: before[mod.id] ?? true });
+        issue({
+          kind: "rack",
+          command: { kind: "enable", id: mod.id, on: before[mod.id] ?? true },
+        });
       }
     },
     clear() {

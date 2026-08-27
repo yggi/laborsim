@@ -34,12 +34,31 @@ import { podFor } from "./parts.ts";
 const {
   snapshot,
   controls,
+  placed,
   bottomKeepOut,
   onSettle,
+  onplace,
 }: {
   snapshot: Snapshot | undefined;
   /** The one channel a part commands through. See `control/controls.ts`. */
   controls: (id: string) => Controls;
+  /**
+   * Where the pilot has put each pod, by component id — **the shell's, not
+   * this component's.**
+   *
+   * It lived here as local `$state` and was therefore destroyed every time the
+   * cabinet opened: `App.svelte` mounts this under `mode === "cab" && !rackOpen`,
+   * so looking down at the rack or stepping out to the chase view unmounted the
+   * glass and every arm came back at its default. The docblock above this field
+   * used to promise the opposite — *"unfitting a component and putting it back
+   * gives you your instrument where you left it"* — and that only ever held
+   * inside one mount.
+   *
+   * Keyed by id rather than by position in the rack, which is what makes that
+   * promise mean something once it is true. Still not persisted across a
+   * reload; that is L-012, and this is the shape it will save.
+   */
+  placed: Readonly<Record<string, { x: number; y: number }>>;
   /** How much glass the dash is taking along the bottom edge, px. */
   bottomKeepOut: number;
   /**
@@ -50,6 +69,8 @@ const {
    * own maker's voice: it is their instrument on their arm.
    */
   onSettle?: (maker: string) => void;
+  /** A legal drop, on its way to a tick and to the recording. */
+  onplace?: (id: string, x: number, y: number) => void;
 } = $props();
 
 /** Every fitted component that brought an instrument, in rack order. */
@@ -59,17 +80,6 @@ const pods = $derived(
     return Pod ? [{ stage, Pod }] : [];
   }),
 );
-
-/**
- * Where the pilot has put each pod, by component id. Only *legal* drops land
- * here — `Draggable` refuses the others — and it is keyed by id rather than by
- * position in the rack so that unfitting a component and putting it back gives
- * you your instrument where you left it, not where a default says.
- *
- * Not yet persisted across a reload; that is L-012, and this is the shape it
- * will save.
- */
-let placed = $state<Record<string, { x: number; y: number }>>({});
 
 /**
  * Fresh kit hangs down the right-hand side, in the order it was fitted, clear
@@ -91,7 +101,7 @@ const startX = (typeof window === "undefined" ? 390 : innerWidth) - PILLAR - POD
     startY={placed[stage.id]?.y ?? FIRST_Y + i * PITCH}
     {bottomKeepOut}
     onplace={(x, y) => {
-      placed[stage.id] = { x, y };
+      onplace?.(stage.id, x, y);
       onSettle?.(stage.maker);
     }}
   >

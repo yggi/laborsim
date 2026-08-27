@@ -42,7 +42,7 @@ import {
   WARN,
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
-import { applyRack, type RackCommand } from "../src/control/trace.ts";
+import { type Act, applyRack } from "../src/control/trace.ts";
 import { snapshot, track } from "../src/core/fixture.ts";
 import type { BodyPose, Snapshot, TrackState } from "../src/core/snapshot.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
@@ -445,12 +445,12 @@ describe("commands cross back through one channel", () => {
    * are two claims and used to be one.
    */
   function wire(rack: Module[]) {
-    const issued: RackCommand[] = [];
+    const issued: Act[] = [];
     const controls = createControls(
       rack,
-      (command) => {
-        issued.push(command);
-        applyRack(rack, command);
+      (act) => {
+        issued.push(act);
+        if (act.kind === "rack") applyRack(rack, act.command);
       },
       { onBypass: (m) => bypassed.push(m.id) },
     );
@@ -465,7 +465,9 @@ describe("commands cross back through one channel", () => {
     const rack = rackOf({ enabled: true });
     const { issued, controls } = wire(rack);
     controls("M0").toggle();
-    expect(issued).toEqual([{ kind: "enable", id: "M0", on: false }]);
+    expect(issued).toEqual([
+      { kind: "rack", command: { kind: "enable", id: "M0", on: false } },
+    ]);
     expect(rack[0]?.enabled).toBe(false);
   });
 
@@ -477,8 +479,8 @@ describe("commands cross back through one channel", () => {
     controls("A").setVerb("CAP");
     controls("A").reorder(2);
     expect(issued).toEqual([
-      { kind: "verb", id: "A", verb: "CAP" },
-      { kind: "order", id: "A", to: 2 },
+      { kind: "rack", command: { kind: "verb", id: "A", verb: "CAP" } },
+      { kind: "rack", command: { kind: "order", id: "A", to: 2 } },
     ]);
     expect(rack[0]?.verb).toBe("SET");
     expect(rack.map((m) => m.id)).toEqual(["B", "C", "A"]);
@@ -497,7 +499,9 @@ describe("commands cross back through one channel", () => {
     expect(rack[0]?.verb).toBe("SET");
     // `toggle` has nothing to ask, so it does not even issue.
     controls("GONE").toggle();
-    expect(issued.every((c) => c.id === "GONE")).toBe(true);
+    expect(issued.every((c) => c.kind === "rack" && c.command.id === "GONE")).toBe(
+      true,
+    );
   });
 
   it("looks the slot up again on every call, because the rack is mutated", () => {

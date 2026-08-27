@@ -38,15 +38,15 @@ import type { Audio } from "../audio/engine.ts";
 import type { Module } from "../control/bus.ts";
 import type { Hands } from "../control/hands.ts";
 import {
+  type Act,
   createTracer,
-  type RackCommand,
   setupOf,
   type Trace,
   type Tracer,
 } from "../control/trace.ts";
 import { MAX_FRAME_SECONDS, makeClock } from "../core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "../core/snapshot.ts";
-import { type CameraMode, createViewport } from "../render/scene.ts";
+import { createViewport } from "../render/scene.ts";
 import { createWorld, initPhysics, type SimWorld } from "../sim/world.ts";
 import type { Exercise } from "../world/exercises.ts";
 import { advance, type Frame } from "./frame.ts";
@@ -78,7 +78,7 @@ export interface RunOptions {
    * `let issue = () => {}` reassigned from inside the boot is the exact shape of
    * bug the note above this file was written about.
    */
-  readonly queue: RackCommand[];
+  readonly queue: Act[];
   /**
    * The rail changed under the cockpit's feet — a slot moved, a verb cycled, a
    * fuse pulled. Called once per frame in which anything landed, never per
@@ -107,8 +107,6 @@ export interface RunOptions {
 }
 
 export interface Run {
-  /** Point the camera. Remembered if the world has not finished booting. */
-  setView(mode: CameraMode): void;
   /** The world, once there is one. Undefined during the boot. */
   world(): SimWorld | undefined;
   /**
@@ -131,9 +129,6 @@ export function createRun(options: RunOptions): Run {
   let live: SimWorld | undefined;
   let tracer: Tracer | undefined;
   let teardown = () => {};
-  /** The camera the caller asked for before there was anything to point. */
-  let pending: CameraMode | undefined;
-  let setMode: ((mode: CameraMode) => void) | undefined;
 
   void initPhysics().then(() => {
     if (disposed) return;
@@ -164,8 +159,9 @@ export function createRun(options: RunOptions): Run {
       world.poses(),
     );
     const clock = makeClock();
-    setMode = viewport.setMode;
-    if (pending !== undefined) viewport.setMode(pending);
+    /** The view the viewport is currently set to, so a change is an edge. */
+    let showing = hands.view;
+    viewport.setMode(showing);
 
     const resize = () => viewport.resize(innerWidth, innerHeight);
     addEventListener("resize", resize);
@@ -239,9 +235,19 @@ export function createRun(options: RunOptions): Run {
       // number. Draining into the tracer rather than applying here is what
       // makes "queued" true rather than aspirational (`control/trace.ts`).
       if (queue.length > 0) {
-        for (const command of queue) runTracer.issue(command);
+        for (const act of queue) runTracer.issue(act);
         queue.length = 0;
         unlanded = true;
+      }
+
+      // Where the operator is watching from, applied on the **edge**: `setMode`
+      // does real work — it toggles the interior layer and zeroes the head — so
+      // calling it every frame would re-straighten your neck sixty times a
+      // second. The field is read here rather than pushed by the cab because a
+      // camera the cab pushed once cost a run (`control/hands.ts`).
+      if (hands.view !== showing) {
+        showing = hands.view;
+        viewport.setMode(showing);
       }
 
       const { steps, snapshot: current } = advance(turn, interval);
@@ -256,6 +262,12 @@ export function createRun(options: RunOptions): Run {
       if (sinceSnapshot >= 1 / SNAPSHOT_HZ) {
         sinceSnapshot = 0;
         options.onSnapshot(current);
+        // The head goes on the recording at the same rate, and for the same
+        // reason: it is a curve somebody watches rather than a quantity the sim
+        // consumes, and the neck's spring is wall-clock driven on purpose, so
+        // there is no gesture to record that would reproduce it
+        // (`control/trace.ts`).
+        runTracer.watch(current.tick, viewport.angles());
       }
 
       // The cab sweeps with the head. **One DOM write a frame, on one element**,
@@ -285,12 +297,6 @@ export function createRun(options: RunOptions): Run {
   });
 
   return {
-    setView(mode) {
-      // Before the viewport exists this is a note to self, not a no-op with a
-      // shrug: the mode is applied the moment there is something to apply it to.
-      if (setMode) setMode(mode);
-      else pending = mode;
-    },
     world: () => live,
     trace: () => tracer?.trace(),
     dispose() {

@@ -24,7 +24,7 @@ import { createNag, NAG_AFTER, NAG_COOLDOWN_MS } from "../src/cockpit/nag.ts";
 import { createNotices } from "../src/cockpit/notices.svelte.ts";
 import { ACTIVE, ALARM, type Module, NOMINAL, WARN } from "../src/control/bus.ts";
 import { restingHands } from "../src/control/hands.ts";
-import { applyRack, type RackCommand } from "../src/control/trace.ts";
+import { type Act, applyRack } from "../src/control/trace.ts";
 import { snapshot, stage } from "../src/core/fixture.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createPilot } from "../src/modules/pilot.ts";
@@ -129,10 +129,10 @@ describe("the E-stop", () => {
    * that can fail on its own.
    */
   function wire(rack: Module[]) {
-    const issued: RackCommand[] = [];
-    const estop = createEstop(rack, (command) => {
-      issued.push(command);
-      applyRack(rack, command);
+    const issued: Act[] = [];
+    const estop = createEstop(rack, (act) => {
+      issued.push(act);
+      if (act.kind === "rack") applyRack(rack, act.command);
     });
     return { issued, estop };
   }
@@ -143,17 +143,22 @@ describe("the E-stop", () => {
     estop.hit();
     expect(estop.engaged).toBe(true);
     expect(rack.map((m) => m.enabled)).toEqual([false, false]);
+    // The latch, then what it does. The latch is *not* derivable from the
+    // fuses: a rack with every module off is a rack somebody could have emptied
+    // by hand, and the mushroom being in is a different fact.
     expect(issued).toEqual([
-      { kind: "enable", id: "A", on: false },
-      { kind: "enable", id: "B", on: false },
+      { kind: "estop", engaged: true },
+      { kind: "rack", command: { kind: "enable", id: "A", on: false } },
+      { kind: "rack", command: { kind: "enable", id: "B", on: false } },
     ]);
     estop.release();
     // Exactly what you had, not everything on: a safety control that quietly
     // rewired your rack would be its own hazard.
     expect(rack.map((m) => m.enabled)).toEqual([true, false]);
-    expect(issued.slice(2)).toEqual([
-      { kind: "enable", id: "A", on: true },
-      { kind: "enable", id: "B", on: false },
+    expect(issued.slice(3)).toEqual([
+      { kind: "estop", engaged: false },
+      { kind: "rack", command: { kind: "enable", id: "A", on: true } },
+      { kind: "rack", command: { kind: "enable", id: "B", on: false } },
     ]);
   });
 
@@ -173,9 +178,9 @@ describe("the E-stop", () => {
     const { issued, estop } = wire(rack);
     estop.hit();
     estop.release();
-    expect(issued).toHaveLength(2);
+    expect(issued).toHaveLength(4);
     estop.release();
-    expect(issued).toHaveLength(2);
+    expect(issued).toHaveLength(4);
   });
 
   it("forgets on a re-rack, because that rack is gone", () => {

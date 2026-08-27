@@ -93,7 +93,7 @@ export function replay(trace: Trace, options: ReplayOptions): Replayed {
     clock: makeClock(),
     hands,
     rack,
-    operator: createPlayback(trace),
+    operator: createPlayback(trace.commands),
     ...(options.onFrame ? { render: options.onFrame } : {}),
   };
 
