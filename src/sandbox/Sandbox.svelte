@@ -196,12 +196,7 @@ const dead = () => inertControls();
   <section>
     <h2>RACK · {current?.name} · plates from three suppliers</h2>
     <div class="phone tall">
-      <Rack
-        {modules}
-        snapshot={current?.snapshot}
-        onchange={noop}
-        debug={false}
-      />
+      <Rack {modules} snapshot={current?.snapshot} controls={dead} debug={false} />
     </div>
   </section>
 </div>

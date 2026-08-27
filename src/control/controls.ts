@@ -15,13 +15,38 @@
  * what kind of module is behind the handle, and a part rendering a replay gets
  * handles that do nothing, because there is nothing there to command.
  *
- * Deliberately two verbs and no more. `toggle` is the enable, which every
- * component has; `setParam` reaches the bounded numbers a module declares. There
- * is no way to reach anything else, which is the point — a component's controls
- * are what it declared, not what a cockpit author can find on it.
+ * ## Four verbs, because the rack is four decisions
+ *
+ * It had two — `toggle` and `setParam` — and the claim that this was "the one
+ * channel" was therefore false in the place it mattered most. The two it was
+ * missing, **reorder** and **verb**, are the two the rack is actually *about*:
+ * order is the game, and a verb is how a module folds its intent into what
+ * reached it. Both were reachable only by `cockpit/Rack.svelte` splicing the
+ * live array and writing `module.verb` in place, which is exactly the thing
+ * `cockpit/contract.ts` claims cannot happen. So the plate was the one part of
+ * the cockpit holding a live module, and the two most consequential commands in
+ * the game were the two nothing could record (L-032).
+ *
+ * There is still no way to reach anything else, which is the point — a
+ * component's controls are what it declared, not what a cockpit author can find
+ * on it.
+ *
+ * ## A command is a value, and it lands on a tick
+ *
+ * Rule 3 has always said commands cross "as discrete, **queued** inputs". They
+ * did not: every one of these mutated a module synchronously, inside the pointer
+ * event's own turn, out of band from the tick counter — so nothing could say
+ * *what was driving* when a thing broke, which is the ledger's whole missing
+ * column. Now a handle produces a `RackCommand` and hands it to `issue`; the
+ * frame applies it at a tick and writes it down (`control/trace.ts`).
+ *
+ * The delay is at most one frame, and only the schedule can stop the ticks —
+ * and the schedule covers the cab, so nothing can be pressed while nothing is
+ * draining.
  */
 
-import type { Module } from "./bus.ts";
+import type { Module, Verb } from "./bus.ts";
+import type { RackCommand } from "./trace.ts";
 
 export interface Controls {
   /**
@@ -39,12 +64,18 @@ export interface Controls {
    * numeric surface a component exposes.
    */
   setParam(id: string, value: number): void;
+  /** How this module folds its intent into the signal that reached it. */
+  setVerb(verb: Verb): void;
+  /** Move the slot, top of the rail being 0. Out of range is a no-op. */
+  reorder(to: number): void;
 }
 
 /** Handles that reach nothing. What a replay gets, and it must be harmless. */
 const INERT: Controls = {
   toggle: () => {},
   setParam: () => {},
+  setVerb: () => {},
+  reorder: () => {},
 };
 
 export interface ControlHooks {
@@ -57,10 +88,11 @@ export interface ControlHooks {
    * in the rack and voids nobody's warranty — which falls out rather than being
    * special-cased, because an E-stop has already left every module disabled by
    * the time anything could call `toggle`.
+   *
+   * It fires when the command is *issued*, not when it lands: a warranty notice
+   * belongs to the press, and the press is what the maker has an opinion about.
    */
   onBypass?(module: Module): void;
-  /** Called after any change, so a caller holding the rack can re-render. */
-  onChange?(): void;
 }
 
 /**
@@ -68,29 +100,38 @@ export interface ControlHooks {
  *
  * `modules` is the live rack, read at call time rather than captured, because
  * the rack is mutated in place — reordering a slot must not leave a cell holding
- * a handle on the module that used to be there.
+ * a handle on the module that used to be there. It is read to *ask* (is this on?
+ * what verb is it?), never to write; writing is `issue`'s job and, one layer
+ * down, `applyRack`'s.
+ *
+ * @param issue where a command goes. In the app this is the run's tracer, which
+ *   stamps it with the tick that applies it. A bench or a test can pass a sink
+ *   that applies it at once.
  */
 export function createControls(
   modules: readonly Module[],
+  issue: (command: RackCommand) => void,
   hooks: ControlHooks = {},
 ): (id: string) => Controls {
   return (id: string): Controls => {
-    const find = () => modules.find((m) => m.id === id);
     // Not a live check: a component absent *now* may be fitted later, and one
     // fitted now may go. Every call looks again.
+    const find = () => modules.find((m) => m.id === id);
     return {
       toggle() {
         const module = find();
         if (!module) return;
         if (module.enabled && module.safety === true) hooks.onBypass?.(module);
-        module.enabled = !module.enabled;
-        hooks.onChange?.();
+        issue({ kind: "enable", id, on: !module.enabled });
       },
       setParam(paramId: string, value: number) {
-        const param = find()?.params?.find((p) => p.id === paramId);
-        if (!param) return;
-        param.set(value);
-        hooks.onChange?.();
+        issue({ kind: "param", id, param: paramId, value });
+      },
+      setVerb(verb: Verb) {
+        issue({ kind: "verb", id, verb });
+      },
+      reorder(to: number) {
+        issue({ kind: "order", id, to });
       },
     };
   };

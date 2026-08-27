@@ -15,6 +15,20 @@ export const STEP_SECONDS = 1 / 60;
  */
 const MAX_STEPS_PER_FRAME = 5;
 
+/**
+ * Ceiling on the wall-clock a single frame may claim to have taken.
+ *
+ * The cap above bounds the work; this bounds the *lie*. A frame that arrives a
+ * quarter of a second after the last one is a stall, and feeding the accumulator
+ * the true figure would only fill it with time the cap is about to throw away.
+ *
+ * It lives here, beside the cap it works with, because it used to live in two
+ * places: `platform/run.ts` and the bench's copy of the loop in
+ * `probe/profile.ts`, with a test scanning both files for the same literal to
+ * check they still agreed. There is one loop now, so there is one number.
+ */
+export const MAX_FRAME_SECONDS = 0.25;
+
 export interface Clock {
   /**
    * Feed wall-clock time; returns how many fixed steps to run now, and how far

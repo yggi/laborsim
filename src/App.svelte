@@ -29,6 +29,7 @@ import Rack from "./cockpit/Rack.svelte";
 import { type Module, NOMINAL } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
 import { restingHands } from "./control/hands.ts";
+import type { RackCommand } from "./control/trace.ts";
 import type { Snapshot } from "./core/snapshot.ts";
 import { styleOf } from "./makers/houses.ts";
 import { createPilot } from "./modules/pilot.ts";
@@ -67,6 +68,33 @@ const pilot = createPilot(hands);
  * rewiring that LOTO hot-patching (BOARD L-026) will one day price.
  */
 const rack: Module[] = $state([pilot]);
+/**
+ * Commands the cab has issued that no tick has taken yet.
+ *
+ * The third plain object that crosses to the loop, beside `hands` and `rack`,
+ * and for the same reason as both: the handles that write to it are held by
+ * cells and plates that outlive any one run, so it cannot belong to the run.
+ * The run drains it, stamps each command with the tick that applies it, and
+ * writes it down — which is how the ledger will one day say what was driving
+ * (`control/trace.ts`).
+ */
+const queue: RackCommand[] = [];
+const issue = (command: RackCommand) => queue.push(command);
+/**
+ * A slot moved, a verb cycled, a fuse pulled — redraw the cabinet.
+ *
+ * Declared out here rather than inside the run effect because that effect *is*
+ * the statement of what a run is made of, and a `rackVersion++` in its body
+ * reads a rune in a place where reading one means "rebuild the world when this
+ * changes". It does not, in fact — the read is inside a callback the loop calls
+ * later — but the scanner in `tests/architecture.test.ts` cannot know that, and
+ * a rule that has to be reasoned about is a rule that gets broken.
+ *
+ * It is one bump per frame in which anything landed. The four call sites that
+ * each used to bump it themselves — two cells, the plate and the E-stop — are
+ * this one.
+ */
+const remountRack = () => rackVersion++;
 let rackOpen = $state(false);
 let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
@@ -83,7 +111,7 @@ let dashHeight = $state(96);
  */
 const session = createSession();
 const board = createNotices();
-const estop = createEstop(rack, () => rackVersion++);
+const estop = createEstop(rack, issue);
 const alarm = createAlarm(
   () => latest,
   () => estop.engaged,
@@ -141,13 +169,12 @@ function toggleRack() {
  * check is why that is a hook rather than a rule in the channel: nobody's
  * warranty is void because you hit the big red button.
  */
-const controls = createControls(rack, {
+const controls = createControls(rack, issue, {
   onBypass(mod) {
     if (estop.engaged) return;
     const [head, body] = styleOf(mod.maker).voice.warranty;
     board.notify(mod.maker, head, body);
   },
-  onChange: () => rackVersion++,
 });
 
 function setView(next: CameraMode) {
@@ -215,6 +242,8 @@ $effect(() => {
     rack,
     pilot,
     hands,
+    queue,
+    onRack: remountRack,
     // What is bolted on beyond the chassis, and *which* list that is stays the
     // cab's decision — `createRun` only knows when there is a world to fit it to
     // (`build/rung-one.ts`).
@@ -387,12 +416,7 @@ $effect(() => {
       />
       {#if rackOpen}
         {#key rackVersion}
-          <Rack
-            modules={rack}
-            snapshot={latest}
-            onchange={() => rackVersion++}
-            debug={showDebug}
-          />
+          <Rack modules={rack} snapshot={latest} {controls} debug={showDebug} />
         {/key}
       {/if}
     </div>

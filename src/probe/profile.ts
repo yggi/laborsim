@@ -36,9 +36,12 @@
  */
 
 import { type Audio, createAudio } from "../audio/engine.ts";
-import { CHASSIS, type Module, NOMINAL } from "../control/bus.ts";
+import { NOMINAL } from "../control/bus.ts";
+import { type Hands, restingHands } from "../control/hands.ts";
+import { IDLE } from "../control/trace.ts";
 import { makeClock, STEP_SECONDS } from "../core/clock.ts";
-import { MAX_TRACK_SPEED } from "../core/spec.ts";
+import { createPilot } from "../modules/pilot.ts";
+import { advance, type Frame } from "../platform/frame.ts";
 import { type CameraMode, createViewport, type Viewport } from "../render/scene.ts";
 import { createWorld, initPhysics } from "../sim/world.ts";
 import { type Exercise, exerciseById } from "../world/exercises.ts";
@@ -266,36 +269,24 @@ interface Stand {
   dispose(): void;
 }
 
-interface Levers {
-  left: number;
-  right: number;
-}
-
 const nextFrame = (): Promise<number> =>
   new Promise((resolve) => requestAnimationFrame(resolve));
 
 /**
- * The levers, as a rack module.
+ * The bench's operator: a pair of hands it holds down for the length of a pass.
  *
  * A pass drives by writing to this rather than by reaching into the machine,
- * for the same reason the cab does: the pilot is a slot on the rail, its intent
- * is folded by verb like everything else's, and a bench that bypassed the rack
- * would be timing a machine nobody can drive.
+ * for the same reason the cab does — the pilot is a slot on the rail and its
+ * intent is folded by verb like everything else's, so a bench that bypassed the
+ * rack would be timing a machine nobody can drive.
+ *
+ * It used to be a `Levers` object and a hand-built copy of the chassis module
+ * beside it, which meant the bench timed a pilot that had no `condition()` and
+ * therefore a rack the annunciator would have read differently from the game's.
+ * `createPilot` is the real one; `seated` is what says a bench is at the
+ * controls, and it is the same field the schedule uses to stop the clock.
  */
-function pilotModule(lever: Levers): Module {
-  return {
-    id: CHASSIS,
-    label: "PILOT",
-    maker: "KIBA WORKS",
-    considers: "a bench, holding the levers down",
-    verb: "SET",
-    enabled: true,
-    intent: () => ({
-      left: lever.left * MAX_TRACK_SPEED,
-      right: lever.right * MAX_TRACK_SPEED,
-    }),
-  };
-}
+const benchHands = (): Hands => ({ ...restingHands(), seated: true });
 
 /**
  * Put the glass back to full size.
@@ -314,7 +305,7 @@ function fillTheGlass(canvas: HTMLCanvasElement): void {
 async function buildStand(
   exercise: Exercise,
   canvas: HTMLCanvasElement,
-  lever: Levers,
+  hands: Hands,
 ): Promise<Stand> {
   const gl = watchCanvas(canvas);
   const silent = new OfflineAudioContext(2, 1, 44_100);
@@ -326,7 +317,7 @@ async function buildStand(
   const physics = performance.now() - beforePhysics;
 
   const beforeWorld = performance.now();
-  const world = createWorld({ exercise, modules: [pilotModule(lever)] });
+  const world = createWorld({ exercise, modules: [createPilot(hands)] });
   const worldMs = performance.now() - beforeWorld;
 
   const glass: readonly [number, number] = [innerWidth, innerHeight];
@@ -396,32 +387,35 @@ async function buildStand(
 /**
  * One pass: a fresh world on an existing stand, warmed, measured, then probed.
  *
- * **The loop is `platform/run.ts`'s, deliberately** — same clamp, same clock,
- * same snapshot-then-render order. A bench whose loop differed from the game's
- * would be measuring a game nobody ships.
- *
- * It is a *copy* rather than a call, because the game's loop owns
+ * **The frame is the game's, and now literally** — `platform/frame.ts`, the same
+ * object `createRun` advances. A bench whose loop differed from the game's would
+ * be measuring a game nobody ships, and for the whole of this file's life before
+ * L-032 it was a *copy* rather than a call: the game's loop owned
  * `requestAnimationFrame`, the pointer handlers and the `:root` writes, and
- * exposes no seam to time the halves of a frame separately or to end on a tick
- * count. Widening it to suit a bench is the thing this bench does not do
- * (`gl.ts` makes the same argument about the renderer). But a copy is a second
- * place for one fact, and this repo has the scar — so
- * `tests/architecture.test.ts` fails if the two stop agreeing about the clamp
- * or the order of the four calls.
+ * exposed no seam to time the halves of a frame separately or to end on a tick
+ * count. All three of those are true of `createRun` and none of them is true of
+ * a frame, which is what the extraction found.
+ *
+ * The copy had drifted before it was noticed: it never called `audio.render()`,
+ * so `cpu` was not the frame's for as long as the column existed (L-080). What
+ * caught that was a source-scanning test comparing two files; what prevents it
+ * now is that there is one file. The hooks below stamp the same three
+ * boundaries the copy did, so every span this bench publishes is the span it
+ * published before (`doc/design/code/mobile-budget.md`).
  */
 async function runPass(
   stand: Stand,
   pass: Pass,
-  lever: Levers,
+  hands: Hands,
   report: (phase: Progress["phase"], through: number) => void,
 ): Promise<PassReport> {
   report("building", 0);
   await nextFrame();
 
-  const world = createWorld({
-    exercise: stand.exercise,
-    modules: [pilotModule(lever)],
-  });
+  // The rail, such as it is: one chassis and nothing bolted to it. The frame
+  // wants it because a command can move a slot, and nothing here issues one.
+  const rack = [createPilot(hands)];
+  const world = createWorld({ exercise: stand.exercise, modules: rack });
 
   const width = Math.round(stand.glass[0] * pass.scale);
   const height = Math.round(stand.glass[1] * pass.scale);
@@ -429,8 +423,8 @@ async function runPass(
   stand.viewport.resize(width, height);
   fillTheGlass(stand.canvas);
 
-  lever.left = pass.driving ? 1 : 0;
-  lever.right = pass.driving ? 1 : 0;
+  hands.leverL = pass.driving ? 1 : 0;
+  hands.leverR = pass.driving ? 1 : 0;
 
   const clock = makeClock();
   const frames: number[] = [];
@@ -449,29 +443,45 @@ async function runPass(
   const measureUntil = warmUntil + MEASURE_TICKS;
   const probeUntil = measureUntil + PROBE_TICKS;
 
+  let beforeSim = 0;
+  let afterSim = 0;
+  let afterRender = 0;
+  let afterAudio = 0;
+  let owed = 0;
+  const turn: Frame = {
+    world,
+    clock,
+    hands,
+    rack,
+    operator: IDLE,
+    owed: (steps) => {
+      owed = steps;
+      beforeSim = performance.now();
+    },
+    render: (snapshot) => {
+      afterSim = performance.now();
+      stand.gl.reset();
+      stand.ear.reset();
+      stand.viewport.render(snapshot);
+      afterRender = performance.now();
+    },
+    // Where the game does it, and with what the game gives it. The frame calls
+    // audio last, after the GL submit, so that is where it is timed.
+    sound: (snapshot) => {
+      stand.audio.render(snapshot, { alarm: NOMINAL, horn: false });
+      afterAudio = performance.now();
+    },
+  };
+
   let last = await nextFrame();
   while (world.tick < probeUntil) {
     const now = await nextFrame();
     const interval = now - last;
-    const elapsed = Math.min(interval / 1000, 0.25);
     last = now;
 
-    const owed = clock.advance(elapsed).steps;
     const probing = world.tick >= measureUntil;
+    advance(turn, interval / 1000);
 
-    const beforeSim = performance.now();
-    for (let i = 0; i < owed; i++) world.step();
-    const snapshot = world.snapshot();
-    const afterSim = performance.now();
-
-    stand.gl.reset();
-    stand.ear.reset();
-    stand.viewport.render(snapshot);
-    const afterRender = performance.now();
-    // Where the game does it, and with what the game gives it. The loop calls
-    // audio last, after the GL submit, so that is where it is timed.
-    stand.audio.render(snapshot, { alarm: NOMINAL, horn: false });
-    const afterAudio = performance.now();
     if (probing) {
       stand.gl.finish();
       gpus.push(performance.now() - afterRender);
@@ -543,7 +553,7 @@ export async function runProfile(
   host: HTMLElement,
   onProgress: (progress: Progress) => void,
 ): Promise<Profile> {
-  const lever: Levers = { left: 0, right: 0 };
+  const hands = benchHands();
   const startup: Startup[] = [];
   const reports: PassReport[] = [];
   let stand: Stand | undefined;
@@ -562,14 +572,14 @@ export async function runProfile(
       host.append(canvas);
       onProgress({ pass, index, total, phase: "building", through: 0 });
       await nextFrame();
-      stand = await buildStand(exercise, canvas, lever);
+      stand = await buildStand(exercise, canvas, hands);
       startup.push(stand.startup);
       if (!gpu) gpu = stand.gl.describe();
     }
 
     const here = stand;
     reports.push(
-      await runPass(here, pass, lever, (phase, through) =>
+      await runPass(here, pass, hands, (phase, through) =>
         onProgress({ pass, index, total, phase, through }),
       ),
     );

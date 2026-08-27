@@ -37,11 +37,19 @@
 import type { Audio } from "../audio/engine.ts";
 import type { Module } from "../control/bus.ts";
 import type { Hands } from "../control/hands.ts";
-import { makeClock } from "../core/clock.ts";
+import {
+  createTracer,
+  type RackCommand,
+  setupOf,
+  type Trace,
+  type Tracer,
+} from "../control/trace.ts";
+import { MAX_FRAME_SECONDS, makeClock } from "../core/clock.ts";
 import { SNAPSHOT_HZ, type Snapshot } from "../core/snapshot.ts";
 import { type CameraMode, createViewport } from "../render/scene.ts";
 import { createWorld, initPhysics, type SimWorld } from "../sim/world.ts";
 import type { Exercise } from "../world/exercises.ts";
+import { advance, type Frame } from "./frame.ts";
 
 export interface RunOptions {
   readonly canvas: HTMLCanvasElement;
@@ -61,6 +69,22 @@ export interface RunOptions {
   fit(world: SimWorld): readonly Module[];
   /** What the loop reads from the cab, and the only thing it reads from it. */
   readonly hands: Hands;
+  /**
+   * Commands the cab has issued and no tick has taken yet.
+   *
+   * The queue architecture rule 3 has always described and never had. It is the
+   * caller's array rather than the run's for the same reason `rack` is: the cab
+   * holds the handles that write to it, and those outlive any one run — a
+   * `let issue = () => {}` reassigned from inside the boot is the exact shape of
+   * bug the note above this file was written about.
+   */
+  readonly queue: RackCommand[];
+  /**
+   * The rail changed under the cockpit's feet — a slot moved, a verb cycled, a
+   * fuse pulled. Called once per frame in which anything landed, never per
+   * command, because a re-render is not per-command either.
+   */
+  onRack(): void;
   /** A sampled snapshot, at `SNAPSHOT_HZ` — not at frame rate. */
   onSnapshot(snapshot: Snapshot): void;
   /**
@@ -87,15 +111,25 @@ export interface Run {
   setView(mode: CameraMode): void;
   /** The world, once there is one. Undefined during the boot. */
   world(): SimWorld | undefined;
+  /**
+   * What has been done to this run so far, as a value.
+   *
+   * Undefined during the boot, for the same reason `world()` is. Recording is
+   * always on: a trace is change-points, so a run nobody touched costs an empty
+   * array, and the ledger cannot ask *what was driving* after the fact if
+   * nothing was writing it down at the time.
+   */
+  trace(): Trace | undefined;
   /** Tear down the world, the renderer and every listener. Safe at any point. */
   dispose(): void;
 }
 
 export function createRun(options: RunOptions): Run {
-  const { canvas, rack, pilot, hands } = options;
+  const { canvas, rack, pilot, hands, queue } = options;
   let frame = 0;
   let disposed = false;
   let live: SimWorld | undefined;
+  let tracer: Tracer | undefined;
   let teardown = () => {};
   /** The camera the caller asked for before there was anything to point. */
   let pending: CameraMode | undefined;
@@ -111,6 +145,16 @@ export function createRun(options: RunOptions): Run {
     const world = createWorld({ exercise: options.exercise, modules: rack });
     live = world;
     rack.push(...options.fit(world));
+
+    // **The setup is read after the kit is on, and before a tick has run.**
+    // Anything the cab does from here is a command with a tick on it; the rail
+    // as fitted is not a command, it is what the commands are against. A queue
+    // left over from the run before belongs to a rack that no longer exists.
+    queue.length = 0;
+    const runTracer = createTracer(
+      setupOf(options.exercise.id, world.snapshot().seed, rack),
+    );
+    tracer = runTracer;
 
     const viewport = createViewport(
       canvas,
@@ -169,32 +213,50 @@ export function createRun(options: RunOptions): Run {
 
     let last = performance.now();
     let sinceSnapshot = 0;
-    let current = world.snapshot();
+    /** Commands forwarded to the tracer that no tick has taken yet. */
+    let unlanded = false;
+
+    // What a frame *is* lives in `frame.ts`; what advances one lives here.
+    // Everything below this object is the browser's half — the callback, the
+    // pointers, the resize, the two custom properties.
+    const turn: Frame = {
+      world,
+      clock,
+      hands,
+      rack,
+      operator: runTracer,
+      render: (snapshot) => viewport.render(snapshot),
+      sound: (snapshot) =>
+        options.audio()?.render(snapshot, { alarm: hands.alarm, horn: hands.horn }),
+    };
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
-      const elapsed = Math.min((now - last) / 1000, 0.25);
+      const interval = (now - last) / 1000;
       last = now;
 
-      // Held while the schedule is open: the site is built and standing there,
-      // and the exercise has not started. Time is fed to the clock rather than
-      // to a flag, so nothing downstream needs to know there is such a thing as
-      // a menu — a paused frame is simply a frame that owed no steps.
-      const { steps } = clock.advance(hands.seated ? elapsed : 0);
-      for (let i = 0; i < steps; i++) world.step();
+      // The cab issues between frames; the tick is where a command gets its
+      // number. Draining into the tracer rather than applying here is what
+      // makes "queued" true rather than aspirational (`control/trace.ts`).
+      if (queue.length > 0) {
+        for (const command of queue) runTracer.issue(command);
+        queue.length = 0;
+        unlanded = true;
+      }
 
-      current = world.snapshot();
+      const { steps, snapshot: current } = advance(turn, interval);
+
+      if (unlanded && steps > 0) {
+        unlanded = false;
+        options.onRack();
+      }
+
       // The UI reads a value at 10 Hz. It never watches the sim.
-      sinceSnapshot += elapsed;
+      sinceSnapshot += Math.min(interval, MAX_FRAME_SECONDS);
       if (sinceSnapshot >= 1 / SNAPSHOT_HZ) {
         sinceSnapshot = 0;
         options.onSnapshot(current);
       }
-      viewport.render(current);
-      // Audio is a renderer, not a reader: it takes the 60 Hz value the scene
-      // takes, not the 10 Hz one the instruments read. An impact heard 100 ms
-      // after you watched it land is heard as a second event.
-      options.audio()?.render(current, { alarm: hands.alarm, horn: hands.horn });
 
       // The cab sweeps with the head. **One DOM write a frame, on one element**,
       // and the compositor moves the cage, the pods, the levers and the dash
@@ -230,6 +292,7 @@ export function createRun(options: RunOptions): Run {
       else pending = mode;
     },
     world: () => live,
+    trace: () => tracer?.trace(),
     dispose() {
       disposed = true;
       live = undefined;
