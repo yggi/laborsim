@@ -15,6 +15,7 @@
  * down (`control/hands.ts`) and a snapshot coming back.
  */
 
+import { untrack } from "svelte";
 import { fitRungOne } from "./build/rung-one.ts";
 import { createAlarm } from "./cockpit/alarm.svelte.ts";
 import { BEAM, PILLAR } from "./cockpit/cage.ts";
@@ -41,6 +42,40 @@ import { createSession } from "./ui/session.svelte.ts";
 import Telemetry from "./ui/Telemetry.svelte";
 import Toasts from "./ui/Toasts.svelte";
 import { type Exercise, exerciseById } from "./world/exercises.ts";
+
+/**
+ * How a run gets built — injected, so that a run in progress is **reachable**.
+ *
+ * The shell builds its run inside an effect and hands the handle to nobody, so
+ * `Run.trace()` — the recording of everything the operator just did, public and
+ * always on — could be read by nothing outside this file. That is the half of
+ * the app no bench and no suite can see (`doc/BOARD.md` L-075), and this is the
+ * one line that opens it.
+ *
+ * A default parameter rather than a new module, because this call path already
+ * answers exactly this question twice and in exactly this shape:
+ * `createSound(make = createLiveAudio)` and `createLiveAudio(context = new
+ * AudioContext())`. The second of those was added because its absence hid a
+ * shipped defect for the whole life of the file.
+ */
+let { makeRun = createRun }: { makeRun?: typeof createRun } = $props();
+
+/**
+ * Captured once, on purpose, and **never read inside the run effect**.
+ *
+ * A prop is a rune: reading `makeRun` in there would make *how* a run is built
+ * a reason to throw the world away, which is the exact shape of the bug that
+ * effect already cost once (`control/hands.ts`, and the rule below it in
+ * `tests/architecture.test.ts`). That guard could not have seen it either — it
+ * matched `$state` and `$derived` and not `$props`, so this closed that hole in
+ * the same commit.
+ *
+ * `untrack` rather than a plain read, because a plain read is the same code with
+ * a compiler warning attached and no statement of intent: capturing the initial
+ * value is exactly the point, and this is the spelling the rest of the repo uses
+ * for it.
+ */
+const buildRun = untrack(() => makeRun);
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
@@ -238,7 +273,7 @@ $effect(() => {
   // starts a new one. Everything below the seam is `platform/run.ts` — this is
   // now a statement of what a run is made of, and nothing about how it turns.
   session.runId;
-  const run = createRun({
+  const run = buildRun({
     canvas,
     exercise: session.exercise,
     rack,

@@ -102,34 +102,6 @@ shipped app, which this branch built by hand twice and threw away twice.
 - **done-when:** a rack you reordered, a pod you moved and an exercise you
   finished are all still there after a reload, and the schedule shows the time.
 
-### [L-075] Nothing drives the app
-- **what:** four benches read the game and none of them *plays* it. `shots` and
-  `listen` drive hand-built snapshots, `cab` poses the renderer, `profile` times
-  it — all downstream of a recording, by design. So a defect in the shell's own
-  wiring is invisible to every one of them, and both of this session's bugs were:
-  the chase camera rebuilding the world, and a mirrored instrument that no test
-  could reach. A scripted pass over BEGIN, the levers, both cameras, the cabinet,
-  the stop and RESET found the first in one run and would have found it the day
-  it landed. Wants deciding: whether it asserts (a fifth suite) or reports (a
-  fifth bench), and what it does about the fact that it needs a real browser.
-  **Half of it is built:** a `Trace` *is* a script, `platform/frame.ts` takes
-  hooks, and `tests/replay.test.ts` already drives a scripted operator headless.
-  What is missing is the *shell* — BEGIN, the cameras, the cabinet latch, RESET
-  — which is the half no trace reaches, and the half both of that session's bugs
-  were in. Driving those four rack commands by hand in Chromium is what checked
-  L-032's own riskiest change, and it was thrown away afterwards, which is the
-  card in one sentence. **And the benches are half of it:** `sandbox/scenes.ts`
-  has `frame(t) => { snapshot, alarm, horn }` — twenty-two hand-authored
-  parametric recordings — while a replay answers `at(tick)`. Those are one
-  interface, and the scene signature's alarm/horn split is the recording boundary
-  `control/trace.ts` arrived at independently. What stops it being a merge is
-  that the scenes reach isolated extremes a real drive will not (one bogie
-  knocking, one track in the air), so a recording cannot replace them: the prize
-  is one type, not fewer scenes. What would make it worth doing is a scene that
-  is hard to author and easy to drive.
-- **done-when:** one command drives the shipped app through its verbs and fails
-  when one of them stops working.
-
 ### [L-015] The rail — drag to reorder
 - **what:** the pipeline model, verbs, settings and reordering all work, and the
   plates now look like equipment. What is missing is **drag**: reordering is
@@ -140,6 +112,34 @@ shipped app, which this branch built by hand twice and threw away twice.
 ---
 
 ## backlog
+
+### [L-087] Nothing checks the thing that actually ships
+- **what:** every bench and both suites boot a **dev** Vite — `drive` included,
+  because browser mode serves source through its own server. What `pages.yml`
+  publishes is a rollup build of four entries with `BASE_PATH` rewritten into
+  every asset URL, and **no check has ever loaded it**. A base-path defect, a
+  broken entry or a chunk that only fails minified reaches the site green.
+  Cheap: `vite preview` and a page-error gate on each of the four entries. Do
+  not grow it into a second driver — the wiring is `drive`'s job, and this asks
+  only whether the built thing boots at all.
+- **done-when:** a build whose `index.html` cannot find its own assets fails
+  before it is published.
+
+### [L-088] The levers, as a thing a thumb has to find
+- **what:** the physical redesign bought a lever that reads as a lever and cost
+  usability that nothing has been written down about. Reported: players want to
+  move it to the side, where the drag **pans the viewport** instead — or worse,
+  is eaten by an Android edge gesture, which the cab cannot see coming and cannot
+  refuse. Also found while building the driver: the console is `role="slider"`
+  with `tabindex="0"`, a label and a live `aria-valuenow`, and **no key handler**
+  — focusable and not operable. Mobile-first says touch is primary, not that a
+  named slider should lie about being one.
+  The three are one subject: where the lever's travel *is*, what else claims that
+  region of glass, and what a lever is when the thumb is not on it.
+- **done-when:** a thumb that starts on the lever and wanders keeps the lever,
+  the edge gesture cannot take a drag that started inside the cab, and the
+  console is either operable by the affordance it advertises or stops
+  advertising it.
 
 ### [L-049] The makers reach the whole cab — the agentic round
 - **what:** one author per manufacturer, each given only its own `doc/LORE.md`
@@ -384,6 +384,44 @@ shipped app, which this branch built by hand twice and threw away twice.
 ---
 
 ## history
+
+### [L-075] Nothing drives the app — **closed**
+The card asked whether it asserts or reports and the answer was **assert**:
+`npm run drive` is a second Vitest project — browser mode, the pinned Chromium
+the benches already carry, one dev dependency and no second runner. The two
+projects sit in one `vite.config.ts` so the line between them is readable, under
+robby's rule, which it paid for: *if it needs a browser to be true it belongs in
+`drive`*, because a two-minute check is one nobody runs.
+
+**The gate is the recording's own vocabulary, not a list of buttons.** *Its
+verbs* was the trap in the card's own sentence — a hand-written list goes stale
+silently, in the direction of less coverage. `control/trace.ts` already
+enumerates them for another reason, so nine kinds across `Command` and
+`Attention` are named once in `tests/browser/verbs.ts` and two checks share it:
+the driver presses each and waits for it **by name**, and the fast suite holds
+the list against both unions in milliseconds. Neither half can be satisfied by
+writing the list down twice.
+
+**Eleven faults were planted and every one failed by name** — BEGIN not seating
+you, the levers reaching nothing, the cabinet not dropping your head, a fuse that
+is not a command, the stop latching unrecorded, RESET not re-racking. Among them
+**L-070's shipped bug, replanted**: reading the camera in the run effect, which
+the driver catches as *a camera press handed back a different run*.
+
+**And a shipped defect fell out of the first run it ever made.**
+`audio/engine.ts` resumed a **closed** `AudioContext` on every dispose — so every
+RESET and every change of exercise — because L-080's fix had replaced
+`=== "suspended"` with `!== "running"` to catch `interrupted`, and `closed` is
+the one state that is terminal. Invisible to all 355 tests including the suite
+written for that file, because `createLiveAudio` built its own context: the only
+link on that path without a seam, between a `createAudio(context)` and a
+`createSound(make)` that both have one. It takes its context now, five branches
+were planted, and the listener comes off before the close rather than after.
+
+The shell grew its first prop — `makeRun`, so a run in progress is reachable —
+and closing that opened a hole in the guard that watches the run effect, which
+matched `$state` and `$derived` and not `$props`. It matches props now, and the
+capture is `untrack`. 363 tests in 11.1s; `drive` is 24.5s.
 
 ### [L-084] A recording is of a session, not of the physics — **closed**
 L-032's edge was wrong. It recorded the levers, the posture and the rack and

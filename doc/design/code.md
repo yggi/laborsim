@@ -14,6 +14,7 @@ are, why the board is ordered the way it is, and what the target platform costs.
 | [`code/prototype-findings.md`](code/prototype-findings.md) | what `prototype/concept-3/` proved, what it faked, and what it cost |
 | [`code/roadmap.md`](code/roadmap.md) | forward-looking: the critical-path review and the argument behind the board's order |
 | [`code/mobile-budget.md`](code/mobile-budget.md) | what the phone actually costs — how it is measured, the payload, and the device table |
+| [`code/driving.md`](code/driving.md) | the only thing here that plays the game: what `npm run drive` presses, and how it knows what the verbs are |
 
 ## Where to go instead
 

@@ -1080,46 +1080,68 @@ export function createAudio(context: BaseAudioContext, output?: AudioNode): Audi
  * gesture handler. That is not a workaround to hide: an exercise that began
  * talking before you had touched anything would be the rig being rude.
  */
-export function createLiveAudio(): { audio: Audio; resume(): void; dispose(): void } {
-  const context = new AudioContext();
+export function createLiveAudio(
+  /**
+   * The context, so that its **lifetime** is reachable from a test.
+   *
+   * This was `new AudioContext()` in the body, and that is why a defect in the
+   * five lines below shipped and survived `tests/graph.test.ts`, a suite written
+   * for this file: `createAudio` takes its context and `createSound` takes its
+   * `make`, so every seam on this path existed except the one in the middle. The
+   * first thing that ever drove the app in a browser found it in one run
+   * (`doc/LOG.md`, L-075).
+   */
+  context: AudioContext = new AudioContext(),
+): { audio: Audio; resume(): void; dispose(): void } {
   const audio = createAudio(context);
+
+  /**
+   * Wake it if it is stopped — but **`closed` is terminal**.
+   *
+   * Two things had to be true at once and only one of them was. *Wake it if it
+   * is anything but running*: `state === "suspended"` was once the whole test
+   * and it is the wrong one, because `AudioContext.state` also has `interrupted`
+   * (iOS, whenever the OS takes audio focus) and a browser restarting its audio
+   * device under load can leave a context stopped in ways that are not
+   * `suspended` either. Anything that test missed stayed stopped **until the
+   * next stray touch anywhere on the window** — and a hand holding a lever
+   * produces no new `pointerdown`, so a context that stopped mid-drive stayed
+   * stopped for as long as you kept driving.
+   *
+   * *And do not ask a closed one.* `!== "running"` includes `closed`, which is
+   * the one state a context never leaves: `resume()` on it rejects with
+   * `InvalidStateError` rather than doing nothing. `dispose()` closes, closing
+   * fires `statechange`, and the listener resumed it — an unhandled rejection on
+   * **every** dispose, so on every RESET and every change of exercise.
+   *
+   * It is one condition because it was two copies, and both were wrong the same
+   * way. `resume()` on a *running* context is a no-op that resolves immediately,
+   * so asking too often is free and asking too rarely is silence.
+   */
+  const wake = () => {
+    if (context.state === "running" || context.state === "closed") return;
+    void context.resume();
+  };
+
   /**
    * The context telling us it has stopped is a better signal than a finger.
    *
    * Every other route back to `running` in this app is somebody happening to
    * touch the glass. This one is the browser saying so, which is the only thing
    * that fires when the *cause* was not a touch — an OS interruption, an audio
-   * device restarting under load. A `resume()` on a context that is already
-   * running is free, and one the autoplay policy refuses simply rejects and
-   * leaves the state alone, so this cannot spin: `statechange` only fires on a
-   * change.
+   * device restarting under load. This cannot spin: `statechange` only fires on
+   * a change, and `wake` declines the two states that are not a stoppage.
    */
-  context.addEventListener("statechange", () => {
-    if (context.state !== "running") void context.resume();
-  });
+  context.addEventListener("statechange", wake);
+
   return {
     audio,
-    /**
-     * Wake it if it is **anything but running**, not only if it is suspended.
-     *
-     * `state === "suspended"` was the whole test, and it is the wrong one:
-     * `AudioContext.state` also has `interrupted` (iOS, whenever the OS takes
-     * audio focus) and a browser restarting its audio device under load can
-     * leave a context stopped in ways that are not `suspended` either. Anything
-     * this test missed stayed stopped **until the next stray touch anywhere on
-     * the window**, because a gesture handler was the only thing that ever
-     * called this — and a hand holding a lever produces no new `pointerdown`,
-     * so a context that stopped mid-drive stayed stopped for as long as you
-     * kept driving.
-     *
-     * `resume()` on a running context is a no-op that resolves immediately, so
-     * asking too often is free and asking too rarely is silence.
-     */
-    resume() {
-      if (context.state !== "running") void context.resume();
-    },
+    resume: wake,
     dispose() {
       audio.dispose();
+      // Before the close, not after: closing *is* a state change, and a
+      // listener still attached for it is the bug above.
+      context.removeEventListener("statechange", wake);
       void context.close();
     },
   };

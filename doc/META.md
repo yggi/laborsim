@@ -80,6 +80,15 @@ test catches that — **ask what clamps a quantity before comparing on it**, the
 ask how big *nothing* is. **Put the control inside the instrument**: one that
 cannot say "I cannot tell" will say something else, and be believed.
 
+**A green summary is not a green run — read the exit code.**
+The browser suite reports uncaught errors, unhandled rejections and throws from
+a rAF callback, sets exit code 1, and prints `Tests 3 passed (3)` above it with
+the errors on their own line. Three planted faults all did this. A human scanning
+that output sees green, and anything that wraps a runner and parses its summary
+converts a failing run into a passing one. **Ask what the thing you trust is
+actually reading**, and prefer the channel the machine acts on to the one written
+for a person.
+
 **A fix with two halves needs each half taken away separately.**
 The site-standing assertion passed with the footing test *deleted* — the graded
 pads alone were carrying it — green for half a reason, and it would have stayed
@@ -89,11 +98,16 @@ props** for want of anywhere to say yes to, together 1 of 117. **Plant the
 absence of each part, not of the whole.**
 
 **Where a thing lives decides whether it can be checked.**
-Two defects stayed shipped because nothing could reach them, not because nobody
+Three defects stayed shipped because nothing could reach them, not because nobody
 looked: NAV-1's route scope plotted every pin on the wrong side of the machine
-for its whole life, its geometry inside a `.svelte` file no test mounts, and six
+for its whole life, its geometry inside a `.svelte` file no test mounts; six
 cab concerns sat in the shell where the E-stop's restore had never been asserted
-at all. **Ask what a defect would have had to get past — if "nothing", that is
+at all; and `createLiveAudio` resumed a **closed** `AudioContext` on every
+dispose while `tests/graph.test.ts`, written for that file, could not see it —
+because it built its own context, between a `createAudio(context)` and a
+`createSound(make)` that both take theirs. **A path is only as reachable as its
+least reachable link**, and the one in the middle is the one nobody notices is
+missing. **Ask what a defect would have had to get past — if "nothing", that is
 the finding.**
 
 **A read is a subscription, and nothing in the syntax says so.** `run.setView(mode)`

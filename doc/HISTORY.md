@@ -180,6 +180,28 @@ one instrument*. The deeper fix was a type: **`traction` is `null`, not 0, for a
 track with no ground**, because 0 is what a *parked* machine reports, and one
 number for two opposite conditions is a dial that lies.
 
+**The phone stopped being an assumption.** Mobile-first had been fixed since
+before there was code, and nothing had ever measured a frame on a phone. Six
+passes over the same six seconds of the same run, on the device itself, answered
+it: **the frame fits** — a Pixel 9 holds its panel's refresh through every pass
+on two browsers — so the ceiling is the **CPU** rather than the pixels, at
+3–3.4 ms of a frame that may be 8.34 ms, and **draw calls at ~7 µs each are what
+spend it**. The price list inverted the intuition: a prop is 0.75 calls and the
+site can triple before its furniture matters, while **the machine already costs
+more than the whole site does**, free today only because the camera sits inside
+it and its geometry culls. Payload: 1.32 MB over the wire, 95% of it Rapier's
+wasm, and everything built since the empty scaffold adds 0.05 MB.
+
+Each of the three runs found a defect **in the bench**, which is the lasting
+lesson. Every pass returned the panel's refresh period, so every delta read 0%
+and the verdict said *pixels are not what is costing you* about a scene where
+halving the buffer removed 43% of the GPU's work — **a saturated instrument
+reports a result, not a limit**. Then a 1 ms clock made one tick a 5% delta and
+two such ticks had been written down as prices. The floor is the larger of the
+clock's step and the drift the control pass measures, which had been in the
+report all along: **put the control inside the instrument**, because one that
+cannot say *I cannot tell* will say something else and be believed.
+
 ## The ride gets springs, and the rig gets something to ask for
 
 **Twelve springs, one per contact point.** Each track's six ray samples became a

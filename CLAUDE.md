@@ -51,6 +51,14 @@ shots` or `npm run cab` for anything visual, `npm run listen` for anything
 audible. **Print the number rather than estimating it**: a gate you do not check
 is not a gate, and this repo has shipped "within its limit" at 307 of 300.
 
+**And `npm run drive` for anything in the shell** — BEGIN, the levers, the
+cameras, the cabinet, the stop, RESET, or anything a press has to cross to reach
+the machine. It is the only thing here that plays the game (`doc/design/code/driving.md`).
+It costs a browser and half a minute, so it is run before pushing rather than on
+a thought, and CI runs it on every branch. **Read its exit code, never its
+summary line**: an uncaught error in the page exits 1 under a summary that still
+says every test passed.
+
 **2. The surfaces moved.** A change that touches code and leaves `doc/` alone is
 incomplete. The minimum is a `doc/LOG.md` entry; anything that closed or opened
 work also touches `doc/BOARD.md` and `doc/NOTES.md`.
