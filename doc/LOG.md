@@ -20,6 +20,92 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-28 — L-075 gets an approach and six spikes, and the first thing to drive the app finds a bug
+
+Cards: none closed. [L-075] spiked, not started.
+
+**The session opened on whether to give this game a solver**, because `yggi/robby`
+— a parallel project, a programming puzzle for pre-readers — has one as a core
+component, and its `CLAUDE.md` says nothing in that codebase matters as much.
+**Rejected, with reasons worth keeping.** Robby's `solve()` is 57 lines of BFS
+and it earns its place through *three shipped consumers*: every level's par is
+re-derived on every test run, the generator judges candidates with it, and the
+editor runs it live. Two of those three are absent here **by design** — `doc/MEMORY.md`
+§ 3.2 says no score, no gate, no par time, and there is no level editor. The
+third, the generator, is real and open (L-027).
+
+And the search does not transplant: robby has four discrete actions, a cheap
+exact transition and a hashable state key; we have two continuous axes at 60 Hz
+over minutes with a Rapier snapshot for state. Anything called a solver here
+would be a planner plus a controller, and **half of that already exists in the
+fiction as NAV-1**. The sharper argument is the design one: robby's subject *is*
+the shortest program, so an optimal player measures the thing the game is about,
+while ours is the gap between what a machine is rated to do and what it does on
+the day — and an optimal driver optimises that gap away. **Robby needs an optimal
+player; we need a plausible bad one.** `doc/NOTES.md` has the evidence already:
+a twelve-year-old found the fun in seconds by driving at the material, and a
+scripted driver went ten minutes without touching anything.
+
+**What does transplant is the technique, and it needs no solver.** Robby's
+load-bearing filter is *solve a candidate twice, once with the mechanic disabled,
+and reject it unless the answer changes* — difference, not direction, which took
+generator acceptance from 55% to 17%. Ours is the same shape with the reference
+driver in place of the search, and **L-075 is what unlocks it**, which is a better
+argument for that card than the one it was carrying.
+
+**The approach L-075 takes: Vitest 4 browser mode, not a fifth bench.**
+`@vitest/browser-playwright@4.1.11` pins to `vitest@4.1.11` exactly and
+peer-depends on the `playwright` already installed, so the fifth thing is a
+*suite* sharing config, fixtures and reporting with the other 355 tests rather
+than a sixth hand-rolled `.mjs`. One dev dependency, no second runner, no second
+browser download. The gate is general rather than a hand-list: **every kind in
+the recording union must appear in the trace the session produced**, so a verb
+added to `control/trace.ts` without a driver step fails the suite until it is
+driven.
+
+**Six blockers, all cleared, with numbers.** The run boots in a browser-mode
+iframe — Rapier's wasm, a real WebGL2 context and the fixed-step clock — with the
+world at 644 ms and the first snapshot at 801 ms; rAF is alive at ~22 fps under
+swiftshader. A full shell mount plus BEGIN plus a lever is 6.41 s wall, 3.85 s
+in-test. The Chromium pin the four benches carry ports over verbatim as
+`launchOptions.executablePath`. And **no custom pointer command is needed**:
+`userEvent.click(el, { position })` produces real pointer events, `setPointerCapture`
+works, and the lever reached `aria-valuenow > 0.9` — because `grab()` sets the
+value on pointerdown and `release()` deliberately does not reset it, a positioned
+click *is* a lever command.
+
+**The suite's summary lies and its exit code does not.** Three faults were
+planted — a throw from a timer, an unhandled rejection, a throw from a rAF
+callback. All three were reported and all three set exit code 1, under a summary
+line reading `Tests 3 passed (3)` with the errors on a separate line. A human
+scanning that output sees green. **The gate is the exit code**; nothing may wrap
+this suite in something that reads the summary instead.
+
+**A shipped defect, found by the first thing that ever drove the app.**
+`audio/engine.ts` disposes by calling `context.close()`, which fires `statechange`
+with `state === "closed"`, which the listener tests as `!== "running"` and
+resumes — `InvalidStateError`, unhandled rejection, **every dispose**, so every
+RESET and every exercise change and not merely teardown. The listener is also
+never removed. This is L-080's own fix over-corrected: it replaced
+`=== "suspended"` with `!== "running"` to catch `interrupted` and the other ways
+a browser stops a context, and **`closed` is the one state that is terminal**.
+The prose above it reasons about all the others and never about that one.
+Invisible to all 355 tests including `tests/graph.test.ts`, which exists for this
+file. It is the card's thesis demonstrating itself, and it blocks the suite's
+own no-page-errors gate.
+
+**Three findings that shape the build.** The recording union has nine kinds and a
+driven session recorded seven — `levers`, `ack`, `estop`, `horn`, `pod`, `posture`,
+`view` — leaving **`rack` and `look` as verbs nothing has ever driven**, so the
+coverage gate has content on day one. The sim is held by `hands.seated`, because
+`advance()` feeds the clock `hands.seated ? elapsed : 0` and an open schedule is a
+frame owing no steps — not a bug, and the cleanest argument that the driver must
+go through the shell rather than through `createRun`. And `index.html`'s page
+frame (`height: 100%`, `overflow: hidden`, `touch-action: none`) is inline in the
+HTML where only that file can see it, while the shell is written against it: one
+fact in one place wants it in a stylesheet `main.ts` imports, so the page and the
+driver cannot disagree.
+
 ## 2026-08-27 — two gates move, and the board catches up with the branch
 
 Cards: none closed. [L-067], [L-085], [L-082] and [L-051] **absorbed** into
