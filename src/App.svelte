@@ -15,7 +15,6 @@
  * down (`control/hands.ts`) and a snapshot coming back.
  */
 
-import { untrack } from "svelte";
 import { fitRungOne } from "./build/rung-one.ts";
 import { createAlarm } from "./cockpit/alarm.svelte.ts";
 import { BEAM, PILLAR } from "./cockpit/cage.ts";
@@ -28,13 +27,13 @@ import { createNotices } from "./cockpit/notices.svelte.ts";
 import Rack from "./cockpit/Rack.svelte";
 import { type Module, NOMINAL } from "./control/bus.ts";
 import { createControls } from "./control/controls.ts";
-import { restingHands } from "./control/hands.ts";
+import { restingHands, type View } from "./control/hands.ts";
+import type { Act } from "./control/trace.ts";
 import type { Snapshot } from "./core/snapshot.ts";
 import { styleOf } from "./makers/houses.ts";
 import { createPilot } from "./modules/pilot.ts";
-import { createRun, type Run } from "./platform/run.ts";
+import { createRun } from "./platform/run.ts";
 import { createSound } from "./platform/sound.svelte.ts";
-import type { CameraMode } from "./render/scene.ts";
 import Briefing from "./ui/Briefing.svelte";
 import Objective from "./ui/Objective.svelte";
 import RunReport from "./ui/RunReport.svelte";
@@ -45,7 +44,7 @@ import { type Exercise, exerciseById } from "./world/exercises.ts";
 
 let canvas: HTMLCanvasElement;
 let latest = $state<Snapshot | undefined>(undefined);
-let mode = $state<CameraMode>("cab");
+let mode = $state<View>("cab");
 let leverL = $state(0);
 let leverR = $state(0);
 /** The horn is down. A cab state, not sim state — nothing can hear it yet. */
@@ -67,6 +66,43 @@ const pilot = createPilot(hands);
  * rewiring that LOTO hot-patching (BOARD L-026) will one day price.
  */
 const rack: Module[] = $state([pilot]);
+/**
+ * Commands the cab has issued that no tick has taken yet.
+ *
+ * The third plain object that crosses to the loop, beside `hands` and `rack`,
+ * and for the same reason as both: the handles that write to it are held by
+ * cells and plates that outlive any one run, so it cannot belong to the run.
+ * The run drains it, stamps each command with the tick that applies it, and
+ * writes it down — which is how the ledger will one day say what was driving
+ * (`control/trace.ts`).
+ */
+const queue: Act[] = [];
+const issue = (act: Act) => queue.push(act);
+/**
+ * Where the pilot has put each pod, by component id.
+ *
+ * It lived inside `Glass.svelte`, which is mounted under
+ * `mode === "cab" && !rackOpen` — so **every placement was destroyed by opening
+ * the cabinet**, and the arms came back at their defaults, while the field's own
+ * comment promised you would find your instrument where you left it. Up here it
+ * outlives the glass, exactly as the rack and the hands do.
+ */
+const placed = $state<Record<string, { x: number; y: number }>>({});
+/**
+ * A slot moved, a verb cycled, a fuse pulled — redraw the cabinet.
+ *
+ * Declared out here rather than inside the run effect because that effect *is*
+ * the statement of what a run is made of, and a `rackVersion++` in its body
+ * reads a rune in a place where reading one means "rebuild the world when this
+ * changes". It does not, in fact — the read is inside a callback the loop calls
+ * later — but the scanner in `tests/architecture.test.ts` cannot know that, and
+ * a rule that has to be reasoned about is a rule that gets broken.
+ *
+ * It is one bump per frame in which anything landed. The four call sites that
+ * each used to bump it themselves — two cells, the plate and the E-stop — are
+ * this one.
+ */
+const remountRack = () => rackVersion++;
 let rackOpen = $state(false);
 let rackVersion = $state(0);
 /** Numeric telemetry is debug now that the meters carry the live reading. */
@@ -83,7 +119,7 @@ let dashHeight = $state(96);
  */
 const session = createSession();
 const board = createNotices();
-const estop = createEstop(rack, () => rackVersion++);
+const estop = createEstop(rack, issue);
 const alarm = createAlarm(
   () => latest,
   () => estop.engaged,
@@ -114,16 +150,15 @@ $effect(() => {
   hands.horn = honking;
   hands.seated = !session.briefing;
   hands.headDown = rackOpen;
+  // The camera crosses here rather than through a method on the run, because
+  // the run effect used to read it and that threw the world away on every CHASE
+  // press (`control/hands.ts`).
+  hands.view = mode;
   // Silent while the folder is open. Hitting the stop lights the master at
   // ALARM and opens the debrief in the same press, and a horn blaring under
   // somebody explaining what you just did is the rig talking over itself.
   hands.alarm = session.report ? NOMINAL : alarm.unacked;
 });
-
-/** The run in progress, or nothing while one is being built or torn down. A
- *  handle that is *absent* during the boot, rather than one that is quietly
- *  inert — which is what it used to be (`platform/run.ts`). */
-let current: Run | undefined;
 
 function toggleRack() {
   rackOpen = !rackOpen;
@@ -141,19 +176,13 @@ function toggleRack() {
  * check is why that is a hook rather than a rule in the channel: nobody's
  * warranty is void because you hit the big red button.
  */
-const controls = createControls(rack, {
+const controls = createControls(rack, issue, {
   onBypass(mod) {
     if (estop.engaged) return;
     const [head, body] = styleOf(mod.maker).voice.warranty;
     board.notify(mod.maker, head, body);
   },
-  onChange: () => rackVersion++,
 });
-
-function setView(next: CameraMode) {
-  mode = next;
-  current?.setView(mode);
-}
 
 /**
  * The stop is also the way out of the exercise. There is no menu button, because
@@ -215,6 +244,8 @@ $effect(() => {
     rack,
     pilot,
     hands,
+    queue,
+    onRack: remountRack,
     // What is bolted on beyond the chassis, and *which* list that is stays the
     // cab's decision — `createRun` only knows when there is a world to fit it to
     // (`build/rung-one.ts`).
@@ -225,18 +256,7 @@ $effect(() => {
     onLook: (offsetX) => nag.look(offsetX, innerWidth),
     audio: sound.voice,
   });
-  // **Untracked, or the camera rebuilds the world.** Read plainly, `mode` joins
-  // the two above as a thing this effect depends on — so pressing CHASE tore the
-  // run down and handed you an identical, untouched copy of the site you were
-  // driving. The chase camera is "hands off the wheel", not a reset
-  // (`doc/MEMORY.md` § 6): `setView` points it while a run is live, and this line
-  // only tells a *new* run where to start. The mode survives the boot either way.
-  run.setView(untrack(() => mode));
-  current = run;
-  return () => {
-    current = undefined;
-    run.dispose();
-  };
+  return () => run.dispose();
 });
 </script>
 
@@ -328,7 +348,7 @@ $effect(() => {
        this is the only equipment you keep. -->
   <div class="camera item">
     {#each ["cab", "chase"] as const as option (option)}
-      <button class:on={mode === option} onclick={() => setView(option)}>
+      <button class:on={mode === option} onclick={() => (mode = option)}>
         {option === "cab" ? "CAB" : "CHASE"}
       </button>
     {/each}
@@ -352,8 +372,13 @@ $effect(() => {
     <Glass
       snapshot={latest}
       {controls}
+      {placed}
       bottomKeepOut={dashHeight + 12}
       onSettle={(maker) => clunk(maker)}
+      onplace={(id, x, y) => {
+        placed[id] = { x, y };
+        issue({ kind: "pod", id, x, y });
+      }}
     />
   {/if}
 
@@ -380,6 +405,10 @@ $effect(() => {
         onEstop={hitEstop}
         onAck={() => {
           alarm.ack();
+          // The one bit of the annunciator the operator creates: the lamps, the
+          // master and the unacked condition are all derived from the snapshot,
+          // so the *press* goes on the recording and the condition never does.
+          issue({ kind: "ack" });
           click();
         }}
         onHorn={(down) => (honking = down)}
@@ -387,12 +416,7 @@ $effect(() => {
       />
       {#if rackOpen}
         {#key rackVersion}
-          <Rack
-            modules={rack}
-            snapshot={latest}
-            onchange={() => rackVersion++}
-            debug={showDebug}
-          />
+          <Rack modules={rack} snapshot={latest} {controls} debug={showDebug} />
         {/key}
       {/if}
     </div>

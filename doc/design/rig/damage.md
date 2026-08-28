@@ -244,7 +244,7 @@ In order, and each one is a `doc/BOARD.md` card:
 |---|---|
 | L-031 damage model | **built.** Mass, price, toughness, priced and attributed events; furniture is dynamic and scatters. |
 | L-039 breakables | **built.** Fourteen kinds over nine materials, on ground graded to hold them, each coming apart into what it is made of. |
-| L-032 record and playback | the ledger's *why* column. Also the only way a line can be argued with. |
+| L-032 record and playback | **built.** A run is a `Setup` plus a trace of what the operator did, and it replays exactly — so `driving` and `bypassed` on a line are re-derivable rather than merely recorded. Watching one back is L-083. |
 | L-029 the ledger itself | itemised, named, priced, condescending. |
 | L-038 machine damage and reset | the cost lands on you as well as on the site. |
 | L-040 the machine symphony | **built.** The fourth channel, and it arrived early because there was already something to sound like. |

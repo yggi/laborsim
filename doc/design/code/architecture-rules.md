@@ -45,9 +45,13 @@ Why: **attribution is the design.** A failure you cannot reproduce cannot be
 blamed on a design decision, and the whole loop collapses to vibes. Replay is
 not a feature bolted on later; it is the thing that makes failure teach.
 
-**Check:** the L-019 spike — the same input trace yields the same
-`world.takeSnapshot()` hash on two different browsers. Rapier's
-`-deterministic` build guarantees its half; this rule guarantees ours.
+**Check:** `tests/replay.test.ts` — a recorded run replayed from its trace and
+its seed yields the same damage events in the same order and the same
+`world.fingerprint()`, and every part of the trace removed in turn changes the
+answer. `tests/determinism.test.ts` holds the weaker half, about a run nobody
+drove. The remaining half is the L-019 spike: the same trace on two different
+*browsers*. Rapier's `-deterministic` build guarantees its share; this rule
+guarantees ours, and the trace format is now the thing that spike compares.
 
 **Transcendentals — settled at L-014.** JS does not require `Math.sin`, `cos`,
 `exp` or `pow` to be bit-identical across engines, and the probe's `H(x,z)` was
@@ -75,11 +79,44 @@ State crosses that boundary in exactly one direction, through an explicit
 snapshot. Commands cross back as discrete, queued inputs — never as shared
 mutable state.
 
+**A recording has two channels, and only one may reach the machine.**
+`commands` is what reached it — the levers and the rack — and reproduces the run
+exactly. `attention` is what the operator saw, heard and did about it: the horn,
+the acknowledgement, the mushroom latch, the cabinet, the view they watched from,
+where their head was, where they put their instruments. The rig reviews the
+second and the physics must never notice it.
+
+Half of that is structural — `createPlayback` takes `readonly Command[]` and is
+never handed the other side, so a headless replay *cannot* read it. What types
+cannot say is that the recording put each thing on the right side, so the check
+is a scan: **the sim, the rack and the modules may read exactly three fields off
+the hands** — `leverL`, `leverR`, `seated`. A fourth is a decision about what a
+recording *is*, and it has to be made in `control/trace.ts` first.
+
+The line between the channels is `doc/MEMORY.md` § 11's: a manufacturer's kit is
+recorded, the training system's own furniture is not. The camera is the one
+stated exception — it is the rig's, but chase takes away the levers, the pods and
+the dash, and `cab/cockpit.md` already said stepping out to use it "is a thing
+the rig can record".
+
+**That last clause was aspirational until L-032.** There was no queue and no
+tick: `Controls` mutated a module inside the pointer event's own turn, and it
+was not even the only writer — `Rack.svelte` spliced the live rail and assigned
+`module.verb`, the E-stop wrote every module's field, and the two commands the
+rack is actually *about*, reorder and verb, could not be expressed through the
+channel at all. A command is a `RackCommand` now, `applyRack` is the one writer,
+and the frame applies it at a tick and writes it down (`control/trace.ts`). The
+cost of it having been false: the ledger could price what you broke and never
+say what was driving.
+
 Concretely:
 
 - **Instruments never subscribe to live sim state.** They read the latest
   snapshot. An instrument is a *view of a recording*, which is also why the same
-  instrument code can drive a replay.
+  instrument code can drive a replay. **A run now literally is one**: a `Setup`
+  and a trace of what the operator did, replayed through the same
+  `platform/frame.ts` the game advances (`control/trace.ts`,
+  `platform/replay.ts`).
 - **Svelte never owns the canvas.** Svelte owns DOM UI. A plain TypeScript
   module owns the renderer, the scene graph and the loop.
 - **Do not use Threlte** (or any reactive scene-graph wrapper). It inverts
@@ -99,7 +136,13 @@ problem that kills mobile frame budgets. The boundary also happens to be the
 same seam a worker would sit on, so rules 1 and 3 reinforce each other.
 
 **Check:** grep — no `three` import under `src/ui/` or `src/cockpit/`, no Svelte
-import under `src/sim/`. A part of a component takes its slot, its style and (a
+import under `src/sim/`. And **one frame**: `world.step(` appears in exactly two
+files under `src/`, which are different `world`s — `sim/world.ts`, where a step
+*is*, and `platform/frame.ts`, where one is *driven*. That check replaced two
+regexes comparing the game's loop with the bench's copy of it, which is the
+weaker form of the same rule: two files agreeing about a literal is an
+approximation of one file, and the copy had drifted before the regexes were
+written (L-080). A part of a component takes its slot, its style and (a
 pod) the snapshot, and nothing else — the contract is `src/cockpit/contract.ts`
 and commands leave through `Controls`, never through a live module. The rune
 rule is scanned rather than trusted — `tests/architecture.test.ts` reads the

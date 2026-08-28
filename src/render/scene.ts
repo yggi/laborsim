@@ -11,6 +11,7 @@
  */
 
 import * as THREE from "three";
+import type { View } from "../control/hands.ts";
 import { createEventReader } from "../core/events.ts";
 import { makeRng } from "../core/rng.ts";
 import type { PropPose, Snapshot } from "../core/snapshot.ts";
@@ -29,7 +30,15 @@ import { ink, inked, terrainMaterial, toon } from "./toon.ts";
  * with a clear windscreen is a genuinely good machine. Chase is the extra, and
  * it costs you the controls — see doc/design/cab/cockpit.md.
  */
-export type CameraMode = "cab" | "chase";
+/**
+ * Re-exported from `control/hands.ts`, which is where it is declared.
+ *
+ * Where the operator is watching from is a **posture**, not a camera setting —
+ * chase takes away the cage, the dash, the pods and the levers, and the renderer
+ * is only the last consumer to hear about it. The alias stays so that the
+ * viewport's own vocabulary reads as the viewport's.
+ */
+export type CameraMode = View;
 
 export interface Viewport {
   render(snapshot: Snapshot): void;
@@ -46,6 +55,17 @@ export interface Viewport {
    * reactive state (architecture rule 3, and `doc/design/cab/components.md`).
    */
   head(): { x: number; y: number };
+  /**
+   * Where the head is pointed, in **radians** — what `head()` is before the
+   * glass turns it into pixels.
+   *
+   * It exists because a recording of a session records the angle and never the
+   * pixels: `head()` is `focalPixels(fov, glassHeight)` through a tangent, so
+   * the same glance is ±10,730 px on a phone and ±13,740 px on a desktop, and a
+   * trace in pixels would replay on the wrong glass (`control/trace.ts`).
+   * `{ pan: 0, tilt: 0 }` in chase, where free look is the orbit instead.
+   */
+  angles(): { pan: number; tilt: number };
   /**
    * A hand is on the glass, or has come off it.
    *
@@ -559,6 +579,9 @@ export function createViewport(
       viewHeight = height;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+    },
+    angles() {
+      return mode === "cab" ? { pan, tilt } : { pan: 0, tilt: 0 };
     },
     head() {
       // Chase is outside the machine: there is no cab to sweep, and the only

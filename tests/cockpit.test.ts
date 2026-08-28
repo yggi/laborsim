@@ -23,7 +23,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   chassisConditions,
   conditionAt,
@@ -42,6 +42,7 @@ import {
   WARN,
 } from "../src/control/bus.ts";
 import { createControls, inertControls } from "../src/control/controls.ts";
+import { type Act, applyRack } from "../src/control/trace.ts";
 import { snapshot, track } from "../src/core/fixture.ts";
 import type { BodyPose, Snapshot, TrackState } from "../src/core/snapshot.ts";
 import { MAKER_NAMES, styleOf } from "../src/makers/houses.ts";
@@ -436,28 +437,76 @@ describe("commands cross back through one channel", () => {
   const rackOf = (...over: Partial<Module>[]) =>
     over.map((o, i) => module({ id: `M${i}`, ...o }));
 
-  it("switches a component off, and says so", () => {
+  /**
+   * A sink that applies as it records — the eager form `createControls` names
+   * for a bench or a test. The app's sink defers to a tick instead, which is
+   * `tests/replay.test.ts`'s subject; here the point is that the handle emits
+   * the right command and that the applier does the right thing with it, which
+   * are two claims and used to be one.
+   */
+  function wire(rack: Module[]) {
+    const issued: Act[] = [];
+    const controls = createControls(
+      rack,
+      (act) => {
+        issued.push(act);
+        if (act.kind === "rack") applyRack(rack, act.command);
+      },
+      { onBypass: (m) => bypassed.push(m.id) },
+    );
+    return { issued, controls };
+  }
+  let bypassed: string[] = [];
+  beforeEach(() => {
+    bypassed = [];
+  });
+
+  it("switches a component off, and says which one", () => {
     const rack = rackOf({ enabled: true });
-    let changed = 0;
-    const controls = createControls(rack, { onChange: () => changed++ });
+    const { issued, controls } = wire(rack);
     controls("M0").toggle();
+    expect(issued).toEqual([
+      { kind: "rack", command: { kind: "enable", id: "M0", on: false } },
+    ]);
     expect(rack[0]?.enabled).toBe(false);
-    expect(changed).toBe(1);
+  });
+
+  it("cycles a verb and moves a slot — the two it could not express", () => {
+    // Order is the game, and a verb is how a module folds in. Both used to be
+    // reachable only by `Rack.svelte` writing the live module (L-032).
+    const rack = rackOf({ id: "A", verb: "SET" }, { id: "B" }, { id: "C" });
+    const { issued, controls } = wire(rack);
+    controls("A").setVerb("CAP");
+    controls("A").reorder(2);
+    expect(issued).toEqual([
+      { kind: "rack", command: { kind: "verb", id: "A", verb: "CAP" } },
+      { kind: "rack", command: { kind: "order", id: "A", to: 2 } },
+    ]);
+    expect(rack[0]?.verb).toBe("SET");
+    expect(rack.map((m) => m.id)).toEqual(["B", "C", "A"]);
+    expect(rack[2]?.verb).toBe("CAP");
   });
 
   it("does nothing at all for a component that is not fitted", () => {
     // The replay case: the instrument is drawn from a recording of a machine
     // that is not in front of you. Its handles must be harmless, not absent.
     const rack = rackOf({ enabled: true });
-    const controls = createControls(rack, {});
-    expect(() => controls("GONE").toggle()).not.toThrow();
+    const { issued, controls } = wire(rack);
     expect(() => controls("GONE").setParam("anything", 3)).not.toThrow();
+    expect(() => controls("GONE").setVerb("AMP")).not.toThrow();
+    expect(() => controls("GONE").reorder(0)).not.toThrow();
     expect(rack[0]?.enabled).toBe(true);
+    expect(rack[0]?.verb).toBe("SET");
+    // `toggle` has nothing to ask, so it does not even issue.
+    controls("GONE").toggle();
+    expect(issued.every((c) => c.kind === "rack" && c.command.id === "GONE")).toBe(
+      true,
+    );
   });
 
   it("looks the slot up again on every call, because the rack is mutated", () => {
     const rack = rackOf({ enabled: true });
-    const controls = createControls(rack, {});
+    const { controls } = wire(rack);
     const handle = controls("LATER");
     rack.push(module({ id: "LATER", enabled: true }));
     handle.toggle();
@@ -466,8 +515,7 @@ describe("commands cross back through one channel", () => {
 
   it("fires the warranty hook on a deliberate bypass, and only then", () => {
     const rack = rackOf({ safety: true, enabled: true });
-    const bypassed: string[] = [];
-    const controls = createControls(rack, { onBypass: (m) => bypassed.push(m.id) });
+    const { controls } = wire(rack);
     controls("M0").toggle();
     expect(bypassed).toEqual(["M0"]);
     // Putting the guard back is not a bypass, and neither is switching off
@@ -480,8 +528,7 @@ describe("commands cross back through one channel", () => {
     // An emergency stop disables every module in the rack, so by the time any
     // cell could call `toggle` there is nothing enabled to bypass.
     const rack = rackOf({ safety: true, enabled: true });
-    const bypassed: string[] = [];
-    const controls = createControls(rack, { onBypass: (m) => bypassed.push(m.id) });
+    const { controls } = wire(rack);
     for (const m of rack) m.enabled = false;
     controls("M0").toggle();
     expect(bypassed).toEqual([]);
@@ -496,7 +543,7 @@ describe("commands cross back through one channel", () => {
       ],
       () => ({ x: 0, z: 0, rotation: { x: 0, y: 0, z: 0, w: 1 } }),
     );
-    const controls = createControls([nav], {});
+    const { controls } = wire([nav]);
     controls("NAV").setParam("target", 3);
     expect(nav.target).toBe(2);
     // The module's own `set` owns the bounds: a pin off the end of the route is
@@ -510,6 +557,8 @@ describe("commands cross back through one channel", () => {
   it("gives a bench and a replay handles that do nothing", () => {
     expect(() => inertControls().toggle()).not.toThrow();
     expect(() => inertControls().setParam("target", 1)).not.toThrow();
+    expect(() => inertControls().setVerb("CAP")).not.toThrow();
+    expect(() => inertControls().reorder(0)).not.toThrow();
   });
 });
 

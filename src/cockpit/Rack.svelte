@@ -20,11 +20,21 @@
  * There is no close button here. The dash's latch is the only way in and out,
  * because it *is* the latch — one handle on the seam, the way a hood has one.
  *
- * Architecture rule 3: edits a plain list, reads a snapshot. Never the sim.
+ * Architecture rule 3: reads a snapshot, writes through `Controls`. Never the
+ * sim, and — since L-032 — never a live module either. It used to `splice` the
+ * rail and assign `module.verb` in place, which made the one part of the cockpit
+ * that could reach a fitted component the same part that owns the two commands
+ * the ledger most needs to know about. Both now leave as values, like every
+ * other command in the cab, and arrive at a tick that can be written down.
+ *
+ * `modules` is still read — a param's bounds, label and unit are declared on the
+ * module and are on no snapshot (L-054 is where that changes). Read to ask;
+ * write through the channel.
  */
 
 import type { Module, Param, Stage, Verb } from "../control/bus.ts";
 import { VERBS } from "../control/bus.ts";
+import type { Controls } from "../control/controls.ts";
 import type { Snapshot } from "../core/snapshot.ts";
 import { MAX_TRACK_SPEED } from "../core/spec.ts";
 import { styleOf } from "../makers/houses.ts";
@@ -34,12 +44,12 @@ import { ampsFor, faceFor, fuseColour, unitsFor } from "./parts.ts";
 const {
   modules,
   snapshot,
-  onchange,
+  controls,
   debug = false,
 }: {
-  modules: Module[];
+  modules: readonly Module[];
   snapshot: Snapshot | undefined;
-  onchange: () => void;
+  controls: (id: string) => Controls;
   debug?: boolean;
 } = $props();
 
@@ -51,28 +61,34 @@ const strength = (v: number) => Math.min(1, Math.abs(v) / MAX_TRACK_SPEED);
 
 function move(index: number, by: number) {
   const to = index + by;
-  if (to < 0 || to >= modules.length) return;
-  const [held] = modules.splice(index, 1);
-  if (held) modules.splice(to, 0, held);
-  onchange();
+  const module = modules[index];
+  if (!module || to < 0 || to >= modules.length) return;
+  controls(module.id).reorder(to);
 }
 
 function cycleVerb(module: Module) {
-  module.verb = VERBS[(VERBS.indexOf(module.verb) + 1) % VERBS.length] as Verb;
-  onchange();
+  controls(module.id).setVerb(
+    VERBS[(VERBS.indexOf(module.verb) + 1) % VERBS.length] as Verb,
+  );
 }
 
 /** The one hot-patchable control every module has. */
 function toggle(module: Module) {
-  module.enabled = !module.enabled;
-  onchange();
+  controls(module.id).toggle();
 }
 
 /**
  * Live mirror of every setting, so turning a knob does not rebuild the rack.
- * Order, verb and enable each change what the rail *is* and call `onchange`;
- * a setting does not, and remounting mid-drag would drop the thumb that is
- * dragging it. The module stays the owner — this only echoes what it accepted.
+ * Order, verb and enable each change what the rail *is* and remount it; a
+ * setting does not, and remounting mid-drag would drop the thumb that is
+ * dragging it.
+ *
+ * It echoes what was **asked for** rather than what the module accepted, which
+ * is the one thing the deferred channel changed here: the command lands a frame
+ * later, so reading `param.get()` back in the same turn would show the previous
+ * value and the thumb would snap backwards under your finger. The range input's
+ * own `min`/`max`/`step` already bound what can be asked, and the module's `set`
+ * is still what enforces it on the machine.
  */
 const shown = $state<Record<string, number>>({});
 const keyOf = (module: Module, param: Param) => `${module.id}:${param.id}`;
@@ -89,8 +105,8 @@ const withUnit = (value: number, unit: string) =>
   `${value}${/^[a-z]/i.test(unit) ? " " : ""}${unit}`;
 
 function setParam(module: Module, param: Param, value: number) {
-  param.set(value);
-  shown[keyOf(module, param)] = param.get();
+  controls(module.id).setParam(param.id, value);
+  shown[keyOf(module, param)] = value;
 }
 
 /** What a face is handed before the first snapshot arrives. */

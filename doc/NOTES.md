@@ -15,9 +15,8 @@ gone stale: resolve, promote or delete, back to 100 or below in one pass.
 
 Reported once: complete silence for seconds during ordinary driving, no impacts,
 Android/Firefox, mute untouched — and gone after a full reload, never seen since.
-Four real defects in `engine.ts` were found looking for it (L-080) and **none of
-them explains it**: the twin was audible-but-wrong, the mute path needs a press,
-`dt` needs a NaN. What is left is a browser stopping its audio device under load,
+Four real defects in `engine.ts` were found looking for it (L-080) and **none
+explains it**. What is left is a browser stopping its audio device under load,
 which the resume fix now covers, or a long dev session's stale context, which a
 refresh fixes and nothing records. A thread until it recurs on a fresh load;
 L-081 is the instrument that would say which.
@@ -36,59 +35,67 @@ nothing; the interaction term commits to everything. `doc/design/rig/missions.md
 
 A twelve-year-old found the fun in seconds by driving at the material; a scripted
 driver went ten minutes without touching anything, because 130 props sat in six
-clusters the route never passed. **Two thirds of that is answered now** (L-039,
-L-057): the work areas are graded pads chosen in the route's own annulus and held
-off the markers, so driving between two pins takes you past one, and the footing
-that lets a thing stand is a rule rather than luck.
+clusters the route never passed. **Two thirds is answered** (L-039, L-057): work
+areas are graded pads in the route's own annulus, held off the markers, so
+driving between two pins takes you past one, and footing is a rule rather than
+luck.
 
-What is left is the sharper third, and closing the other two made it sharper
-still: **proximity is not composition.** A pad near the route is somewhere you
-pass; it is not somewhere that was *laid out* — no bench you have to go round, no
-clearance you have to judge, no unsurveyed obstruction on the line you were
-actually given. The generator now has the vocabulary for it (a pad is a first-
-class thing with a target height) and none of the intent. L-027 is where that
+The sharper third, and closing the others made it sharper: **proximity is not
+composition.** A pad near the route is somewhere you pass; it is not somewhere
+that was *laid out* — no bench to go round, no clearance to judge, no unsurveyed
+obstruction on the line you were given. The generator has the vocabulary (a pad
+is a thing with a target height) and none of the intent. L-027 is where it
 becomes a card; the thread is what "composed" would have to mean first.
 
-## The suspension is simulated and heard, and neither drawn nor shown
+## Which simulated quantities does the player get to see?
 
-Two halves of one gap. **No instrument:** travel is on the developer's telemetry
-line and nowhere else, and an instrument costs view (§ 6) — so does compression
-earn a head, join TRACTION's plan view as a third channel, or is it the first
-quantity the machine deliberately refuses to show you? That last is either a good
-rule or a hole in principle 5. **Not drawn:** the belt is one rigid loop bolted
-to the hull while the bogies move, so a big enough hit passes it through the
-ground. A real track drapes over its wheels; the honest fix is a bottom run that
-follows the six compressions, which nobody has costed.
+The physics tiers in `machine/physics-migration.md` are a *development* fidelity
+ladder, not a player-facing one. Unanswered: whether the player sees a **domain
+stack** (structure / mechanics / power / thermal / signal), a **fidelity ladder**
+they descend, or both as a matrix. Shapes `src/sim/layers/`, still empty.
 
-## What does "multi-layer" cut along, for the player?
-
-The physics tiers in `machine/physics-migration.md` are a *development* fidelity ladder,
-not a player-facing one. Unanswered: whether the player sees a **domain stack**
-(structure / mechanics / power / thermal / signal), a **fidelity ladder** they
-descend, or both as a matrix. Shapes `src/sim/layers/`, which is still empty.
+The suspension is the live instance and the sharpest one, because it is
+simulated and *heard* and shown nowhere: travel is on the developer's telemetry
+line only, and an instrument costs view (§ 6). Does compression earn a head, join
+TRACTION's plan view as a third channel, or is it the first quantity the machine
+deliberately **refuses** to show you? That last is either a good rule or a hole
+in principle 5. (Its other half — the belt not following its own bogies — is a
+defect with a known fix, so it is L-086 rather than a question.)
 
 ## The lemon — degradation
 
-The symptom half became cards and most are closed (L-043, L-040; lights L-046
-remain). Still a thread is **degradation**: the drive genuinely changes — per-track
-`MU` falls, a bias enters the normal-load share, a sprocket will not take full
-torque. A damaged machine becomes a *different machine*, which is the whole
-subject and the expensive part. It keeps getting cheaper: the friction model can
-already express most of it, and the voices are per track and read `traction`,
-`commanded` and `contacts` directly, so a lost tooth would sound wrong with **no
-audio work at all**. Not v0; do not let the reset design (L-038) foreclose it.
+The symptom half is mostly cards and mostly closed (L-043, L-040; lights L-046
+remain). The thread is **degradation**: per-track `MU` falls, a bias enters the
+normal-load share, a sprocket will not take full torque — a damaged machine
+becoming a *different machine*, which is the whole subject and the expensive
+part. It keeps getting cheaper: the friction model can already express most of
+it, and the voices read `traction`, `commanded` and `contacts` per track, so a
+lost tooth would sound wrong with **no audio work at all**. Not v0; do not let
+the reset design (L-038) foreclose it.
+
+## What else is a session, that nobody has thought to record?
+
+Twice the answer to "should this be on the recording?" turned out to be written
+down already and unread, so the useful question is not *what did we miss* but
+*what class of thing keeps getting missed*. Both misses were the same shape: a
+thing that reaches no simulated quantity, and is therefore invisible to every
+instinct that sorts by whether it matters to the physics.
+
+Left off deliberately, and worth re-asking once there is a viewer (L-083): the
+**time between things** — a hesitation before a lever moves is on the trace as a
+gap, and nothing reads gaps — and **what the operator was shown**, which is the
+snapshot stream and is thrown away between frames.
 
 ## Does a component ship a voice?
 
-Half answered: a component's **switchgear** is in its own maker's voice and it
-needed no new machinery, so *whose* noise it is was never the hard part. Still
-open is **a voice of its own** — TILT-GUARD winding you down, a servo hunting, a
-relay chattering: a component saying something about its state rather than a
-control being operated. Either a fourth part of the triptych, which the
-plate/cell/pod argument would have to survive, or not a part at all but a thing a
-component *does*. Three pieces of evidence for the second, all **readings on the
-recording** rather than surfaces to fit: the switchgear, the bogies, the rig's
-cues.
+Half answered: a component's **switchgear** is in its own maker's voice and
+needed no new machinery, so *whose* noise it is was never the hard part. Open is
+**a voice of its own** — TILT-GUARD winding you down, a servo hunting, a relay
+chattering: a component saying something about its state rather than a control
+being operated. Either a fourth part of the triptych, which the plate/cell/pod
+argument would have to survive, or not a part at all but a thing a component
+*does*. Three pieces of evidence for the second, all **readings on the
+recording** rather than surfaces to fit: the switchgear, the bogies, the cues.
 
 ## How much of the cab should a glance cost you?
 

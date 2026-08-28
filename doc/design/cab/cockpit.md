@@ -493,7 +493,10 @@ discipline of stopping *first* is a thing you learn by not doing it once.
 Specific contexts may disable it entirely as a challenge condition.
 
 It sits comfortably in the training frame: a rig plausibly has an external
-observation view, and stepping out to use it is a thing the rig can record.
+observation view, and stepping out to use it is a thing the rig can record —
+which it now does (L-084). The camera is the one thing on the recording that is
+the rig's rather than a manufacturer's, and it earns the exception by taking the
+levers, the pods and the dash away while the world keeps going.
 
 Still open: **field stowing of panels** — allowed at a cost in hands or seconds,
 or not at all?

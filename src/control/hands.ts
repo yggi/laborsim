@@ -44,6 +44,18 @@
 import type { Condition } from "./bus.ts";
 import { NOMINAL } from "./bus.ts";
 
+/**
+ * Where the operator is watching from.
+ *
+ * It is declared here rather than in `render/scene.ts` because it is a
+ * **posture**, not a camera setting — the same class of thing as `headDown`.
+ * Chase does not merely move the camera: it takes away the cage, the dash, the
+ * pods and the levers, so it is "hands off the wheel" and the world does not
+ * wait (`doc/design/cab/cockpit.md`). The renderer is one of its consumers, and
+ * the last one to hear about it.
+ */
+export type View = "cab" | "chase";
+
 export interface Hands {
   /** Left track lever, −1…1. What you leave it at is what the machine keeps at. */
   leverL: number;
@@ -68,13 +80,34 @@ export interface Hands {
    * open you cannot look around, the same way you cannot reach the levers.
    */
   headDown: boolean;
+  /**
+   * In the cab, or outside it watching.
+   *
+   * **It crosses here because reading it anywhere else cost a run.** The camera
+   * used to be a rune the shell handed to `Run.setView`, and the shell's
+   * run-building effect read it plainly — so pressing CHASE joined the camera to
+   * the list of things that rebuild the world, threw the site you were driving
+   * away and handed you an identical untouched copy of it. The `untrack` that
+   * fixed that was a note not to depend on a value the effect had no business
+   * holding; this is the value not being there. `run.ts` reads the field and
+   * points the viewport when it changes.
+   *
+   * A sixth field, and adding it was a field — which is what `Controls` and this
+   * object were both built to make true.
+   */
+  view: View;
 }
 
 /**
- * Nobody touching anything: at the schedule, levers parked, nothing to say.
+ * Nobody touching anything: at the schedule, levers parked, in the seat.
  *
- * Also the honest value for a replay, whenever there is one — a recording has
- * hands on the levers but nobody's hand on the horn (`audio/engine.ts`).
+ * It was once described as "the honest value for a replay… a recording has hands
+ * on the levers but nobody's hand on the horn". That is no longer true and the
+ * correction is worth keeping: **the horn is on the recording**, because a rig
+ * reviewing a session cares whether you sounded it before moving off even though
+ * nothing on the site can hear it. What a replay gets is every one of these
+ * fields except `alarm`, which the annunciator re-derives, and `seated`, which a
+ * tick existing already says (`control/trace.ts`).
  */
 export const AT_REST: Readonly<Hands> = Object.freeze({
   leverL: 0,
@@ -83,6 +116,7 @@ export const AT_REST: Readonly<Hands> = Object.freeze({
   alarm: NOMINAL,
   seated: false,
   headDown: false,
+  view: "cab",
 });
 
 /** A mutable set of hands at rest, for the one effect that keeps them current. */

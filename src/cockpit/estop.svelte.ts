@@ -12,9 +12,24 @@
  * nothing new, which is why `hit` and `release` are two verbs rather than one
  * boolean: the way out is a twist, and that is exactly the ceremony a real stop
  * demands.
+ *
+ * ## It issues commands; it does not write modules
+ *
+ * It used to reach into every module and set `enabled` directly, which made it
+ * the third of four routes into the rack and the only one that could change the
+ * whole rail in a single press without anything downstream being able to say so
+ * (L-032). It now emits one `enable` command per slot through the same channel
+ * a cell's toggle uses, so the recording carries the stop and the release the
+ * way it carries everything else the operator did.
+ *
+ * The `before` map stays. It is not a second home for rack state — it is the
+ * stop's own memory of what it interrupted, which is what makes a release a
+ * restoration rather than a guess, and it is read at the moment of the press
+ * rather than sampled from anywhere.
  */
 
 import type { Module } from "../control/bus.ts";
+import type { Act } from "../control/trace.ts";
 
 export interface Estop {
   readonly engaged: boolean;
@@ -27,11 +42,11 @@ export interface Estop {
 }
 
 /**
- * @param rack mutated in place, exactly as everything else that owns a slot
- *   does — the array's identity is what the cab is rendering.
- * @param onChange the rack's contents changed under the cockpit's feet.
+ * @param rack read to see what is in circuit, never written.
+ * @param issue where the latch and each `enable` command go — the run's tracer,
+ *   which stamps them with the tick that applies them.
  */
-export function createEstop(rack: Module[], onChange: () => void): Estop {
+export function createEstop(rack: readonly Module[], issue: (act: Act) => void): Estop {
   let engaged = $state(false);
   /** Enabled-state of each module before the stop, so release can restore it. */
   let before: Record<string, boolean> = {};
@@ -44,17 +59,25 @@ export function createEstop(rack: Module[], onChange: () => void): Estop {
       if (engaged) return;
       engaged = true;
       before = {};
+      // The latch first, then what it does. A recording of the press before its
+      // consequences is the order it happened in, and the order the debrief
+      // will want to read it back in.
+      issue({ kind: "estop", engaged: true });
       for (const mod of rack) {
         before[mod.id] = mod.enabled;
-        mod.enabled = false;
+        issue({ kind: "rack", command: { kind: "enable", id: mod.id, on: false } });
       }
-      onChange();
     },
     release() {
       if (!engaged) return;
       engaged = false;
-      for (const mod of rack) mod.enabled = before[mod.id] ?? true;
-      onChange();
+      issue({ kind: "estop", engaged: false });
+      for (const mod of rack) {
+        issue({
+          kind: "rack",
+          command: { kind: "enable", id: mod.id, on: before[mod.id] ?? true },
+        });
+      }
     },
     clear() {
       engaged = false;

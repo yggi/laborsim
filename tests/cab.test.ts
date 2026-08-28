@@ -24,6 +24,7 @@ import { createNag, NAG_AFTER, NAG_COOLDOWN_MS } from "../src/cockpit/nag.ts";
 import { createNotices } from "../src/cockpit/notices.svelte.ts";
 import { ACTIVE, ALARM, type Module, NOMINAL, WARN } from "../src/control/bus.ts";
 import { restingHands } from "../src/control/hands.ts";
+import { type Act, applyRack } from "../src/control/trace.ts";
 import { snapshot, stage } from "../src/core/fixture.ts";
 import { MAX_TRACK_SPEED } from "../src/core/spec.ts";
 import { createPilot } from "../src/modules/pilot.ts";
@@ -120,21 +121,50 @@ describe("the annunciator's acknowledgement", () => {
 });
 
 describe("the E-stop", () => {
+  /**
+   * The stop issues commands now rather than writing modules (L-032), so a test
+   * of it is a test of what it *said*. An eager sink applies as it records,
+   * which keeps the claim about the rack's state a claim about the rack's state
+   * — and makes the second claim, that it went through the one channel, a thing
+   * that can fail on its own.
+   */
+  function wire(rack: Module[]) {
+    const issued: Act[] = [];
+    const estop = createEstop(rack, (act) => {
+      issued.push(act);
+      if (act.kind === "rack") applyRack(rack, act.command);
+    });
+    return { issued, estop };
+  }
+
   it("disables every module in the rack and remembers what it found", () => {
     const rack = [mod({ id: "A", enabled: true }), mod({ id: "B", enabled: false })];
-    const estop = createEstop(rack, () => {});
+    const { issued, estop } = wire(rack);
     estop.hit();
     expect(estop.engaged).toBe(true);
     expect(rack.map((m) => m.enabled)).toEqual([false, false]);
+    // The latch, then what it does. The latch is *not* derivable from the
+    // fuses: a rack with every module off is a rack somebody could have emptied
+    // by hand, and the mushroom being in is a different fact.
+    expect(issued).toEqual([
+      { kind: "estop", engaged: true },
+      { kind: "rack", command: { kind: "enable", id: "A", on: false } },
+      { kind: "rack", command: { kind: "enable", id: "B", on: false } },
+    ]);
     estop.release();
     // Exactly what you had, not everything on: a safety control that quietly
     // rewired your rack would be its own hazard.
     expect(rack.map((m) => m.enabled)).toEqual([true, false]);
+    expect(issued.slice(3)).toEqual([
+      { kind: "estop", engaged: false },
+      { kind: "rack", command: { kind: "enable", id: "A", on: true } },
+      { kind: "rack", command: { kind: "enable", id: "B", on: false } },
+    ]);
   });
 
   it("is latched, not toggled — hitting it twice is hitting it once", () => {
     const rack = [mod({ id: "A", enabled: true })];
-    const estop = createEstop(rack, () => {});
+    const { estop } = wire(rack);
     estop.hit();
     // The second press must not overwrite the memory with the disabled state it
     // has already imposed, or RESUME hands back a dead rack.
@@ -143,20 +173,19 @@ describe("the E-stop", () => {
     expect(rack[0]?.enabled).toBe(true);
   });
 
-  it("tells the cockpit both times, because the rack moved under it", () => {
-    let changed = 0;
-    const estop = createEstop([mod()], () => changed++);
+  it("says nothing at all for a press that changed nothing", () => {
+    const rack = [mod({ id: "A", enabled: true })];
+    const { issued, estop } = wire(rack);
     estop.hit();
     estop.release();
-    expect(changed).toBe(2);
-    // And not for a press that changed nothing.
+    expect(issued).toHaveLength(4);
     estop.release();
-    expect(changed).toBe(2);
+    expect(issued).toHaveLength(4);
   });
 
   it("forgets on a re-rack, because that rack is gone", () => {
     const rack = [mod({ id: "A", enabled: true })];
-    const estop = createEstop(rack, () => {});
+    const { estop } = wire(rack);
     estop.hit();
     estop.clear();
     expect(estop.engaged).toBe(false);

@@ -34,13 +34,19 @@ Against the five-beat core loop (`doc/MEMORY.md` § 4):
 | **Build** — spec the machine | absent | absent — still the rack, not parts |
 | **Wire** — order the rack | **built** | **built** |
 | **Site** — drive it | **built** | **built**, and now *asked for something* |
-| **Diagnose** — attribute to one decision, from a replay | absent | **half** — the debrief names it; no replay |
+| **Diagnose** — attribute to one decision, from a replay | absent | **built** (2026-08-27) — a run is a trace, and it replays |
 | **Back to build** — with a reason | absent | absent |
 
 Two of five became two and a half, and the half is the important one: the loop
 can now say both *no* (a citizen, a bill) and *yes* (an exercise completed).
 What it still cannot do is let you **watch the moment back**, which is the
 difference between being told and being shown.
+
+*(2026-08-27: the engine half of that landed with `L-032`, and it was three
+seams rather than a feature — the sim's input was ambient, rack edits crossed by
+four untimestamped routes, and the frame was written twice. A run is a `Setup`
+plus a trace now, and it replays exactly, asserted. Nothing yet **shows** you
+one: that is `L-083`, and it is the smaller half.)*
 
 ## The critical reading
 
@@ -55,6 +61,12 @@ is now the one *behind* it: everything the loop says, it says **after the fact
 and in words**. `L-032` (record and playback) is what turns "you cost ¥55,690
 and NAV-1 was driving" into something you can watch, and every attribution card
 below still waits on it.
+
+**`L-032` closed 2026-08-27**, and the shape of it was wrong here too: it was
+not a feature to build but three seams to close, and most of a replay was
+already in the tree carrying comments saying so. The recording exists and the
+attribution is on it, so `L-018` and `L-079` are unblocked. What is left of
+*watch* is `L-083`, and it is the smaller half.
 
 **2. The acceptance scenario is already half-built, and nobody noticed.**
 `L-018` asks for *two components fighting over one actuator*. Levers and NAV-1
@@ -133,9 +145,11 @@ this order and for these reasons.*
    attribution half — *what was driving when this happened* — is what makes it
    teach instead of score, and that is why it comes after (3) in dependency even
    though its first lines can be written before.
-3. **Record and playback, one engine** (`L-032`). An input trace plus the seed
-   reproduces a run exactly. First user is the ledger: every line needs the rack
-   state at the moment of impact. Second user is the player.
+3. **Record and playback, one engine** (`L-032` — closed). An input trace plus
+   the seed reproduces a run exactly. First user is the ledger: every line needs
+   the rack state at the moment of impact — and it has it, because rack state is
+   on the trace and `DamageEvent.driving` survives the round trip. Second user is
+   the player, and that user is still waiting (`L-083`).
 4. **The acceptance scenario, made legible** (`L-018`), and with it the
    **first-run path** (`L-033`) that gets someone to it unaided.
 

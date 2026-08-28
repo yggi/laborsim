@@ -405,86 +405,140 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
 });
 
 /**
- * The profiling bench copies the game's loop, so the copy has to be checked.
+ * The recording is two channels, and only one of them may reach the machine.
  *
- * `src/probe/profile.ts` runs its own `requestAnimationFrame` loop rather than
- * calling `createRun`, and that is deliberate: the real loop owns the pointer
- * handlers, the resize listener and the `:root` writes, and exposes no seam to
- * time the halves of a frame apart or to stop on a tick count. Widening it to
- * suit a bench is the thing the bench does not do.
+ * `commands` is what reached it — the levers and the rack. `attention` is what
+ * the operator saw, heard and did about it: the horn, the acknowledgement, the
+ * mushroom, the cabinet latch, the view they watched from, where their head
+ * was. The rig reviews the second and the physics must never notice it.
  *
- * But a copy is one fact in two places — the convention with the most scars in
- * this repo — and the failure is silent in the worst way: the bench keeps
- * producing numbers, for a loop the game no longer runs. It went unnoticed once
- * already in the small, when the loop moved out of `App.svelte` and the bench's
- * comment still named the component.
+ * Half of that is structural: `createPlayback` takes `readonly Command[]` and is
+ * never handed the other channel, so a headless replay *cannot* read it. What
+ * types cannot say is that the recording put each thing on the right side —
+ * nothing stops a future `hands.horn` in a module's `intent`, and then the horn
+ * would be a sim input filed under attention, and every guarantee here would be
+ * quietly false while every test stayed green.
  *
- * So this checks the two things a frame's cost actually turns on: the clamp on
- * elapsed time, and the order of the four calls that make up a frame.
+ * So: the sim, the rack and the modules may read exactly three fields off the
+ * hands. Adding a fourth is a decision about what a recording *is*, and it has
+ * to be made here first.
  */
-describe("one fact, one place — the bench's loop matches the game's", () => {
-  const run = readFileSync(join(SRC, "platform/run.ts"), "utf8");
-  const bench = readFileSync(join(SRC, "probe/profile.ts"), "utf8");
+describe("the sim reads three fields off the hands, and no more", () => {
+  const COMMANDED = ["leverL", "leverR", "seated"];
 
-  it("both clamp elapsed time to the same ceiling", () => {
-    // Matched on the *ceiling*, not the spelling: the bench keeps the raw
-    // interval as a sample before dividing it, so the expressions differ and
-    // the number is the thing that has to agree.
-    const clamp = /const elapsed = Math\.min\([^,]+,\s*([\d.]+)\s*\)/;
-    const inRun = run.match(clamp)?.[1];
-    const inBench = bench.match(clamp)?.[1];
+  it.each(SIM_TREES)("src/%s touches no other hand", (tree) => {
+    const read = new Set<string>();
+    for (const path of filesUnder(join(SRC, tree))) {
+      // `trace.ts` is the one file whose job is to know about all of them: it
+      // reads every field in order to write it down. It commands nothing.
+      if (path.endsWith("control/trace.ts")) continue;
+      const code = blankComments(readFileSync(path, "utf8"));
+      // Not preceded by a slash, or `"../control/hands.ts"` reads a field
+      // called `ts` and the rule fails on its own import.
+      for (const m of code.matchAll(/(?<!\/)\bhands\.(\w+)/g)) read.add(m[1] as string);
+    }
     expect(
-      inRun,
-      "src/platform/run.ts no longer clamps the way this expects",
-    ).toBeDefined();
-    expect(inBench, "the bench must clamp elapsed time as the game does").toBe(inRun);
+      [...read].filter((field) => !COMMANDED.includes(field)),
+      `only ${COMMANDED.join(", ")} may reach the machine — see control/trace.ts`,
+    ).toEqual([]);
   });
 
-  it("both give the voice the same frame the picture got", () => {
-    // The bench's copy of the loop simply **did not call `audio.render()`**, so
-    // its `cpu` column — documented as "the whole frame's CPU span" — stopped
-    // before the one half of a frame that can make the machine go silent. The
-    // omission was invisible because nothing said the two loops had to agree
-    // about audio: this test only pinned the other four calls.
-    // **Comments blanked first.** The first version of this matched the phrase
+  it("and the horn, the view and the head are on the other channel", () => {
+    // The complement, so the rule cannot pass by the fields simply not existing.
+    const hands = blankComments(readFileSync(join(SRC, "control/hands.ts"), "utf8"));
+    for (const field of ["horn", "headDown", "view", "alarm"]) {
+      expect(hands, `hands.${field} has gone`).toMatch(
+        new RegExp(`\\b${field}(\\??):`),
+      );
+    }
+  });
+});
+
+/**
+ * One fact, one place — **there is one frame**.
+ *
+ * This used to be the other thing. `src/probe/profile.ts` ran its own
+ * `requestAnimationFrame` loop rather than calling `createRun`, deliberately:
+ * the real loop owned the pointer handlers, the resize listener and the `:root`
+ * writes, and exposed no seam to time the halves of a frame apart or to stop on
+ * a tick count. So there were two copies of a frame, and this file held two
+ * regexes comparing them — one for the literal `0.25` and one for the order of
+ * four calls.
+ *
+ * That guard was weaker than it looked, and it was not the copy's only failure:
+ * the bench never called `audio.render()` at all, so its `cpu` column — "the
+ * whole frame's CPU span" — stopped before the one half of a frame that can make
+ * the machine go silent, and nothing said the two loops had to agree about audio
+ * because this test only pinned the other four calls (L-080).
+ *
+ * Two files agreeing about a literal is an approximation of one file. L-032
+ * needed a third caller — a replay — and three copies is not a thing anybody
+ * defends, so the frame came out into `src/platform/frame.ts` and what is left
+ * to check is structural: **nothing else steps the world.** A second loop cannot
+ * quietly agree with the first about the wrong thing if there cannot be a second
+ * loop.
+ */
+describe("one fact, one place — there is one frame", () => {
+  it("only src/platform/frame.ts drives the sim", () => {
+    // Comments blanked, or `hands.ts` and `pilot.ts` — which have to name
+    // `world.step()` in order to explain what runs inside it — are violations.
+    const steppers = filesUnder(SRC)
+      .filter((path) =>
+        blankComments(readFileSync(path, "utf8")).includes("world.step("),
+      )
+      .map((path) => path.slice(SRC.length + 1))
+      .sort();
+    // Two, and they are different `world`s. `sim/world.ts` is where a step *is*
+    // — that line steps Rapier — and `platform/frame.ts` is where one is
+    // *driven*. Anything else in this list is a second loop, which is the thing
+    // that drifted. Give the caller a hook instead.
+    expect(steppers, "a frame belongs to src/platform/frame.ts").toEqual([
+      "platform/frame.ts",
+      "sim/world.ts",
+    ]);
+    // `tests/` is deliberately not scanned: a test stepping a world by hand is
+    // exercising the world, not running a frame, and `determinism.test.ts` has
+    // to be able to do exactly that.
+  });
+
+  it("and the frame is the whole frame, voice included", () => {
+    // **Comments blanked first.** An earlier version of this matched the phrase
     // `audio.render()` inside the bench's own doc comment about `audio.render()`
     // — so deleting the call passed. A check that a file *mentions* something is
     // not a check that it *does* it.
-    const code = blankComments(bench);
-    expect(blankComments(run), "the game no longer voices a frame").toContain(
-      "audio()?.render(",
-    );
-    expect(code, "the bench must voice a frame as the game does").toContain(
-      "audio.render(",
-    );
+    const frame = blankComments(readFileSync(join(SRC, "platform/frame.ts"), "utf8"));
+    const at = [
+      frame.indexOf("clock.advance"),
+      frame.indexOf("operator.at("),
+      frame.indexOf("world.step()"),
+      frame.indexOf(".snapshot()"),
+      frame.indexOf("render?.("),
+      frame.indexOf("sound?.("),
+    ];
+    expect(
+      at.every((i) => i >= 0),
+      "the frame is missing one of its six",
+    ).toBe(true);
+    expect(
+      at.every((value, i) => i === 0 || value > (at[i - 1] as number)),
+      "a frame owes its steps, gives each one its input, steps, samples, draws, sounds",
+    ).toBe(true);
+    // And the callers hand it something to draw with and something to sound
+    // with, or the extraction has quietly dropped what the copy dropped.
+    for (const caller of ["platform/run.ts", "probe/profile.ts"] as const) {
+      const code = blankComments(readFileSync(join(SRC, caller), "utf8"));
+      expect(code, `${caller} no longer voices a frame`).toMatch(/sound:/);
+      expect(code, `${caller} no longer draws a frame`).toMatch(/render:/);
+    }
   });
 
-  it("both step, snapshot, then render, in that order", () => {
-    // Positions rather than text: the two differ in what they do *between*
-    // these calls — that is the whole point of the bench — and agree on the
-    // sequence, which is what a frame's cost is made of.
-    const sequence = (source: string): number[] => {
-      const body = source.slice(source.indexOf("clock.advance"));
-      return [
-        body.indexOf("clock.advance"),
-        body.indexOf("world.step()"),
-        body.indexOf(".snapshot()"),
-        body.indexOf(".render("),
-      ];
-    };
-    for (const [name, source] of [
-      ["src/platform/run.ts", run],
-      ["src/probe/profile.ts", bench],
-    ] as const) {
-      const at = sequence(source);
-      expect(
-        at.every((i) => i >= 0),
-        `${name} is missing one of the four`,
-      ).toBe(true);
-      expect(
-        at.every((value, i) => i === 0 || value > (at[i - 1] as number)),
-        `${name} does not advance, step, snapshot, render in that order`,
-      ).toBe(true);
-    }
+  it("and the clamp on a stalled frame is one number", () => {
+    // It was a literal in two files, compared by regex. It is `MAX_FRAME_SECONDS`
+    // beside the step cap it works with, and nothing else may name a ceiling.
+    const frame = blankComments(readFileSync(join(SRC, "platform/frame.ts"), "utf8"));
+    expect(frame).toContain("MAX_FRAME_SECONDS");
+    expect(blankComments(readFileSync(join(SRC, "core/clock.ts"), "utf8"))).toMatch(
+      /export const MAX_FRAME_SECONDS = [\d.]+;/,
+    );
   });
 });
