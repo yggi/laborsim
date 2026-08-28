@@ -41,6 +41,7 @@ viewport budgeting is a core mechanic rather than a UI style.
 npm install
 npm run dev        # dev server, exposed on the LAN so you can open it on a phone
 npm test           # headless sim + architecture-rule enforcement
+npm run drive      # plays the app in a real browser — the only thing that does
 npm run typecheck  # svelte-check
 npm run lint       # biome
 npm run format     # biome, writing fixes

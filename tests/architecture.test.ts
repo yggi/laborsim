@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ATTENTION_KINDS, COMMAND_KINDS } from "./browser/verbs.ts";
 
 const SRC = new URL("../src", import.meta.url).pathname;
 
@@ -278,10 +279,21 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
 
   /** Every name this component declares with a rune. */
   const runes = [
-    ...CODE.matchAll(
-      /(?:let|const)\s+([A-Za-z_$][\w$]*)[^=\n]*=\s*\$(?:state|derived)\b/g,
-    ),
-  ].map((m) => m[1] as string);
+    ...[
+      ...CODE.matchAll(
+        /(?:let|const)\s+([A-Za-z_$][\w$]*)[^=\n]*=\s*\$(?:state|derived)\b/g,
+      ),
+    ].map((m) => m[1] as string),
+    // **A prop is a rune too**, and the pattern above cannot see one: the
+    // binding is a destructuring pattern rather than a name. The shell grew its
+    // first prop for L-075 — how to build a run, so that a run in progress is
+    // reachable — and reading it inside the run effect would have been a
+    // dependency this rule exists to forbid, invisible to this rule.
+    ...[...CODE.matchAll(/let\s*\{([^}]*)\}[^=]*=\s*\$props\(\)/g)]
+      .flatMap((m) => (m[1] as string).split(","))
+      .map((part) => part.split("=")[0]?.trim() ?? "")
+      .filter(Boolean),
+  ];
 
   /** The balanced block introduced by `opener`, opener included. */
   function bodyAfter(source: string, opener: string): string {
@@ -325,10 +337,11 @@ describe("rule 3 — nothing outside the reactive graph reads a rune", () => {
    * be a deliberate act.
    */
   it("a run is made of the exercise and the reset, and nothing else", () => {
-    // The effect *containing* `createRun`, which is the last one opened before
+    // The effect *containing* the run's construction, which is the last one
+    // opened before
     // it — and with every `untrack(() => …)` blanked out, because that is
     // precisely the spelling of "read this, do not depend on it".
-    const built = CODE.indexOf("const run = createRun");
+    const built = CODE.indexOf("const run = buildRun");
     expect(
       built,
       "the shell no longer builds a run where this expects",
@@ -540,5 +553,49 @@ describe("one fact, one place — there is one frame", () => {
     expect(blankComments(readFileSync(join(SRC, "core/clock.ts"), "utf8"))).toMatch(
       /export const MAX_FRAME_SECONDS = [\d.]+;/,
     );
+  });
+});
+
+/**
+ * The driver's coverage list, held against the source it claims to enumerate.
+ *
+ * `tests/browser/drive.test.ts` asserts that a browser session recorded every
+ * verb in `tests/browser/verbs.ts`. That is only worth anything if the list is
+ * still the whole of what a session *can* record — otherwise a control added to
+ * the cab is a control nothing drives, and the browser suite stays green while
+ * covering less of the app than it did yesterday.
+ *
+ * So this half reads the unions, in the fast suite, in milliseconds. The browser
+ * half cannot: it costs a Chromium and it is run before pushing rather than on a
+ * thought (`vite.config.ts`).
+ */
+describe("the driver's verb list is the recording's own vocabulary", () => {
+  const TRACE = blankComments(readFileSync(join(SRC, "control/trace.ts"), "utf8"));
+
+  /** The `kind` literals of one exported union, in declaration order. */
+  const kindsOf = (name: string): string[] => {
+    const start = TRACE.indexOf(`export type ${name} =`);
+    expect(start, `no such union: ${name}`).toBeGreaterThan(-1);
+    // A union declaration ends at the first blank line after it; every member is
+    // an inline object literal, so this needs no parser.
+    const end = TRACE.indexOf("\n\n", start);
+    const body = TRACE.slice(start, end < 0 ? undefined : end);
+    return [...body.matchAll(/kind:\s*"([^"]+)"/g)].map((m) => m[1] as string);
+  };
+
+  it("lists every Command kind, and no kind that is not one", () => {
+    expect([...COMMAND_KINDS].sort()).toEqual(kindsOf("Command").sort());
+  });
+
+  it("lists every Attention kind, and no kind that is not one", () => {
+    expect([...ATTENTION_KINDS].sort()).toEqual(kindsOf("Attention").sort());
+  });
+
+  it("reads a union at all — an empty sample is a failure, not a pass", () => {
+    // The scar this repo already carries: a board-sizing guard that reported
+    // `(0 checked)` on every run for as long as it existed. A regex that stops
+    // matching is silent, so the count is asserted rather than assumed.
+    expect(kindsOf("Command").length).toBeGreaterThan(1);
+    expect(kindsOf("Attention").length).toBeGreaterThan(1);
   });
 });

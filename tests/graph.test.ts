@@ -22,7 +22,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { createAudio } from "../src/audio/engine.ts";
+import { createAudio, createLiveAudio } from "../src/audio/engine.ts";
 import { ACTIVE, NOMINAL } from "../src/control/bus.ts";
 import type { SimEvent } from "../src/core/events.ts";
 import { chassis, snapshot, stage, track } from "../src/core/fixture.ts";
@@ -432,5 +432,145 @@ describe("the panel speaks only when something changed", () => {
     // Nothing is moving, so the only sources are the long-running voices built
     // with the graph. Not one transient.
     expect(book.sources.every((s) => s.stopped === undefined)).toBe(true);
+  });
+});
+
+/* -- the live context's lifetime -------------------------------------------- */
+
+/**
+ * The half of this file that had no seam at all.
+ *
+ * `createAudio` takes its context and `createSound` takes its `make`, so the
+ * graph and the shell were both drivable in plain Node — and `createLiveAudio`,
+ * in between them, said `new AudioContext()` in its body. That is the whole
+ * reason a defect in five lines outlived a suite written for this file. The fake
+ * below is the transcript idea applied to a *lifetime* rather than to a graph: it
+ * writes down the state each `resume()` was asked in, which is the only question
+ * worth asking of it.
+ */
+function fakeLiveContext(book: Transcript) {
+  const base = fakeContext(book) as unknown as Record<string, unknown>;
+  const listeners = new Set<() => void>();
+  /** The state the context was in each time `resume()` was called. */
+  const asked: string[] = [];
+  let state = "suspended";
+
+  const fire = () => {
+    for (const fn of [...listeners]) fn();
+  };
+
+  const context = {
+    ...base,
+    get state() {
+      return state;
+    },
+    addEventListener(type: string, fn: () => void) {
+      if (type === "statechange") listeners.add(fn);
+    },
+    removeEventListener(type: string, fn: () => void) {
+      if (type === "statechange") listeners.delete(fn);
+    },
+    resume() {
+      asked.push(state);
+      // A real one rejects with InvalidStateError when closed. Recording the
+      // attempt is the claim; rejecting here would only add an unhandled
+      // rejection to this suite to prove what `asked` already says.
+      if (state !== "closed") {
+        state = "running";
+        fire();
+      }
+      return Promise.resolve();
+    },
+    close() {
+      state = "closed";
+      fire();
+      return Promise.resolve();
+    },
+  };
+
+  return {
+    context: context as unknown as AudioContext,
+    asked,
+    listeners,
+    /** The browser stopping the context under us, in any of the ways it can. */
+    stop(next: string) {
+      state = next;
+      fire();
+    },
+  };
+}
+
+describe("the live context is woken when it stops and never after it is closed", () => {
+  it("wakes a context the browser stopped, in any of the ways it can stop it", () => {
+    // `suspended` was once the whole test. `interrupted` is iOS taking audio
+    // focus, and a browser restarting its device under load can leave a context
+    // stopped in ways that are neither.
+    for (const stopped of ["suspended", "interrupted"]) {
+      const fake = fakeLiveContext(new Transcript());
+      const live = createLiveAudio(fake.context);
+
+      // The browser saying so is the signal; nothing touched the glass.
+      fake.stop(stopped);
+      expect(fake.asked).toContain(stopped);
+      expect(fake.context.state).toBe("running");
+      live.dispose();
+    }
+  });
+
+  it("wakes the context a gesture arrives on, which no statechange announced", () => {
+    // The autoplay policy leaves a fresh context `suspended` without ever
+    // firing an event, so the first touch is the only thing that can start it.
+    // This is the route `platform/sound.svelte.ts` wires to the window.
+    const fake = fakeLiveContext(new Transcript());
+    const live = createLiveAudio(fake.context);
+    expect(fake.asked).toEqual([]);
+
+    live.resume();
+    expect(fake.asked).toEqual(["suspended"]);
+    expect(fake.context.state).toBe("running");
+
+    // Asking a running one again is free and must reach the context anyway
+    // never — a no-op here, not a rejected promise there.
+    live.resume();
+    expect(fake.asked).toEqual(["suspended"]);
+    live.dispose();
+  });
+
+  it("never asks a closed context to resume — closed is the one state it cannot leave", () => {
+    const fake = fakeLiveContext(book);
+    const live = createLiveAudio(fake.context);
+
+    live.dispose();
+
+    // `dispose()` closes, closing fires `statechange`, and the listener used to
+    // resume it: an InvalidStateError on every dispose, so on every RESET and
+    // every change of exercise. Found by the first thing that ever drove the
+    // shipped app (`doc/LOG.md`, L-075).
+    expect(fake.asked).not.toContain("closed");
+    expect(fake.context.state).toBe("closed");
+
+    // And the handle itself declines, for a caller holding it after teardown.
+    live.resume();
+    expect(fake.asked).not.toContain("closed");
+  });
+
+  it("takes its listener off the context when it disposes", () => {
+    const fake = fakeLiveContext(book);
+    const live = createLiveAudio(fake.context);
+    expect(fake.listeners.size).toBe(1);
+
+    live.dispose();
+    expect(fake.listeners.size).toBe(0);
+  });
+
+  it("does not spin: waking a context is one ask, not a cascade", () => {
+    const fake = fakeLiveContext(book);
+    const live = createLiveAudio(fake.context);
+
+    // `resume()` sets `running`, which fires `statechange`, which reaches the
+    // same listener. It stops there because `running` is not a stoppage.
+    fake.stop("suspended");
+    expect(fake.asked).toEqual(["suspended"]);
+    live.dispose();
   });
 });

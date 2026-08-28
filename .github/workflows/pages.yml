@@ -65,6 +65,18 @@ jobs:
           npm run typecheck
           npm test
 
+      # The driver drives the real shell in a real browser, so it needs one.
+      # `vite.config.ts` prefers a pinned Chromium where an image provides one
+      # and falls back to Playwright's own resolution, which is this.
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      # Its own step, because it is half a minute rather than ten seconds and
+      # because a failure here is a different kind of news: the suites above say
+      # a unit is wrong, this one says the assembled app is.
+      - name: Drive
+        run: npm run drive
+
       # Project pages are served from /<repo>/, and a branch build one level
       # deeper again, so the bundle has to be told its own base or every asset
       # 404s. `vite.config.ts` reads BASE_PATH; nothing is hardcoded, so

@@ -20,6 +20,183 @@ What happened, in past tense. Anything tried and rejected, and why.
 
 ---
 
+## 2026-08-28 — the app gets driven, and the first drive finds a bug
+
+Cards: **[L-075] closed**. [L-087] and [L-088] opened. `CLAUDE.md` gate 1 gained
+a command.
+
+**`npm run drive` is a second Vitest project**, not a sixth bench — the card's
+open question answered *assert*. `@vitest/browser-playwright` pins to the same
+Vitest and peer-depends on the `playwright` the benches already use, so the cost
+was one dev dependency and no second runner. Both projects live in one
+`vite.config.ts` deliberately: the line between them has to be readable, and a
+second config file would let a new check land on the wrong side by not noticing.
+The rule dividing them is robby's, which that repo paid for — *if it needs a
+browser to be true it belongs in `drive`* — because a two-minute check is one
+nobody runs and the eleven-second one is only valuable while it is cheap enough
+to run on a thought.
+
+**The gate is the recording's vocabulary rather than a list of buttons**, and
+that was the trap in the card's own sentence. *Drive it through its verbs*: a
+hand-written list of what to press goes stale the first time somebody adds a
+control, silently, in the direction of less coverage. `control/trace.ts` already
+enumerates them for a different reason — `Command` is what reached the machine,
+`Attention` is what the operator saw, heard and did about it — so the nine kinds
+are named once in `tests/browser/verbs.ts` and **two checks share the list**: the
+driver presses each and waits for it *by name*, and `tests/architecture.test.ts`
+holds the list against both unions in the fast suite, in milliseconds. Neither
+half can be satisfied by writing the list down twice. Planting a tenth kind fails
+the fast suite in 382 ms.
+
+**Eleven faults planted, eleven failures, each naming its own verb** — BEGIN not
+seating you, the levers reaching nothing, the head sweep not reaching the
+viewport, the cabinet not dropping your head, a pulled fuse that is not a
+command, the stop latching unrecorded, RESET not re-racking. One of them is
+**L-070's shipped bug replanted**: reading the camera rune in the run effect,
+which the driver reports as *a camera press handed back a different run*. The
+fast suite catches that one too, independently, which is the right kind of
+redundancy — it is the bug this project has already paid for twice.
+
+**A shipped defect fell out of the first run the driver ever made.**
+`audio/engine.ts` was resuming a **closed** `AudioContext` — `dispose()` closes,
+closing fires `statechange`, and the listener tested `state !== "running"` and
+resumed it. An `InvalidStateError` on every dispose, so on every RESET and every
+change of exercise, not merely at teardown. It is L-080's own fix over-corrected:
+that session replaced `=== "suspended"` with `!== "running"` to catch
+`interrupted` and the other ways a browser stops a context, and **`closed` is the
+one state that is terminal**. The prose above the line reasons about all the
+others and never about that one.
+
+The reason it survived is worth more than the fix. `createAudio` takes its
+context and `createSound` takes its `make`, both with comments saying they exist
+so a test can drive them — and `createLiveAudio`, between the two, said
+`new AudioContext()` in its body. **A path is only as reachable as its least
+reachable link**, and the missing one was in the middle, where nobody notices.
+It takes its context now, the condition is one function rather than two copies
+that were wrong the same way, and the listener comes off *before* the close
+rather than after. Five branches planted and watched.
+
+**The shell grew its first prop**, `makeRun`, so that a run in progress is
+reachable — a default parameter rather than a new module, because this call path
+already answers exactly that question twice and the second answer was added the
+same day. Closing it opened a hole: the guard that watches the run effect for new
+dependencies matched `$state` and `$derived` and **not `$props`**, so a prop read
+in the most dangerous effect in the app would have been invisible to the rule
+written about that exact effect. It matches props now — planted and watched — and
+the capture is `untrack`, which is the spelling that says *initial value, on
+purpose* instead of the same code with a compiler warning attached.
+
+**Three things the driver had to be told, each of which is a fact about the
+game.** Nothing moves until you are seated, because `advance()` feeds the clock
+`hands.seated ? elapsed : 0` — so a driver that skipped BEGIN would watch a
+parked machine agree with itself, which is how the first replay test managed to
+prove nothing. BEGIN *is* a new run, and so is RESET, and nothing else may be. And
+a refused pod drop **tells nobody** — `Draggable` eases it back and records
+nothing when the drop is outside the cage or overlapping another pod, which is
+indistinguishable from a broken drag; the driver measures the glass and moves
+along the axis with room in it, because guessing put it on top of the other pod.
+
+**Two cards came out of it.** [L-087]: every bench and both suites boot a *dev*
+Vite, `drive` included, so **nothing has ever loaded what actually ships** — a
+`BASE_PATH` defect reaches the site green. [L-088]: the levers, which the physical
+redesign improved and made harder to use — a thumb that wanders pans the viewport
+or is eaten by an Android edge gesture, and the console advertises `role="slider"`
+with a live `aria-valuenow` and has no key handler at all, which the driver found
+while looking for a way to press it.
+
+**Numbers.** 363 tests in 10.8 s; typecheck 881 files, 0 errors; lint clean.
+`drive` is one file: 23.5 s, and 24.5 s on the run before it — a browser boot and
+a swiftshader frame are not stable numbers, so treat that one as *about half a
+minute* rather than as a reading. The lint run is worth recording: it was first read with
+`tail -2`, which showed `Found 1 info` and hid `Found 1 error` on the line above —
+the repo's own gate lesson, re-earned within the session that cites it.
+
+## 2026-08-28 — L-075 gets an approach and six spikes, and the first thing to drive the app finds a bug
+
+Cards: none closed. [L-075] spiked, not started.
+
+**The session opened on whether to give this game a solver**, because `yggi/robby`
+— a parallel project, a programming puzzle for pre-readers — has one as a core
+component, and its `CLAUDE.md` says nothing in that codebase matters as much.
+**Rejected, with reasons worth keeping.** Robby's `solve()` is 57 lines of BFS
+and it earns its place through *three shipped consumers*: every level's par is
+re-derived on every test run, the generator judges candidates with it, and the
+editor runs it live. Two of those three are absent here **by design** — `doc/MEMORY.md`
+§ 3.2 says no score, no gate, no par time, and there is no level editor. The
+third, the generator, is real and open (L-027).
+
+And the search does not transplant: robby has four discrete actions, a cheap
+exact transition and a hashable state key; we have two continuous axes at 60 Hz
+over minutes with a Rapier snapshot for state. Anything called a solver here
+would be a planner plus a controller, and **half of that already exists in the
+fiction as NAV-1**. The sharper argument is the design one: robby's subject *is*
+the shortest program, so an optimal player measures the thing the game is about,
+while ours is the gap between what a machine is rated to do and what it does on
+the day — and an optimal driver optimises that gap away. **Robby needs an optimal
+player; we need a plausible bad one.** `doc/NOTES.md` has the evidence already:
+a twelve-year-old found the fun in seconds by driving at the material, and a
+scripted driver went ten minutes without touching anything.
+
+**What does transplant is the technique, and it needs no solver.** Robby's
+load-bearing filter is *solve a candidate twice, once with the mechanic disabled,
+and reject it unless the answer changes* — difference, not direction, which took
+generator acceptance from 55% to 17%. Ours is the same shape with the reference
+driver in place of the search, and **L-075 is what unlocks it**, which is a better
+argument for that card than the one it was carrying.
+
+**The approach L-075 takes: Vitest 4 browser mode, not a fifth bench.**
+`@vitest/browser-playwright@4.1.11` pins to `vitest@4.1.11` exactly and
+peer-depends on the `playwright` already installed, so the fifth thing is a
+*suite* sharing config, fixtures and reporting with the other 355 tests rather
+than a sixth hand-rolled `.mjs`. One dev dependency, no second runner, no second
+browser download. The gate is general rather than a hand-list: **every kind in
+the recording union must appear in the trace the session produced**, so a verb
+added to `control/trace.ts` without a driver step fails the suite until it is
+driven.
+
+**Six blockers, all cleared, with numbers.** The run boots in a browser-mode
+iframe — Rapier's wasm, a real WebGL2 context and the fixed-step clock — with the
+world at 644 ms and the first snapshot at 801 ms; rAF is alive at ~22 fps under
+swiftshader. A full shell mount plus BEGIN plus a lever is 6.41 s wall, 3.85 s
+in-test. The Chromium pin the four benches carry ports over verbatim as
+`launchOptions.executablePath`. And **no custom pointer command is needed**:
+`userEvent.click(el, { position })` produces real pointer events, `setPointerCapture`
+works, and the lever reached `aria-valuenow > 0.9` — because `grab()` sets the
+value on pointerdown and `release()` deliberately does not reset it, a positioned
+click *is* a lever command.
+
+**The suite's summary lies and its exit code does not.** Three faults were
+planted — a throw from a timer, an unhandled rejection, a throw from a rAF
+callback. All three were reported and all three set exit code 1, under a summary
+line reading `Tests 3 passed (3)` with the errors on a separate line. A human
+scanning that output sees green. **The gate is the exit code**; nothing may wrap
+this suite in something that reads the summary instead.
+
+**A shipped defect, found by the first thing that ever drove the app.**
+`audio/engine.ts` disposes by calling `context.close()`, which fires `statechange`
+with `state === "closed"`, which the listener tests as `!== "running"` and
+resumes — `InvalidStateError`, unhandled rejection, **every dispose**, so every
+RESET and every exercise change and not merely teardown. The listener is also
+never removed. This is L-080's own fix over-corrected: it replaced
+`=== "suspended"` with `!== "running"` to catch `interrupted` and the other ways
+a browser stops a context, and **`closed` is the one state that is terminal**.
+The prose above it reasons about all the others and never about that one.
+Invisible to all 355 tests including `tests/graph.test.ts`, which exists for this
+file. It is the card's thesis demonstrating itself, and it blocks the suite's
+own no-page-errors gate.
+
+**Three findings that shape the build.** The recording union has nine kinds and a
+driven session recorded seven — `levers`, `ack`, `estop`, `horn`, `pod`, `posture`,
+`view` — leaving **`rack` and `look` as verbs nothing has ever driven**, so the
+coverage gate has content on day one. The sim is held by `hands.seated`, because
+`advance()` feeds the clock `hands.seated ? elapsed : 0` and an open schedule is a
+frame owing no steps — not a bug, and the cleanest argument that the driver must
+go through the shell rather than through `createRun`. And `index.html`'s page
+frame (`height: 100%`, `overflow: hidden`, `touch-action: none`) is inline in the
+HTML where only that file can see it, while the shell is written against it: one
+fact in one place wants it in a stylesheet `main.ts` imports, so the page and the
+driver cannot disagree.
+
 ## 2026-08-27 — two gates move, and the board catches up with the branch
 
 Cards: none closed. [L-067], [L-085], [L-082] and [L-051] **absorbed** into
@@ -794,285 +971,3 @@ frame pushes the middle out. Wrong for this loop — the page is idle and has dr
 nothing, so every frame is a full-rate frame and the middle *is* the period;
 what the minimum caught was jitter, and the same 120 Hz phone read 120 then 121.
 Median now.
-
-## 2026-08-26 — the frame fits, and the bench was wrong about why
-
-Cards: [L-034] closed.
-
-A Pixel 9 (Firefox 153, Android 17) ran the bench. **Every pass came back at
-8.34 ms — the panel's own 120 Hz period — so the frame fits with room, and the
-answer to "is mobile-first in trouble" is no.** What the run was actually worth
-is the price list underneath it, in `docs/design/code/mobile-budget.md`:
-
-- **a prop is 0.75 draw calls and 0.01 ms of render CPU.** 108 of them — the
-  difference between E-01 and E-03 — are 81 calls, 1 ms of CPU, 3 ms of GPU-owed
-  time. The site can roughly triple before the furniture is worth a thought,
-  which is what L-039 and L-023 were waiting to hear.
-- **the machine costs more draw calls than the whole site does.** Chase adds 170
-  over the cab's 225: greebles, grousers, bogies, and the ink shell doubling
-  every one. So the number to watch is rung 2's arm, not the prop count.
-- **the ceiling is CPU, not GPU.** ~4 ms of an 8.34 ms frame is already sim,
-  snapshot and render submit. Half a frame, and half of that spent.
-- motion is free (5 %), and there was no thermal drift over ninety seconds.
-
-**The device found a defect in the bench on contact, and it is the session's
-lesson.** Comparing passes on frame time is worthless when the frame is pinned:
-all six passes reported the refresh period, every delta read 0 %, and the fill
-verdict printed *pixels are not what is costing you* about a scene where halving
-the buffer removes 43 % of the GPU's work. No null test would have caught it —
-the instrument could see fine, it was reading something saturated. The report
-now detects the pin, says so, and falls back to GPU-owed time, which nothing
-clamps; `tests/probe.test.ts` holds both branches and all three pinned
-assertions were watched failing with the bug put back. `META.md` gained the
-general form: **a quantity with a ceiling reports the ceiling, and it looks like
-a result.**
-
-Three smaller things the same run bought. `performance.now()` is quantized to
-1 ms on Firefox, so every duration in that report is an integer — the bench now
-measures and prints the clock's own resolution beside the numbers it governs. A
-`cpu` column was added, timed as one span rather than summed from `sim` and
-`render`, because `sim` is sampled only over frames that owed a step and a sum
-of those medians describes no particular frame. And Firefox reports a spoofed
-`UNMASKED_RENDERER` ("Mali-T760, or similar") — recorded as a caveat, and the
-reason the next row wanted is the same phone on Chrome.
-
-`formatReport` also stopped reading `location`; the href is passed in. That is
-what made it testable at all, and its own header had been claiming it was.
-
-## 2026-08-26 — an instrument for the pillar nobody had measured
-
-Cards: [L-034] — the bench.
-
-`profile.html` and `src/probe/`: a fourth entry point that builds the **real**
-world and the **real** viewport on the device in your hand and times them. One
-button, ninety seconds, and a block of fixed-width text to paste back — because
-the numbers had to come off a phone and a phone is not where anybody reads a
-console.
-
-Six passes over the same six seconds of the same run, each changing exactly one
-thing, because a single frame time says whether to worry and nothing about what
-to cut: the pixel count, the prop count, the motion, the view, and last of all
-nothing at all, so a minute of thermal load shows up as itself. **A pass ends on
-a tick count, not a frame count, and each gets a fresh world** — that is what
-makes two devices comparable at all, and the user has more devices coming.
-
-Three decisions worth the next session's time:
-
-- **Draw calls are counted at the driver**, by shadowing the draw entry points
-  on the canvas's own context. `renderer.info` was the obvious route and would
-  have meant publishing the `WebGLRenderer` out of `render/scene.ts` — a bench
-  is not a reason to widen an interface. It also counts the shadow pass, which
-  three.js's own figure does not present as part of a frame. A `Proxy` was
-  rejected: three.js makes thousands of context calls a frame and a trap on each
-  would be timing the profiler.
-- **The GPU column is measured in a separate second.** `render()` returns when
-  the commands are queued, so seeing what is still owed needs a fence, and a
-  fence kills the CPU/GPU overlap the real loop lives on. Timing the frame with
-  one in it would report a game slower than the one that ships. First cut used
-  `gl.finish()` alone and read a flat **0.00 everywhere** — the instrument could
-  not see the claim (META). A one-pixel `readPixels` after it cannot be faked;
-  the same column then read 167 ms against a 183 ms frame, which is a software
-  rasteriser telling the truth about itself.
-- **`sim` is measured over the frames that owed a step.** A 120 Hz phone steps a
-  60 Hz sim every other frame, so half the samples would be a snapshot and
-  nothing else, and the median would report a physics engine that costs nothing.
-
-`src/probe/` is a new seam and deliberately outside rule 3's scan: the bench
-touches both halves because a profiler that could reach neither would be
-profiling neither. The half that *is* enforced is the other one — nothing
-outside `src/probe/` may import it, checked in `tests/architecture.test.ts`, and
-verified by planting an import in `src/ui/format.ts` and watching it fail.
-
-`npm run profile` drives the same page headlessly. Not a reading — SwiftShader
-is a rasteriser, not a phone — but the thing META keeps asking for: a bench that
-fails silently fails *in somebody's hand*, ninety seconds into their evening.
-`--build` builds first, which is the only way it can report the payload at all.
-
-The bytes half of the budget is answered and crystallized into
-`docs/design/code/mobile-budget.md`: **1.30 MB over the wire, 1.24 MB of it one
-chunk, and that chunk is Rapier.** `NOTES.md` had carried 1.25 MB gzipped for an
-*empty scaffold* — so the scene, the cockpit, the audio graph and the exercises
-have between them added 0.05 MB, and `-compat` inlining wasm as base64 is the
-entire budget. The levers are named in order and none of them is "write less
-game". The frame half stays open until a device runs it, and the budget itself
-is deliberately **unset**: a budget written before a measurement is a guess with
-a table around it, which is the thing the page exists to stop.
-
-What the bench does not measure, and now says so on its own face: the cab. The
-cage, the dash, the pods and the levers are DOM over the glass and none of it is
-on that page. It is a `NOTES.md` thread rather than a card because measuring it
-means either mounting the app in the bench or teaching `App.svelte` to time
-itself, and `App.svelte` is already ten concerns (L-070).
-## 2026-08-26 — doc/, and the closed cards join the pipeline
-
-Cards: [L-074] closed. `CLAUDE.md` restructured.
-
-**The closed cards were the same dump one level down.** `LOG.md` carried a
-section holding six cards pushed out of the board's history — 56 lines, and every
-one of them described something `HISTORY.md` already said: TRACTION, the
-dash-as-panel, the triptych, draggable instruments. A third copy, after the
-session entry and the arc.
-
-The fix is the rule the log already follows: **history past its target folds into
-`HISTORY.md` and is deleted.** A closed card is not raw material, it is *already*
-a condensed session — which is exactly why parking it in a third file bought
-nothing. Checked before deleting rather than assumed: of the six, only
-TILT-GUARD's verb reasoning was genuinely absent from the arc — `AMP` rather than
-`CAP`, because `CAP` clamps a positive intent into the arriving signal's
-magnitude and would turn a reversing machine around, a safety module causing the
-crash it exists to prevent. That went in, with the ordering lesson beside it (a
-guard above the thing it guards is a warning light).
-
-**And the tree moved to `doc/`, to match `yggi/robby`.** The root holds
-`CLAUDE.md`, `README.md` and configuration — the two entrypoints for a reader who
-has not been told where to look, one found by the agent and one by GitHub — and
-every other document is in `doc/`. `docs/` became `doc/`, the six surfaces and
-`LORE.md` moved into it, and `tests/docs.test.ts` became `tests/doc.test.ts`.
-
-Getting there took two corrections worth recording, both mine.
-
-**I checked one branch and called it the repo.** Told the core files were in
-`doc/`, I cloned robby `--depth 1` on its default branch, found no `doc/` and no
-`META.md`, and started reasoning about what the instruction "must" have meant
-instead. That is guessing dressed as inference. Fetching every branch found
-`claude/agentic-project-structure`, which had `META.md` and `docs/design/` in
-four clusters — the same structure built here this morning — and re-fetching
-`main` half an hour later found it merged and moved to `doc/` exactly as
-described. **A shallow clone of one branch is not a look at a repository**, and
-when a stated fact does not match what I see, the next move is to widen the
-search, not to reinterpret the statement.
-
-**A `cd` leaked across a here-doc.** A comparison script `cd`'d into robby and
-then printed "laborsim — ROOT .md files", which listed robby's root. It was
-obvious only because the output had `HANDOFF.md` in it, which laborsim has never
-had. Absolute paths in anything that compares two trees.
-
-Both went to `doc/META.md` as one Diagnosis entry — they are the same shape, a
-look that was narrower than it claimed to be, and the contradiction was the
-finding in each.
-
-`CLAUDE.md` gained the section robby has and this repo lacked: **Gates — what
-makes a change finished.** Four conditions, each failed here before — the suites
-green *and run*, with the number printed rather than estimated; the surfaces
-moved; nothing new left unverifiable, with a planted fault to prove a new check
-can fail; and a measured claim re-measured, because numbers in `doc/` are
-readings rather than decoration.
-
-## 2026-08-26 — the log's downstream side learns to condense
-
-Cards: [L-073] closed, [L-072] opened. `CLAUDE.md` changed again.
-
-The question was whether the archive is a dump or a condensation layer. Measured
-rather than argued, and it is a dump with a label on it:
-
-- **1,577 lines, of which 33 are framing prose.** A 2% condensation. Every spill
-  wrote a one-paragraph header once and never revisited it.
-- **32 entry blocks holding 28 distinct entries.** Four sessions were stored in
-  *two* archives at once, three byte-identical and one differing by a trailing
-  separator. Nothing checked, so nothing noticed.
-- **Nothing read it.** Every reference in the repo was a pointer to its
-  existence — the repo map, a README row, `CLAUDE.md`'s spill rule, and
-  `tests/docs.test.ts` explicitly *excluding* it from link checking. No document
-  cited an archive for an answer.
-- **No gate.** `doc/LOG.md` had 1000/1200; the archives had nothing and grew ~250
-  lines a session.
-- **The naming had already broken**: `early` / `mid` / `panel` — two periods and
-  a subject, with no rule for what comes next. And the headers drift: the panel
-  archive opened "Seven sessions in which the dash… became a panel" because two
-  GRIP/SLIP sessions had been bolted on with an "and finally".
-
-The argument that settles it: **git is already the dump.** Every entry is in
-`doc/LOG.md`'s history and in the commit that wrote it — verified before relying on
-it. So the one layer doing a job already done was the archive, while the job
-nobody was doing is the one git cannot do cheaply: git hands you commits, not
-periods, and changes, not changes of mind.
-
-`doc/HISTORY.md`, at the root because it is a surface with a job and a discipline —
-burying it under `doc/` is part of what let it rot. Oldest first, because it is
-a story rather than a feed. One file, because per-period files would rebuild the
-star topology we took apart this morning.
-
-The property that matters is that it **converges**: a spill folds its sessions
-*into the paragraph they belong to* and deletes them, so a month becomes a
-section, a quarter a paragraph, a year a line. Appending is the failure mode, and
-the file says so.
-
-1,577 lines of dump became 215 lines of arc — the reversals (sequence the ladder
-not the biped), the reframings (the training frame; the rack as a pipeline, which
-dissolved three questions at once), the things that fell out for free (the
-dead-man's throttle; a machine that flips over backwards with no tipping logic),
-and the measurements that decided design (GRIP vs SLIP at r = 0.267).
-
-The new rule got exercised the same session it was written: this entry pushed
-`doc/LOG.md` to 1227, past its 1200 line, so its three oldest sessions — the horn and
-the switchgear, the maker's voice, and the round that finished the triptych and
-moved the cockpit/ui seam — were **folded into `doc/HISTORY.md`'s narrative and
-deleted**, not moved. Three sessions, 266 lines, became a 24-line section. That is
-the whole point of the layer, done once so the shape is on record.
-
-**One honest failure worth recording.** I set the target at 200 before writing,
-came in at 229, and then shaved: three passes rewording paragraphs that were fine
-to claw back sixteen lines. That is precisely the pathology the band was
-introduced to stop, performed by the person who introduced it eight hours
-earlier. The target was wrong, not the file — 200 was picked before the content
-existed. It is 250 now, on a reason that does not depend on what I happened to
-write: **below `doc/MEMORY.md`'s 300, because current truth outranks how it was
-arrived at**, so this can never be the longest thing in the repo.
-
-## 2026-08-26 — the loop leaves the component
-
-Cards: [L-070] closed, which finishes the foundation pass ([L-068], [L-069],
-[L-070]).
-
-`App.svelte` was 1082 lines and the sim lifecycle was 155 of them, in one
-`$effect` in the middle: physics init, world, rack assembly, viewport, resize,
-pointer capture, the frame loop, teardown. The file's own opening comment has
-said since it was written that "Svelte owns the DOM; a plain module owns the
-renderer and the loop". `platform/run.ts` is the module that comment was
-describing, and the header now points at it instead of promising it.
-
-**`platform/`, because almost everything the run does is where the application
-meets the browser** — `requestAnimationFrame`, pointer capture, a resize
-listener, one custom-property write a frame. The world and the renderer are
-things it owns, not things it is. The directory had been empty since the repo
-map first named it.
-
-**The escape hatch went with it, and the fix is that the run exists
-synchronously.** The old code hoisted `let setViewMode = () => {}` into the
-component and reassigned it from inside the `.then()`, so pressing CHASE before
-the wasm landed reached a function that did nothing and reported nothing.
-`createRun` returns a `Run` immediately and *remembers* a view given during the
-boot, applying it on arrival; `dispose()` is safe at any point including
-mid-boot. What the shell holds is a `Run | undefined` — an absence that is typed
-and handled with `?.` rather than a function that lies about being ready.
-
-**The run has no opinion about what is fitted.** NAV-1 needs a world to read a
-pose off and TILT-GUARD needs one for an attitude, which is *why* they are built
-in there — but which components those are is the cab's business. So the caller
-passes `fit(world)` and hands modules back. A run with `createAutonav` inside it
-would be a run that knows what a machine is.
-
-L-069 is what made this a small change rather than a fight: everything the loop
-needs from the cab already arrived as one argument, so the extraction moved code
-without having to *decide* anything about the boundary. Two objects cross the
-seam now and nothing else does — `hands` going down, a snapshot coming back.
-
-The scanner from L-069 failed, correctly, the moment the blocks it reads moved
-out of the component: `no such block: const tick = (now: number) => {`. Its rule
-is stronger now rather than gone — a plain `.ts` module cannot hold a rune at
-all — so it checks the boundary instead: the pilot module (still declared in the
-component, still called from inside `world.step()`) reads no rune, the component
-contains no `requestAnimationFrame`, and the run declares no rune and imports no
-Svelte. Each verified by breaking it.
-
-Driven, not just typechecked. The cab bench reads `PILOT [SET] +2.20/-2.20` down
-the whole chain with the clock running — identical to before the extraction — and
-a separate probe pressed CHASE on the same tick as BEGIN, which is the race the
-old hatch lost, and got the chase camera. 242 tests, lint, typecheck, build, 19
-cab shots, 20 panel shots.
-
-Not done, and deliberately: the shell is 984 lines and still holds the
-annunciator, the E-stop, the horn, the notices, the audio lifecycle and the nag.
-Those are all *cab* concerns and they belong to a component; the card was about
-the sim lifecycle, and stretching it into a general decomposition would have been
-a different, worse change.

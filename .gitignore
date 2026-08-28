@@ -25,3 +25,8 @@ shots/
 
 # Audio renders. Same reasoning — regenerate with `npm run listen`.
 renders/
+
+# Browser-suite evidence: failure screenshots and attachments. Same reasoning as
+# `shots/` — regenerate by running the suite.
+.vitest-attachments/
+tests/browser/__screenshots__/
